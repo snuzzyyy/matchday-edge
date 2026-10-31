@@ -5,6 +5,8 @@ import android.content.Intent;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
+import android.webkit.ValueCallback;
+import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
@@ -14,6 +16,8 @@ import android.webkit.WebViewClient;
 public class MainActivity extends Activity {
     private static final String HOME = "https://snuzzyyy.github.io/matchday-edge/";
     private WebView web;
+    private ValueCallback<Uri[]> fileCallback;
+    private static final int PICK_FILE = 42;
 
     @Override
     protected void onCreate(Bundle state) {
@@ -37,9 +41,36 @@ public class MainActivity extends Activity {
                 return true;
             }
         });
+        // Lets the site's photo upload open the phone's gallery / file picker
+        web.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> callback, FileChooserParams params) {
+                if (fileCallback != null) fileCallback.onReceiveValue(null);
+                fileCallback = callback;
+                try {
+                    Intent pick = params.createIntent();
+                    pick.addCategory(Intent.CATEGORY_OPENABLE);
+                    startActivityForResult(Intent.createChooser(pick, "Choose a photo"), PICK_FILE);
+                } catch (Exception e) {
+                    fileCallback = null;
+                    return false;
+                }
+                return true;
+            }
+        });
         setContentView(web);
         if (state != null) web.restoreState(state);
         else web.loadUrl(HOME);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == PICK_FILE && fileCallback != null) {
+            fileCallback.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(resultCode, data));
+            fileCallback = null;
+            return;
+        }
+        super.onActivityResult(requestCode, resultCode, data);
     }
 
     @Override

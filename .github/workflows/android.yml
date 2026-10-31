@@ -21,7 +21,14 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.9"
+      - name: Unpack the signing key from secrets
+        env:
+          KS_B64: ${{ secrets.MDE_KEYSTORE_B64 }}
+        run: |
+          if [ -n "$KS_B64" ]; then echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/matchday.keystore"; echo "MDE_KEYSTORE_PATH=$RUNNER_TEMP/matchday.keystore" >> "$GITHUB_ENV"; fi
       - name: Build APK
+        env:
+          MDE_KEYSTORE_PASSWORD: ${{ secrets.MDE_KEYSTORE_PASSWORD }}
         run: gradle -p android assembleDebug --no-daemon
       - name: Publish to the "app" release
         env:

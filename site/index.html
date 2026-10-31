@@ -627,7 +627,7 @@ h3{font-size:15px;font-weight:700}
 .fmt.sm button{padding:5px 9px;font-size:11.5px}
 /* phone: full-screen slip with the summary pinned to the bottom */
 .drawer.slipdr{width:min(520px,100%);padding:0;display:flex;flex-direction:column}
-.slip.drawer{border:0;border-radius:0;max-height:none;flex:1;display:flex;flex-direction:column;background:var(--bg-2)}
+.slip.drawer{border:0;border-radius:0;max-height:none;flex:1;display:flex;flex-direction:column;background:var(--bg-2);padding:0!important;margin:0}
 .slip.drawer .slip-hd{position:sticky;top:0;z-index:2;padding-top:calc(12px + env(safe-area-inset-top,0px))}
 .slip.drawer .slip-legs{overflow:visible;flex:1}
 .slip.drawer .slip-ft{position:sticky;bottom:0;padding-bottom:calc(14px + env(safe-area-inset-bottom,0px));box-shadow:0 -12px 24px -12px rgba(0,0,0,.6);border-top:1px solid var(--line);background:var(--surface)}
@@ -759,6 +759,22 @@ h3{font-size:15px;font-weight:700}
 .friendslink:hover{border-color:var(--blue)}
 .friendslink span{display:grid}.friendslink small{color:var(--muted);font-size:12.5px}
 .avstack{display:flex}.avstack .av{border:2px solid var(--surface);margin-left:-8px}.avstack .av:first-child{margin-left:0}
+.bdg{display:inline-flex;align-items:center;gap:3px;font-family:var(--body);font-size:10.5px;font-weight:800;letter-spacing:.06em;padding:3px 7px;border-radius:6px;margin-left:6px;vertical-align:middle;line-height:1.2;white-space:nowrap}
+.bdg.sm{font-size:9px;padding:2px 5px;margin-left:5px}
+.bdg.dev{background:rgba(34,216,143,.14);color:var(--win);border:1px solid rgba(34,216,143,.45);font-family:ui-monospace,Menlo,Consolas,monospace}
+.bdg.pro{background:linear-gradient(90deg,var(--tang),#FF4F6D);color:#fff}
+.bdgrow{margin:2px 0 2px -6px}
+.slip.drawer .slip-body{flex:1;display:flex;flex-direction:column;justify-content:center;gap:18px;padding:20px 16px}
+.slip.drawer .empty-slip{padding:10px 0}
+.quick{display:grid;gap:8px}
+.quick > small{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.qp{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:12px;align-items:center;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:11px 12px}
+.qp:hover{border-color:var(--blue)}
+.qp span{display:grid;min-width:0}.qp b{font-size:14px}.qp small{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.qp-r{text-align:right}.qp-r b{font-family:var(--display);font-size:18px}
+.qp-add{width:30px;height:30px;border-radius:50%;background:var(--blue);color:#fff;display:grid!important;place-items:center;font-weight:800;font-size:18px}
+.qlinks{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px}
+.qlinks .btn{padding:10px}
 .fmt-row{display:flex;justify-content:space-between;align-items:center;font-size:12.5px;color:var(--muted)}
 .fmt-big button{display:grid;gap:1px;padding:6px 12px;text-align:center;line-height:1.15}
 .fmt-big button b{font-size:12.5px}
@@ -1212,7 +1228,15 @@ function slipHTML(mode = "rail") {
   const closeBtn = drawer ? `<button class="close sm" data-close aria-label="Close bet slip">✕</button>` : "";
   const head = `<div class="slip-hd"><h2>Bet slip${n ? ` <span class="badge alt">${n}</span>` : ""}</h2><div class="hd-acts">${n ? `<button class="more" data-clear>Clear all</button>` : ""}${closeBtn}</div></div>`;
   const fmt = `<div class="fmt sm" role="group" aria-label="Odds format"><button data-fmt="frac" aria-pressed="${S.fmt === "frac"}">Fractional</button><button data-fmt="dec" aria-pressed="${S.fmt === "dec"}">Decimal</button></div>`;
-  if (!n) return `<div class="slip ${mode}">${head}<div class="empty-slip"><img src="img/empty-slip.webp" alt="" loading="lazy" class="es-img"><b style="color:var(--fg-2)">Your slip is empty</b>Tap any price to add a selection.</div><div class="slip-ft"><div class="ft-links"><span>Odds shown as</span>${fmt}</div></div></div>`;
+  if (!n) {
+    let quick = "";
+    if (drawer && S.data) {
+      const T = tiers(S.sport, firstWin(S.sport)), picks = [...T.bank, ...T.strong].slice(0, 3);
+      quick = `<div class="quick">${picks.length ? `<small>Quick picks · ${S.sport === "nba" ? "NBA" : "football"}</small>${picks.map(c => `<button class="qp" data-leg="${c.sport}|${c.g.id}|${c.m.k}"><span><b>${esc(c.m.label)}</b><small>${esc(vs(c.sport, c.g))} · ${whenLabel(kick(c.g))}</small></span><span class="qp-r"><b>${odds(priceOf(c.m))}</b><small style="color:${tierColor(c.m.p)}">${pct(c.m.p)}</small></span><span class="qp-add" aria-hidden="true">+</span></button>`).join("")}` : ""}
+        <div class="qlinks"><a class="btn ghost" href="#acca" data-close>Build an acca</a><a class="btn ghost" href="#bets" data-close>Best bets</a></div></div>`;
+    }
+    return `<div class="slip ${mode}">${head}<div class="slip-body"><div class="empty-slip"><img src="img/empty-slip.webp" alt="" loading="lazy" class="es-img"><b style="color:var(--fg-2)">Your slip is empty</b>Tap any price to add a selection.</div>${quick}</div><div class="slip-ft"><div class="ft-links"><span>Odds shown as</span>${fmt}</div></div></div>`;
+  }
   const c = slipCalc(), ret = S.stake * c.dec, type = n === 1 ? "Single" : n === 2 ? "Double" : n === 3 ? "Treble" : n + "-fold";
   const legs = S.slip.map(l => `<div class="leg2">
       <div class="lg-main"><div class="ls">${esc(l.label)}</div><div class="lm">${esc(l.match)} · ${whenLabel(l.kick)}</div>
@@ -1684,7 +1708,7 @@ function viewAccount(mode = "account") {
   const tab = ["mybets", "profile"].includes(S.acctTab) ? S.acctTab : "mybets";
   const tabs = [["mybets", "My bets"], ["profile", "Profile & settings"]];
   return `<section class="prof"><label class="avwrap" title="Change profile photo">${avatarHTML(P, 66)}<span class="avcam" aria-hidden="true">📷</span><input type="file" id="avatarFile" accept="image/*" class="sr"></label>
-    <div class="who"><b>${esc(P.display_name || "")}<span class="plan ${P.plan === "pro" ? "pro" : ""}">${P.plan === "pro" ? "Pro" : "Free plan"}</span></b><span>${S.socialReady ? `Friend code <b class="fcode">${esc(P.friend_code || "")}</b> · ` : ""}member since ${new Date(P.created_at || S.user.created_at).toLocaleDateString("en-GB", { month: "short", year: "numeric" })}</span></div>
+    <div class="who"><b>${esc(P.display_name || "")}${badgesHTML(P) || `<span class="plan">Free plan</span>`}</b><span>${S.socialReady ? `Friend code <b class="fcode">${esc(P.friend_code || "")}</b> · ` : ""}member since ${new Date(P.created_at || S.user.created_at).toLocaleDateString("en-GB", { month: "short", year: "numeric" })}</span></div>
     <button class="btn ghost sm" data-signout>Sign out</button></section>
   ${m}
   <a class="friendslink" href="#friends">${avatarStack()}<span><b>Friends</b><small>${nFr ? `${nFr} friend${nFr > 1 ? "s" : ""} · feed, leaderboard and invites` : "Invite your friends and compare bets"}</small></span><span aria-hidden="true">›</span></a>
@@ -1692,6 +1716,7 @@ function viewAccount(mode = "account") {
   ${tab === "mybets" ? myBetsView() : profileView()}`;
 }
 /* ---------- social ---------- */
+const badgesHTML = (p, small) => { p = p || {}; const out = []; if ((p.badges || []).includes("dev")) out.push(`<span class="bdg dev${small ? " sm" : ""}" title="Developer">&lt;/&gt; DEV</span>`); if (p.plan === "pro") out.push(`<span class="bdg pro${small ? " sm" : ""}" title="Pro member">PRO</span>`); return out.join(""); };
 const avatarStack = () => { const fr = Object.values(S.friends || {}).slice(0, 3); return `<span class="avstack">${fr.length ? fr.map(f => avatarHTML(f, 30)).join("") : `<span class="av ini" style="width:30px;height:30px;font-size:14px">+</span>`}</span>`; };
 const REACTS = [["fire", "🔥"], ["clap", "👏"], ["lol", "😂"], ["yikes", "😬"]];
 function avatarHTML(p, size = 40) {
@@ -1707,7 +1732,7 @@ async function loadSocial() {
   S.socialReady = true;
   const ids = (fr.data || []).map(x => x.friend_id);
   const [pr, bt, ch] = await Promise.all([
-    ids.length ? sb.from("profiles").select("id,display_name,avatar_url,created_at,show_on_leaderboard").in("id", ids) : { data: [] },
+    ids.length ? sb.from("profiles").select("*").in("id", ids) : { data: [] },
     sb.from("bets").select("*").in("user_id", [S.user.id, ...ids]).order("placed_at", { ascending: false }).limit(120),
     ids.length ? sb.from("challenges").select("user_id,data").in("user_id", ids) : { data: [] }
   ]);
@@ -1736,8 +1761,8 @@ function feedItems() {
   const items = [];
   for (const b of S.feedBets || []) {
     const who = person(b.user_id), legs = (b.legs || []).length, kind = legs > 3 ? legs + "-fold acca" : legs === 3 ? "treble" : legs === 2 ? "double" : "bet";
-    if (b.result === "open") items.push({ t: b.placed_at, b, html: `<b>${esc(who.display_name)}</b> placed a ${kind}`, tone: "" });
-    else { const pl = (+b.returns || 0) - +b.stake; items.push({ t: b.settled_at || b.placed_at, b, html: b.result === "won" ? `<b>${esc(who.display_name)}</b> won <span class="pos">+${gbp(pl)}</span>` : b.result === "lost" ? `<b>${esc(who.display_name)}</b> lost <span class="neg">${gbp(-b.stake)}</span>` : `<b>${esc(who.display_name)}</b>'s bet was void`, tone: b.result }); }
+    if (b.result === "open") items.push({ t: b.placed_at, b, html: `<b>${esc(who.display_name)}</b>${badgesHTML(who, 1)} placed a ${kind}`, tone: "" });
+    else { const pl = (+b.returns || 0) - +b.stake; items.push({ t: b.settled_at || b.placed_at, b, html: b.result === "won" ? `<b>${esc(who.display_name)}</b>${badgesHTML(who, 1)} won <span class="pos">+${gbp(pl)}</span>` : b.result === "lost" ? `<b>${esc(who.display_name)}</b>${badgesHTML(who, 1)} lost <span class="neg">${gbp(-b.stake)}</span>` : `<b>${esc(who.display_name)}</b>'s bet was void`, tone: b.result }); }
   }
   for (const [uid, C] of Object.entries(S.friendChal || {})) {
     const who = person(uid);
@@ -1759,7 +1784,7 @@ function boardView() {
   const P = S.profile || {}, meId = S.user.id;
   const rows = S.board || [];
   return `<section class="section">${rows.length ? `<div class="lbl">${rows.map((r, i) => { const roi = +r.staked ? Math.round(+r.profit / +r.staked * 100) : null, ch = r.user_id === meId ? S.chal : (S.friendChal || {})[r.user_id];
-      return `<button class="lbr ${r.user_id === meId ? "me" : ""}" data-mate="${r.user_id}"><span class="lbn ${i < 3 ? "top" + (i + 1) : ""}">${i + 1}</span>${avatarHTML({ display_name: r.display_name, avatar_url: r.avatar_url }, 38)}<span class="lbw"><b>${esc(r.display_name)}${r.user_id === meId ? " (you)" : ""}</b><small>${r.settled} settled · ${r.won} won${ch ? ` · £1K step ${Math.min((ch.rung || 0) + 1, ch.rungs || 10)}` : ""}</small></span><span class="lbp ${+r.profit > 0 ? "pos" : +r.profit < 0 ? "neg" : ""}">${gbp(+r.profit)}<small>${roi == null ? "–" : (roi > 0 ? "+" : "") + roi + "% ROI"}</small></span></button>`; }).join("")}</div>` : `<div class="empty">Settle a bet to get on the board.</div>`}
+      return `<button class="lbr ${r.user_id === meId ? "me" : ""}" data-mate="${r.user_id}"><span class="lbn ${i < 3 ? "top" + (i + 1) : ""}">${i + 1}</span>${avatarHTML({ display_name: r.display_name, avatar_url: r.avatar_url }, 38)}<span class="lbw"><b>${esc(r.display_name)}${r.user_id === meId ? " (you)" : ""}${badgesHTML(r, 1)}</b><small>${r.settled} settled · ${r.won} won${ch ? ` · £1K step ${Math.min((ch.rung || 0) + 1, ch.rungs || 10)}` : ""}</small></span><span class="lbp ${+r.profit > 0 ? "pos" : +r.profit < 0 ? "neg" : ""}">${gbp(+r.profit)}<small>${roi == null ? "–" : (roi > 0 ? "+" : "") + roi + "% ROI"}</small></span></button>`; }).join("")}</div>` : `<div class="empty">Settle a bet to get on the board.</div>`}
     <label class="optrow"><input type="checkbox" id="lbOpt" ${P.show_on_leaderboard !== false ? "checked" : ""}> Show me on my friends' leaderboard</label></section>`;
 }
 function friendsView() {
@@ -1767,7 +1792,7 @@ function friendsView() {
   return `<section class="section"><div class="invite"><div><b>Your friend code</b><span class="fcode big">${esc(P.friend_code || "…")}</span><span>Friends can type this in, or you can send them your invite link.</span></div><button class="btn sm" data-invite>Share invite link</button></div>
     <form class="addrow" id="addFriend"><div class="field"><label for="fcode">Add a friend by their code</label><input id="fcode" maxlength="6" placeholder="e.g. 7F3A9C" autocomplete="off" style="text-transform:uppercase"></div><div class="field" style="flex:0 0 auto;align-self:end"><button class="btn" type="submit">Add friend</button></div></form>
     <h2 style="margin-top:6px">Your friends</h2>
-    ${fr.length ? `<div class="mates">${fr.map(f => `<div class="mate"><button class="mate-main" data-mate="${f.id}">${avatarHTML(f, 44)}<span><b>${esc(f.display_name)}</b><small>Tap to see their bets and £1K challenge</small></span></button><button class="x" data-unfriend="${f.id}" aria-label="Remove ${esc(f.display_name)}">✕</button></div>`).join("")}</div>` : `<div class="empty">No friends yet. Share your link or code to get started.</div>`}</section>`;
+    ${fr.length ? `<div class="mates">${fr.map(f => `<div class="mate"><button class="mate-main" data-mate="${f.id}">${avatarHTML(f, 44)}<span><b>${esc(f.display_name)}${badgesHTML(f, 1)}</b><small>Tap to see their bets and £1K challenge</small></span></button><button class="x" data-unfriend="${f.id}" aria-label="Remove ${esc(f.display_name)}">✕</button></div>`).join("")}</div>` : `<div class="empty">No friends yet. Share your link or code to get started.</div>`}</section>`;
 }
 function myBetsView() {
   return `${statBlock()}<section class="section"><div class="hd"><h2>My bets</h2><div class="chips">${[["open", "Open"], ["settled", "Settled"], ["all", "All"]].map(([k, l]) => `<button class="chip" data-betfilter="${k}" aria-pressed="${S.betFilter === k}">${l}</button>`).join("")}</div></div>
@@ -1790,7 +1815,7 @@ function mateSheet(uid) {
   const profit = settled.reduce((a, b) => a + (+b.returns || 0) - +b.stake, 0), staked = settled.reduce((a, b) => a + +b.stake, 0);
   const shares = me || bets.length || p.share_bets !== false;
   return `<div class="scrim top" data-mateclose></div><div class="ijsheet" role="dialog" aria-modal="true" aria-label="${esc(p.display_name)}"><button class="close sm ij-x" data-mateclose aria-label="Close">✕</button>
-    <div class="ij-head">${avatarHTML(p, 64)}<div><h2>${esc(p.display_name)}</h2><span class="ij-team">${me ? "That's you" : "Your friend"}${p.created_at ? " · joined " + new Date(p.created_at).toLocaleDateString("en-GB", { month: "short", year: "numeric" }) : ""}</span></div></div>
+    <div class="ij-head">${avatarHTML(p, 64)}<div><h2>${esc(p.display_name)}</h2><div class="bdgrow">${badgesHTML(p)}</div><span class="ij-team">${me ? "That's you" : "Your friend"}${p.created_at ? " · joined " + new Date(p.created_at).toLocaleDateString("en-GB", { month: "short", year: "numeric" }) : ""}</span></div></div>
     <div class="ij-grid"><div><small>Profit / loss</small><b class="${profit > 0 ? "pos" : profit < 0 ? "neg" : ""}">${settled.length ? gbp(profit) : "–"}</b></div><div><small>Win rate</small><b>${decided ? Math.round(won / decided * 100) + "%" : "–"}</b></div>
     <div><small>Return on stakes</small><b>${staked ? Math.round(profit / staked * 100) + "%" : "–"}</b></div><div><small>£1K challenge</small><b>${ch ? (ch.rung >= ch.rungs ? "Completed 🏆" : `Step ${(ch.rung || 0) + 1} · ${fmtBank(ch.bank)}`) : "Not started"}</b>${ch && ch.past && ch.past.length ? `<span class="ij-days">${ch.past.length} previous attempt${ch.past.length > 1 ? "s" : ""}</span>` : ""}</div></div>
     <div class="ij-note"><small>Recent bets</small></div>

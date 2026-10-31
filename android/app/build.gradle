@@ -6,9 +6,24 @@ android {
         applicationId "com.snuzzyyy.matchdayedge"
         minSdk 24
         targetSdk 34
-        versionCode 2
-        versionName "1.1"
+        versionCode 3
+        versionName "1.2"
     }
-    buildTypes { release { minifyEnabled false } }
+    // The signing key lives in GitHub secrets (never in the repo). Without it, builds fall back to a throwaway debug key.
+    def ks = System.getenv("MDE_KEYSTORE_PATH")
+    signingConfigs {
+        fixed {
+            if (ks) {
+                storeFile file(ks)
+                storePassword System.getenv("MDE_KEYSTORE_PASSWORD")
+                keyAlias "matchday"
+                keyPassword System.getenv("MDE_KEYSTORE_PASSWORD")
+            }
+        }
+    }
+    buildTypes {
+        debug { if (ks) signingConfig signingConfigs.fixed }
+        release { minifyEnabled false; if (ks) signingConfig signingConfigs.fixed }
+    }
     compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
 }
