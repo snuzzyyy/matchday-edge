@@ -84,8 +84,9 @@ a{color:var(--blue-2)}
 .tl-short{display:none}
 .tab-chal .tl-long,.tab-chal .tl-short{background:linear-gradient(90deg,var(--tang-2),#FF6F91);-webkit-background-clip:text;background-clip:text;color:transparent;font-weight:700}
 @media (max-width:640px){
-  .tabs{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:0;overflow:visible}
-  .tab{justify-content:center;padding:10px 1px 12px;font-size:12.5px;gap:3px}
+  .tabs{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:0;overflow:visible}
+  .tab{justify-content:center;padding:10px 0 12px;font-size:12px;gap:2px}
+  .tab .badge{padding:0 4px;font-size:9.5px;line-height:14px}
   .tab[aria-current=page]::after{left:6px;right:6px}
   .tl-long{display:none}.tl-short{display:inline}
   .tab .badge{padding:0 5px;font-size:10px;line-height:15px}
@@ -622,6 +623,38 @@ h3{font-size:15px;font-weight:700}
 .slip.drawer .slip-hd{position:sticky;top:0;z-index:2;padding-top:calc(12px + env(safe-area-inset-top,0px))}
 .slip.drawer .slip-legs{overflow:visible;flex:1}
 .slip.drawer .slip-ft{position:sticky;bottom:0;padding-bottom:calc(14px + env(safe-area-inset-bottom,0px));box-shadow:0 -12px 24px -12px rgba(0,0,0,.6);border-top:1px solid var(--line);background:var(--surface)}
+/* acca builder */
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.acca-ctrl{display:grid;gap:10px}
+.seg3{display:grid;grid-template-columns:repeat(3,1fr);background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:4px;gap:4px}
+.seg3 button{padding:10px 6px;border-radius:9px;font-weight:700;font-size:13.5px;color:var(--muted)}
+.seg3 button[aria-pressed=true]{background:var(--blue);color:#fff}
+.risk-desc{margin:-2px 0 0;font-size:12.5px;color:var(--muted)}
+.auto{display:flex;gap:8px;flex-wrap:wrap}
+.accabox{background:radial-gradient(90% 140% at 100% 0%,rgba(61,123,255,.18),transparent 60%),var(--surface);border:1px solid var(--blue);border-radius:16px;padding:16px;display:grid;gap:12px}
+.ab-hd{display:flex;justify-content:space-between;align-items:center}
+.ab-legs{display:grid;gap:8px}
+.ab-leg{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;align-items:center;background:var(--bg-2);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.abl-main{min-width:0;display:grid;gap:5px}
+.abl-match{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.abl-main select{width:100%;background:var(--surface-2);border:1px solid var(--line-2);border-radius:8px;color:var(--fg);font:inherit;font-weight:700;font-size:14px;padding:8px 10px}
+.abl-p{text-align:right;display:grid}
+.abl-p b{font-family:var(--display);font-size:20px}
+.abl-p small{font-size:11px;color:var(--muted);font-weight:700}
+.ag-list{display:grid;gap:8px}
+.ag{display:grid;grid-template-columns:34px minmax(0,1fr);gap:12px;align-items:center;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;transition:border-color .12s,background .12s}
+.ag:hover{border-color:var(--line-2)}
+.ag.on{border-color:var(--blue);background:rgba(61,123,255,.08)}
+.ag-tick{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;border:2px solid var(--line-2);font-weight:800;color:var(--muted);font-size:16px}
+.ag.on .ag-tick{background:var(--blue);border-color:var(--blue);color:#fff}
+.ag-main{display:grid;gap:4px;min-width:0}
+.ag-teams{display:flex;align-items:center;gap:6px;min-width:0;flex-wrap:wrap}
+.ag-teams .logo,.ag-teams .mono{width:20px;height:20px;font-size:8px}
+.ag-teams b{font-size:14.5px}
+.ag-v{color:var(--dim);font-size:12px}
+.ag-meta{font-size:12px;color:var(--muted)}
+.ag-pick{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;color:var(--fg-2);background:var(--bg-2);border-radius:8px;padding:6px 9px}
+.ag-pick span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .fmt-row{display:flex;justify-content:space-between;align-items:center;font-size:12.5px;color:var(--muted)}
 .fmt-big button{display:grid;gap:1px;padding:6px 12px;text-align:center;line-height:1.15}
 .fmt-big button b{font-size:12.5px}
@@ -666,7 +699,7 @@ const store = { get(k, d) { try { const v = localStorage.getItem("mde:" + k); re
 
 const S = { data: null, logos: {}, sport: store.get("sport", "football"), fmt: store.get("fmt", "frac"), slip: store.get("slip", []),
             stake: store.get("stake", 5), boxSide: {}, league: "all", win: "today", drawer: null, slipOpen: false };
-const VIEWS = [["live", "Live", "Live"], ["fixtures", "Fixtures", "Games"], ["tables", "Tables", "Tables"], ["news", "News", "News"], ["bets", "Best Bets", "Bets"], ["challenge", "£1K Challenge", "£1K"]];
+const VIEWS = [["live", "Live", "Live"], ["fixtures", "Fixtures", "Games"], ["acca", "Accas", "Accas"], ["bets", "Best Bets", "Bets"], ["tables", "Tables", "Tables"], ["news", "News", "News"], ["challenge", "£1K Challenge", "£1K"]];
 const view = () => { const h = location.hash.slice(1); return h === "account" || h === "acca" || VIEWS.some(v => v[0] === h) ? h : "live"; };
 
 /* ---------- odds ---------- */
@@ -991,7 +1024,6 @@ function viewBets() {
   const sec = (cls, name, desc, list) => list.length ? `<section class="section"><div class="tierhd"><span class="tag ${cls}">${name}</span><span class="sub" style="margin:0">${desc}</span></div><div class="pgrid">${list.map(pickCard).join("")}</div></section>` : "";
   return `${promo()}<div class="hd"><div><h1>Best bets</h1><p class="sub">Every market is rated by a model built on season stats and recent form, then blended with the betting market. One pick per game, so you can stack them without doubling up.</p></div>
   ${winChips()}</div>
-  ${presetsHTML()}
   <div class="tiers">
   ${sec("bank", "Bankers", "74%+ model chance. Short prices, best for acca legs.", T.bank)}
   ${sec("strong", "Strong", "60 to 74% chance at better prices.", T.strong)}
@@ -1025,8 +1057,50 @@ function presetsHTML() {
   ${firstWin(S.sport) !== "today" && !S.accaWin ? `<div class="note">All of today's ${S.sport === "nba" ? "NBA" : "football"} has started, so these use ${WIN_NAME[aw].toLowerCase()}'s games.${S.sport === "football" && upcoming("nba", "today").length ? ` Switch to <b>NBA</b> at the top for tonight's games.` : ""}</div>` : ""}<div class="presets">${presets || `<div class="empty">Not enough upcoming games to build one.</div>`}</div></section>
 `;
 }
+/* ---------- acca builder: pick games, it picks the safest leg in each ---------- */
+const RISK = { safe: { name: "Safest", min: 1.10, pmin: .60, desc: "The most likely bet in each game." }, balanced: { name: "Balanced", min: 1.25, pmin: .58, desc: "Still likely, at better prices." }, bigger: { name: "Bigger odds", min: 1.5, pmin: .48, desc: "Riskier legs for a bigger payout." } };
+const accaSel = () => (S.accaSel = S.accaSel || { football: [], nba: [] })[S.sport];
+function legOptions(sport, g) {
+  const r = RISK[S.accaRisk || "safe"];
+  return g.model.markets.filter(m => m.k !== "12" && m.p <= .96 && priceOf(m) >= 1.05).sort((a, b) => b.p - a.p).map(m => ({ m, ok: priceOf(m) >= r.min && m.p >= r.pmin }));
+}
+function legFor(sport, g) {
+  const o = legOptions(sport, g), pick = (S.accaPick || {})[g.id];
+  const chosen = pick && o.find(x => x.m.k === pick);
+  if (chosen) return chosen.m;
+  const ok = o.filter(x => x.ok); return (ok[0] || o[0] || {}).m;
+}
+function accaGames() { const w = S.accaWin && upcoming(S.sport, S.accaWin).length ? S.accaWin : firstWin(S.sport); return { w, list: upcoming(S.sport, w) }; }
 function viewAcca() {
-  return `<div class="hd"><div><h1>Acca builder</h1><p class="sub">Tap a ready-made acca to load it, or add legs from Fixtures and Best Bets.</p></div></div>${presetsHTML()}<section class="section slipwide"><h2>Your slip</h2>${slipHTML()}</section>`;
+  const sp = S.sport, { w, list } = accaGames(), sel = accaSel().filter(id => list.some(g => g.id === id) || findGame(sp, id) && isPre(findGame(sp, id)));
+  S.accaSel[sp] = sel;
+  const risk = S.accaRisk || "safe";
+  const legs = sel.map(id => findGame(sp, id)).filter(Boolean).map(g => ({ g, m: legFor(sp, g) })).filter(x => x.m);
+  const dec = legs.reduce((a, x) => a * priceOf(x.m), 1), p = legs.reduce((a, x) => a * x.m.p, 1), est = legs.some(x => !x.m.dec);
+  const type = legs.length === 1 ? "Single" : legs.length === 2 ? "Double" : legs.length === 3 ? "Treble" : legs.length + "-fold acca";
+  const summary = legs.length ? `<section class="accabox"><div class="ab-hd"><h2>Your acca</h2><button class="more" data-accaclear>Clear</button></div>
+    <div class="ab-legs">${legs.map(({ g, m }) => `<div class="ab-leg"><div class="abl-main"><div class="abl-match">${esc(vs(sp, g))} · ${whenLabel(kick(g))}</div>
+      <label class="sr" for="alt-${g.id}">Bet for ${esc(vs(sp, g))}</label><select id="alt-${g.id}" data-accaalt="${g.id}">${legOptions(sp, g).slice(0, 12).map(x => `<option value="${x.m.k}" ${x.m.k === m.k ? "selected" : ""}>${esc(x.m.label)} · ${pct(x.m.p)} · ${odds(priceOf(x.m))}</option>`).join("")}</select></div>
+      <div class="abl-p"><b>${odds(priceOf(m))}</b><small>${pct(m.p)}</small></div><button class="x" data-accag="${g.id}" aria-label="Remove ${esc(vs(sp, g))}">✕</button></div>`).join("")}</div>
+    <div class="sum3"><div><small>${type} odds${est ? " · est." : ""}</small><b>${odds(dec)}</b></div><div><small>Chance it lands</small><b>${pct(p)}</b></div><div><small>£${S.stake} returns</small><b class="ret">${money(S.stake * dec)}</b></div></div>
+    <div class="meter"><i style="width:${Math.max(p * 100, 2)}%"></i></div>
+    ${legs.length >= 2 && p < .25 ? `<div class="warn">Every leg has to win, so the chance drops with each game you add. Fewer games or "Safest" gives a better chance.</div>` : ""}
+    <button class="btn" data-accaslip>Add ${type.toLowerCase()} to bet slip</button></section>` : "";
+  const byDay = new Map(); for (const g of list) { const k = dayKey(kick(g)); if (!byDay.has(k)) byDay.set(k, []); byDay.get(k).push(g); }
+  const rows = [...byDay].map(([dk, gs]) => `<div class="day"><div class="dayhd"><h2>${dayLabel(dk)[0]}</h2><span>${dayLabel(dk)[1]}</span></div><div class="ag-list">${gs.map(g => {
+      const on = sel.includes(g.id), m = legFor(sp, g);
+      return `<button class="ag ${on ? "on" : ""}" data-accag="${g.id}" aria-pressed="${on}"><span class="ag-tick" aria-hidden="true">${on ? "✓" : "+"}</span>
+        <span class="ag-main"><span class="ag-teams">${logo(sp, sp === "nba" ? g.away : g.home)}<b>${esc(sp === "nba" ? g.away.name : g.home.name)}</b><span class="ag-v">${sp === "nba" ? "@" : "v"}</span>${logo(sp, sp === "nba" ? g.home : g.away)}<b>${esc(sp === "nba" ? g.home.name : g.away.name)}</b></span>
+        <span class="ag-meta">${hm(kick(g))}${sp === "football" ? " · " + esc(leagueName(g.league)) : ""}</span>
+        ${m ? `<span class="ag-pick"><span>${esc(m.label)}</span><b style="color:${tierColor(m.p)}">${pct(m.p)}</b></span>` : ""}</span></button>`; }).join("")}</div></div>`).join("");
+  return `<div class="hd"><div><h1>Acca builder</h1><p class="sub">Tap the ${sp === "nba" ? "NBA" : "football"} games you want. We pick the bet in each game most likely to land and show your chance of the whole acca winning.</p></div></div>
+  <div class="acca-ctrl"><div class="seg3" role="group" aria-label="Safety level">${Object.entries(RISK).map(([k, r]) => `<button data-accarisk="${k}" aria-pressed="${risk === k}">${r.name}</button>`).join("")}</div>
+    <p class="risk-desc">${RISK[risk].desc}</p>
+    <div class="chips">${["today", "tomorrow", "48h", "week"].map(k => `<button class="chip" data-accawin="${k}" aria-pressed="${w === k}" ${upcoming(sp, k).length ? "" : "disabled style=\"opacity:.4\""}>${WIN_NAME[k]}</button>`).join("")}</div>
+    <div class="auto"><button class="btn ghost sm" data-accaauto="3">Pick the best 3 for me</button><button class="btn ghost sm" data-accaauto="5">Pick the best 5</button></div></div>
+  ${summary}
+  ${list.length ? rows : `<div class="empty">No ${sp === "nba" ? "NBA" : "football"} games left in this window.</div>`}
+  <h2 style="margin-top:8px">Or try a ready-made acca</h2>${presetsHTML()}`;
 }
 const fmtRow = () => `<div class="fmt-row"><span>Odds format</span><div class="fmt fmt-big" role="group" aria-label="Odds format"><button data-fmt="frac" aria-pressed="${S.fmt === "frac"}"><b>Fractional</b><small>e.g. 5/2</small></button><button data-fmt="dec" aria-pressed="${S.fmt === "dec"}"><b>Decimal</b><small>e.g. 3.50</small></button></div></div>`;
 function slipHTML(mode = "rail") {
@@ -1544,6 +1618,19 @@ document.addEventListener("click", e => {
   else if (d.close !== undefined) { S.drawer = null; S.slipOpen = false; render(); }
   else if (d.rm) { S.slip = S.slip.filter(l => l.id !== d.rm); save(); render(); }
   else if (d.clear !== undefined) { S.slip = []; save(); render(); }
+  else if (d.accag) { const a = accaSel(), i = a.indexOf(d.accag); if (i >= 0) a.splice(i, 1); else a.push(d.accag); render(); }
+  else if (d.accarisk) { S.accaRisk = d.accarisk; S.accaPick = {}; render(); }
+  else if (d.accaclear !== undefined) { S.accaSel[S.sport] = []; S.accaPick = {}; render(); }
+  else if (d.accaauto) {
+    const n = +d.accaauto, { list } = accaGames();
+    const ranked = list.map(g => ({ g, m: legFor(S.sport, g) })).filter(x => x.m && x.m.p >= RISK[S.accaRisk || "safe"].pmin && priceOf(x.m) >= RISK[S.accaRisk || "safe"].min).sort((a, b) => b.m.p - a.m.p);
+    S.accaSel[S.sport] = ranked.slice(0, n).map(x => x.g.id); S.accaPick = {}; render();
+    if (ranked.length < n) toast(`Only ${ranked.length} games fit right now`); else toast(`Picked the ${n} safest games`);
+  }
+  else if (d.accaslip !== undefined) {
+    const legs = accaSel().map(id => findGame(S.sport, id)).filter(Boolean).map(g => ({ sport: S.sport, g, m: legFor(S.sport, g) })).filter(x => x.m);
+    S.slip = asLegs(legs); save(); S.slipOpen = innerWidth <= 1100; render(); toast("Acca added to your bet slip");
+  }
   else if (d.copyslip !== undefined) {
     const c = slipCalc(), type = S.slip.length === 1 ? "Single" : S.slip.length === 2 ? "Double" : S.slip.length === 3 ? "Treble" : S.slip.length + "-fold acca";
     const txt = S.slip.map((l, i) => `${i + 1}. ${l.label} @ ${odds(l.dec)}\n   ${l.match}, ${whenLabel(l.kick)}`).join("\n") + `\n\n${type} @ ${odds(c.dec)} · £${S.stake} stake returns ${money(S.stake * c.dec)}`;
@@ -1567,7 +1654,7 @@ function setLegOdds(id, raw) {
   l.dec = Math.round(d * 1000) / 1000; l.custom = Math.abs(l.dec - l.orig) > 0.0005; l.est = l.custom ? false : l.estOrig ?? l.est;
   save(); render(); toast(l.custom ? "Price updated to " + odds(l.dec) : "Back to the app's price");
 }
-document.addEventListener("change", e => { const t = e.target; if (t.dataset && t.dataset.legodds) setLegOdds(t.dataset.legodds, t.value); });
+document.addEventListener("change", e => { const t = e.target; if (t.dataset && t.dataset.legodds) setLegOdds(t.dataset.legodds, t.value); if (t.dataset && t.dataset.accaalt) { S.accaPick = S.accaPick || {}; S.accaPick[t.dataset.accaalt] = t.value; render(); } });
 document.addEventListener("keydown", e => { const t = e.target; if (e.key === "Enter" && t.dataset && t.dataset.legodds) t.blur(); });
 document.addEventListener("focusin", e => { const t = e.target; if (t.dataset && t.dataset.legodds) setTimeout(() => t.select(), 0); });
 document.addEventListener("click", e => { const b = e.target.closest("[data-legreset]"); if (!b) return; const l = S.slip.find(x => x.id === b.dataset.legreset); if (l && l.orig != null) { l.dec = l.orig; l.custom = false; if (l.estOrig != null) l.est = l.estOrig; save(); render(); toast("Back to the app's price"); } });
