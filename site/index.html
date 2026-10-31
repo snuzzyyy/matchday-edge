@@ -488,9 +488,9 @@ h3{font-size:15px;font-weight:700}
 .acct-btn{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:var(--surface);border:1px solid var(--line);color:var(--fg-2);flex:none;text-decoration:none;font-family:var(--display);font-weight:700;font-size:15px}
 .acct-btn svg{width:19px;height:19px}
 .word{white-space:nowrap}
-@media (max-width:480px){.sport .spi{display:none}.sport{flex:none}.brand{min-width:0;flex:1 1 auto}.brand-txt{min-width:0}.updated{overflow:hidden;text-overflow:ellipsis}.updated span:last-child{overflow:hidden;text-overflow:ellipsis}}
-@media (max-width:440px){.word{font-size:17px}.mark{width:30px;height:30px}.sport button{padding:6px 10px;gap:0;font-size:12.5px}.acct-btn{width:34px;height:34px;font-size:13px}.bar{gap:8px}}
-@media (max-width:370px){.word{font-size:15px}.sport button{padding:5px 8px;font-size:12px}}
+@media (max-width:480px){.sport .spi{width:16px;height:16px}.sport button{gap:5px;padding:6px 9px}.sport{flex:none}.brand{min-width:0;flex:1 1 auto}.brand-txt{min-width:0}.updated{overflow:hidden;text-overflow:ellipsis}.updated span:last-child{overflow:hidden;text-overflow:ellipsis}}
+@media (max-width:440px){.word{font-size:17px}.mark{width:30px;height:30px}.sport button{padding:6px 8px;gap:4px;font-size:12.5px}.acct-btn{width:34px;height:34px;font-size:13px}.bar{gap:8px}}
+@media (max-width:370px){.word{font-size:15px}.sport .sl{display:none}.sport button{padding:6px 10px}.sport .spi{width:20px;height:20px}}
 .acct-btn.in{background:linear-gradient(135deg,var(--blue),var(--violet));color:#fff;border:0}
 .acct-btn[aria-current=page]{outline:2px solid var(--tang);outline-offset:2px}
 .acct-grid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:22px;align-items:start}
@@ -637,8 +637,8 @@ h3{font-size:15px;font-weight:700}
         <span class="brand-txt"><span class="word">Matchday <b>Edge</b></span><span class="updated" id="updated"><span class="dot"></span><span>Loading…</span></span></span>
       </a>
       <div class="sport" role="group" aria-label="Sport">
-        <button id="sp-football" data-sport="football" aria-pressed="true"><img class="spi" src="img/icon-football.webp" alt="">Football</button>
-        <button id="sp-nba" data-sport="nba" aria-pressed="false"><img class="spi" src="img/icon-basketball.webp" alt="">NBA</button>
+        <button id="sp-football" data-sport="football" aria-pressed="true" aria-label="Football"><img class="spi" src="img/icon-football.webp" alt=""><span class="sl">Football</span></button>
+        <button id="sp-nba" data-sport="nba" aria-pressed="false" aria-label="NBA"><img class="spi" src="img/icon-basketball.webp" alt=""><span class="sl">NBA</span></button>
       </div>
       <a class="acct-btn" id="acctBtn" href="#account" aria-label="Your account"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg></a>
     </div>
