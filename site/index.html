@@ -87,7 +87,7 @@ a{color:var(--blue-2)}
 .tbadge.alt{background:var(--blue)}
 .tab-chal .tl-long,.tab-chal .tl-short{background:linear-gradient(90deg,var(--tang-2),#FF6F91);-webkit-background-clip:text;background-clip:text;color:transparent;font-weight:700}
 @media (max-width:640px){
-  .tabs{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:0;overflow:visible;padding-top:2px}
+  .tabs{display:grid;grid-template-columns:repeat(9,auto);justify-content:space-between;gap:0;overflow:visible;padding-top:2px}
   .tab{flex-direction:column;justify-content:center;align-items:center;padding:7px 0 9px;font-size:10.5px;font-weight:600;gap:4px;letter-spacing:0;color:var(--muted)}
   .tab .ti{display:block;position:relative;width:22px;height:22px}
   .tab .ti svg{width:22px;height:22px;display:block}
@@ -97,7 +97,7 @@ a{color:var(--blue-2)}
   .tab[aria-current=page]::after{left:22%;right:22%;height:3px}
   .tab-chal .tl-long,.tab-chal .tl-short{background:none;-webkit-background-clip:initial;background-clip:initial;color:inherit}
   .tab .badge{padding:0 4px;font-size:9.5px;line-height:14px}
-  .tab[aria-current=page]::after{left:6px;right:6px}
+  .tab[aria-current=page]::after{left:-3px;right:-3px}
   .tl-long{display:none}.tl-short{display:inline}
   .tab .badge{padding:0 5px;font-size:10px;line-height:15px}
 }
@@ -820,6 +820,7 @@ h3{font-size:15px;font-weight:700}
 .trk-other{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;background:var(--surface);border:1px dashed var(--line-2);border-radius:12px;padding:10px 14px;font-size:13px;color:var(--fg-2);text-align:left}
 .trk-other b{color:var(--blue-2);white-space:nowrap}
 .trk{display:grid;gap:10px}
+.trk-link{margin-bottom:14px}.ic-dot{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:var(--surface-3)}.ic-dot svg{width:18px;height:18px}
 .trk-card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:grid;gap:10px}
 .trk-hd{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;align-items:start}
 .trk-hd div{display:grid;gap:2px}.trk-hd b{font-size:14.5px}.trk-hd small{font-size:12px;color:var(--muted)}
@@ -881,12 +882,13 @@ const store = { get(k, d) { try { const v = localStorage.getItem("mde:" + k); re
 
 const S = { data: null, logos: {}, sport: store.get("sport", "football"), fmt: store.get("fmt", "frac"), slip: store.get("slip", []),
             stake: store.get("stake", 5), chalOdds: store.get("chalOdds", "over"), boxSide: {}, league: "all", win: "today", drawer: null, slipOpen: false };
-const VIEWS = [["live", "Live", "Live"], ["fixtures", "Fixtures", "Games"], ["acca", "Accas", "Accas"], ["bets", "Best Bets", "Bets"], ["friends", "Friends", "Friends"], ["tables", "Tables", "Tables"], ["news", "News", "News"], ["challenge", "£1K Challenge", "£1K"]];
+const VIEWS = [["live", "Live", "Live"], ["fixtures", "Fixtures", "Games"], ["acca", "Accas", "Accas"], ["bets", "Best Bets", "Tips"], ["mybets", "My Bets", "My Bets"], ["friends", "Friends", "Friends"], ["tables", "Tables", "Tables"], ["news", "News", "News"], ["challenge", "£1K Challenge", "£1K"]];
 const TAB_ICONS = (() => { const svg = p => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`; return {
   live: svg('<circle cx="12" cy="12" r="2.2"/><path d="M7.8 7.8a6 6 0 000 8.4M16.2 7.8a6 6 0 010 8.4M5 5a10 10 0 000 14M19 5a10 10 0 010 14"/>'),
   fixtures: svg('<rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/>'),
   acca: svg('<path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/>'),
   bets: svg('<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1"/>'),
+  mybets: svg('<path d="M4 7.5A1.5 1.5 0 015.5 6h13A1.5 1.5 0 0120 7.5V10a2 2 0 000 4v2.5a1.5 1.5 0 01-1.5 1.5h-13A1.5 1.5 0 014 16.5V14a2 2 0 000-4z"/><path d="M14.5 6v12" stroke-dasharray="1.6 2.2"/><path d="M7.5 10.5h4M7.5 13.5h3"/>'),
   friends: svg('<circle cx="9" cy="8.5" r="3.3"/><path d="M3 19.5c.9-3.3 3.3-5 6-5s5.1 1.7 6 5"/><path d="M16 5.6a3.2 3.2 0 010 6M17.6 14.6c1.6.7 2.8 2.3 3.4 4.9"/>'),
   tables: svg('<rect x="3.5" y="4" width="17" height="16" rx="2.5"/><path d="M3.5 9.5h17M3.5 14.8h17M9 9.5V20"/>'),
   news: svg('<path d="M5 4.5h11.5V19a1.5 1.5 0 001.5 1.5H6.5A1.5 1.5 0 015 19z"/><path d="M16.5 8.5H19a1 1 0 011 1V19a1.5 1.5 0 01-1.5 1.5M8 8.5h5.5M8 12h5.5M8 15.5h3.5"/>'),
@@ -1030,8 +1032,8 @@ function tiers(sport, win) {
 /* ---------- render: chrome ---------- */
 function renderChrome() {
   const v = view(), live = games(S.sport).filter(isLive).length;
-  $("#tabs").innerHTML = VIEWS.map(([id, label, short]) => { const n = id === "live" ? live : id === "acca" ? S.slip.length : 0;
-    return `<a class="tab" href="#${id}" ${v === id ? 'aria-current="page"' : ""}><span class="ti" aria-hidden="true">${TAB_ICONS[id] || ""}${n ? `<span class="tbadge ${id === "live" ? "" : "alt"}">${n}</span>` : ""}</span><span class="tl-long">${label}</span><span class="tl-short">${short}</span>${n ? `<span class="badge dk ${id === "live" ? "" : "alt"}">${n}</span>` : ""}</a>`; }).join("");
+  $("#tabs").innerHTML = VIEWS.map(([id, label, short]) => { const n = id === "live" ? live : id === "acca" ? S.slip.length : id === "mybets" ? liveTracked() : 0;
+    return `<a class="tab" href="#${id}" ${v === id ? 'aria-current="page"' : ""}><span class="ti" aria-hidden="true">${TAB_ICONS[id] || ""}${n ? `<span class="tbadge ${id === "acca" ? "alt" : ""}">${n}</span>` : ""}</span><span class="tl-long">${label}</span><span class="tl-short">${short}</span>${n ? `<span class="badge dk ${id === "acca" ? "alt" : ""}">${n}</span>` : ""}</a>`; }).join("");
   for (const b of document.querySelectorAll("[data-sport]")) b.setAttribute("aria-pressed", b.dataset.sport === S.sport);
   for (const b of document.querySelectorAll("[data-fmt]")) b.setAttribute("aria-pressed", b.dataset.fmt === S.fmt);
   const anyLive = S.data.football.some(isLive) || S.data.nba.some(isLive);
@@ -1091,7 +1093,7 @@ function viewLive() {
   const now = Date.now();
   const recent = all.filter(g => g.status.state === "post" && now - new Date(kick(g)) < 864e5 * 1.2).sort((a, b) => new Date(kick(b)) - new Date(kick(a))).slice(0, 12);
   const next = all.filter(isPre).slice(0, 6);
-  return `${promo()}${trackerHTML()}<div class="hd"><div><h1>${sp === "nba" ? "NBA" : "Football"} live</h1><p class="sub">Scores and in-play stats update every 10 seconds. Tap any game for full stats, the timeline and every market.</p></div>${(S.tracked || []).length ? "" : `<button class="btn ghost sm" data-import>+ Import a bet to track</button>`}</div>
+  return `${promo()}${(S.tracked || []).length ? `<a class="friendslink trk-link" href="#mybets"><span class="ic-dot"><span class="dot red"></span></span><span><b>Your tracked bets</b><small>${liveTracked() ? `${liveTracked()} in play now · ` : ""}follow them in My Bets</small></span><span aria-hidden="true">›</span></a>` : ""}<div class="hd"><div><h1>${sp === "nba" ? "NBA" : "Football"} live</h1><p class="sub">Scores and in-play stats update every 10 seconds. Tap any game for full stats, the timeline and every market.</p></div>${(S.tracked || []).length ? "" : `<button class="btn ghost sm" data-import>+ Import a bet to track</button>`}</div>
   ${live.length ? `<section class="section"><div class="live-grid">${live.map(g => liveCard(sp, g)).join("")}</div></section>`
     : `<div class="empty art"><img src="img/empty-live.webp" alt="" loading="lazy"><b>Nothing in play right now</b><span>${next[0] ? `Next up: <b>${esc(vs(sp, next[0]))}</b> at ${hm(kick(next[0]))} (${dayLabel(dayKey(kick(next[0])))[0].toLowerCase()}).` : "Check back when games kick off."}</span></div>`}
   ${next.length && live.length ? `<section class="section"><h2>Starting soon</h2>${fixtureBlocks(sp, next, false)}</section>` : ""}
@@ -1692,13 +1694,14 @@ function legValue(l) {
   const v = l.stat === "cards" ? (P.s.yellowCards || 0) + (P.s.redCards || 0) : (P.s[l.stat] || 0);
   return { v, g, on: onPitch(P), dnp: !P.starter && !P.subIn && g.status.state === "post" };
 }
-function trackerHTML() {
-  const all = S.tracked || [], sportOf = t => (t.legs[0] || {}).sport, T = all.filter(t => sportOf(t) === S.sport), other = all.length - T.length;
+const liveTracked = () => (S.tracked || []).filter(t => t.legs.some(l => { const g = findGame(l.sport, l.gid); return g && isLive(g); })).length;
+function trackerHTML(bare) {
+  const all = S.tracked || [], sportOf = t => (t.legs[0] || {}).sport, T = bare ? all : all.filter(t => sportOf(t) === S.sport), other = all.length - T.length;
   const otherName = S.sport === "nba" ? "football" : "NBA";
   const otherNote = other ? `<button class="trk-other" data-sport="${S.sport === "nba" ? "football" : "nba"}"><span>${other} ${otherName} bet${other > 1 ? "s" : ""} being tracked</span><b>View ›</b></button>` : "";
   if (!T.length) return otherNote ? `<section class="section">${otherNote}</section>` : "";
   for (const t of T) for (const l of t.legs) { const g = findGame(l.sport, l.gid); if (g && !isPre(g) && !(l.sport === "nba" ? g.box : g.lineups)) loadDetail(l.sport + ":" + l.gid); }
-  return `<section class="section"><div class="hd"><h2>Your tracked bets</h2><button class="btn ghost sm" data-import>+ Import a bet</button></div><div class="trk">${otherNote}${T.map(t => {
+  return `<section class="section">${bare ? "" : `<div class="hd"><h2>Your tracked bets</h2><button class="btn ghost sm" data-import>+ Import a bet</button></div>`}<div class="trk">${otherNote}${T.map(t => {
     let hit = 0, lost = false, started = false, voids = 0;
     const rows = t.legs.map(l => { const r = legValue(l), g = r.g, done = r.v != null && r.v >= l.target, post = g && g.status.state === "post";
       if (done) hit++; else if (r.dnp) voids++; else if (post) lost = true; if (g && !isPre(g)) started = true;
@@ -1908,15 +1911,14 @@ function viewAccount(mode = "account") {
     <div class="subtabs" role="tablist">${tabsF.map(([k, l]) => `<button role="tab" data-ftab="${k}" aria-selected="${ft === k}">${l}</button>`).join("")}</div>
     ${ft === "feed" ? feedView() : ft === "board" ? boardView() : friendsView()}`;
   }
-  const tab = ["mybets", "profile"].includes(S.acctTab) ? S.acctTab : "mybets";
-  const tabs = [["mybets", "My bets"], ["profile", "Profile & settings"]];
+
   return `<section class="prof"><label class="avwrap" title="Change profile photo">${avatarHTML(P, 66)}<span class="avcam" aria-hidden="true">📷</span><input type="file" id="avatarFile" accept="image/*" class="sr"></label>
     <div class="who"><b>${esc(P.display_name || "")}${badgesHTML(P)}</b>${planChip(P)}<span>${S.socialReady && P.friend_code ? `<span class="fc-row">Friend code <b class="fcode">${esc(P.friend_code)}</b><button class="fc-btn" data-copycode aria-label="Copy friend code">⧉ Copy</button><button class="fc-btn" data-invite aria-label="Share invite link">↗ Share</button></span>` : ""}member since ${new Date(P.created_at || S.user.created_at).toLocaleDateString("en-GB", { month: "short", year: "numeric" })}</span></div>
     <button class="btn ghost sm" data-signout>Sign out</button></section>
   ${m}
   <a class="friendslink" href="#friends">${avatarStack()}<span><b>Friends</b><small>${nFr ? `${nFr} friend${nFr > 1 ? "s" : ""} · feed, leaderboard and invites` : "Invite your friends and compare bets"}</small></span><span aria-hidden="true">›</span></a>
-  <div class="subtabs" role="tablist">${tabs.map(([k, l]) => `<button role="tab" data-acct="${k}" aria-selected="${tab === k}">${l}</button>`).join("")}</div>
-  ${tab === "mybets" ? myBetsView() : profileView()}`;
+  <a class="friendslink" href="#mybets"><span class="ic-dot">${ICON.chart}</span><span><b>My Bets</b><small>${S.bets.length ? `${S.bets.length} saved · ` : ""}tracked bets, results and profit</small></span><span aria-hidden="true">›</span></a>
+  ${profileView()}`;
 }
 /* ---------- social ---------- */
 const badgesHTML = (p, small) => { p = p || {}; const b = p.badges || [], sm = small ? " sm" : "", out = [];
@@ -2002,8 +2004,16 @@ function friendsView() {
     <h2 style="margin-top:6px">Your friends</h2>
     ${fr.length ? `<div class="mates">${fr.map(f => `<div class="mate"><button class="mate-main" data-mate="${f.id}">${avatarHTML(f, 44)}<span><b>${esc(f.display_name)}${badgesHTML(f, 1)}</b><small>Tap to see their bets and £1K challenge</small></span></button><button class="x" data-unfriend="${f.id}" aria-label="Remove ${esc(f.display_name)}">✕</button></div>`).join("")}</div>` : `<div class="empty">No friends yet. Share your link or code to get started.</div>`}</section>`;
 }
-function myBetsView() {
-  return `${statBlock()}<section class="section"><div class="hd"><h2>My bets</h2><button class="btn ghost sm" data-import>+ Import a player bet</button><div class="chips">${[["open", "Open"], ["settled", "Settled"], ["all", "All"]].map(([k, l]) => `<button class="chip" data-betfilter="${k}" aria-pressed="${S.betFilter === k}">${l}</button>`).join("")}</div></div>
+function viewMyBets() {
+  const T = (S.tracked || []).length;
+  const head = `<div class="hd"><div><h1>My Bets</h1><p class="sub">Bets you're tracking update live every 10 seconds. Saved bets keep your profit and loss.</p></div><button class="btn ghost sm" data-import>+ Import a bet</button></div>`;
+  const live = T ? `<section class="section"><h2>Tracking live</h2>${trackerHTML(true)}</section>` : "";
+  if (!sb || !S.user) return `${head}${live}${T ? "" : `<div class="empty art"><img src="img/empty-bets.webp" alt="" loading="lazy"><b>No bets yet</b><span>Import a player bet to follow it live, e.g. "Haaland to score @ 1.80".</span></div>`}
+    <a class="friendslink" href="#account"><span class="ic-dot">${ICON.chart}</span><span><b>Save your bets</b><small>Sign in free to save bets, mark them won or lost and see your profit.</small></span><span aria-hidden="true">›</span></a>`;
+  return `${head}${live}${myBetsView(true)}`;
+}
+function myBetsView(inTab) {
+  return `${statBlock()}<section class="section"><div class="hd"><h2>${inTab ? "Saved bets" : "My bets"}</h2>${inTab ? "" : `<button class="btn ghost sm" data-import>+ Import a player bet</button>`}<div class="chips">${[["open", "Open"], ["settled", "Settled"], ["all", "All"]].map(([k, l]) => `<button class="chip" data-betfilter="${k}" aria-pressed="${S.betFilter === k}">${l}</button>`).join("")}</div></div>
   <div style="display:grid;gap:8px">${betRows()}</div>
   <form class="addrow" id="addBet"><div class="field"><label for="ab-label">Add a bet you placed</label><input id="ab-label" placeholder="e.g. Liverpool to win" required></div><div class="field" style="flex:0 1 110px"><label for="ab-odds">Odds</label><input id="ab-odds" placeholder="5/2 or 3.5" required></div><div class="field" style="flex:0 1 100px"><label for="ab-stake">Stake £</label><input id="ab-stake" type="number" inputmode="decimal" min="0" step="0.5" value="${S.stake}" required></div><div class="field" style="flex:0 0 auto;align-self:end"><button class="btn" type="submit">Add</button></div></form></section>`;
 }
@@ -2154,17 +2164,17 @@ function render() {
   if (!S.data) return;
   renderChrome();
   const v = view();
-  $("#main").innerHTML = v === "friends" ? viewAccount("friends") : v === "account" ? viewAccount() : v === "tables" ? viewTables() : v === "news" ? viewNews() : v === "fixtures" ? viewFixtures() : v === "bets" ? viewBets() : v === "acca" ? viewAcca() : v === "challenge" ? viewChallenge() : viewLive();
+  $("#main").innerHTML = v === "friends" ? viewAccount("friends") : v === "account" ? viewAccount() : v === "tables" ? viewTables() : v === "news" ? viewNews() : v === "fixtures" ? viewFixtures() : v === "bets" ? viewBets() : v === "mybets" ? viewMyBets() : v === "acca" ? viewAcca() : v === "challenge" ? viewChallenge() : viewLive();
   const norail = v === "account" || v === "friends"; document.querySelector(".page").classList.toggle("norail", norail);
   $("#rail").innerHTML = norail ? "" : slipHTML();
-  const L = $("#layer"), prevDr = $(".drawer"), keepTop = prevDr && S.drawer && prevDr.dataset.key === S.drawer ? prevDr.scrollTop : 0;
+  const L = $("#layer"), prevDr = $(".drawer"), dkey = S.drawer || (S.slipOpen ? "slip" : ""), same = !!(prevDr && dkey && prevDr.dataset.key === dkey), keepTop = same ? prevDr.scrollTop : 0;
   if (S.drawer) { const [sp, id] = S.drawer.split(":"); const g = findGame(sp, id); L.innerHTML = g ? drawerHTML(sp, g) : ""; if (!g) S.drawer = null; }
   else if (S.slipOpen) L.innerHTML = slipDrawer();
   else L.innerHTML = "";
   if (S.injOpen) L.insertAdjacentHTML("beforeend", injuryCard(S.injOpen));
   if (S.mateOpen && S.user) L.insertAdjacentHTML("beforeend", mateSheet(S.mateOpen));
   if (S.importOpen) { const ae = document.activeElement, keep = ae && ae.id === "imptext" ? [ae.selectionStart, ae.selectionEnd] : null; L.insertAdjacentHTML("beforeend", importSheet()); if (keep) { const t = $("#imptext"); t.focus(); t.setSelectionRange(keep[0], keep[1]); } }
-  const dr = $(".drawer"); if (dr && S.drawer) { dr.dataset.key = S.drawer; if (keepTop) dr.scrollTop = keepTop; dr.style.animation = keepTop ? "none" : ""; }
+  const dr = $(".drawer"); if (dr && dkey) { dr.dataset.key = dkey; if (same) { dr.style.animation = "none"; dr.scrollTop = keepTop; } }
   document.body.style.overflow = (S.drawer || S.slipOpen) ? "hidden" : "";
 }
 
@@ -2221,7 +2231,7 @@ document.addEventListener("click", e => {
       const gs = [...new Set(r.legs.map(l => l.gid))].map(id => r.legs.find(l => l.gid === id)).map(l => findGame(l.sport, l.gid)).filter(Boolean);
       sb.from("bets").insert({ label: text, match: gs.map(g => vs(r.legs[0].sport, g)).join(", "), legs: r.legs.map(l => ({ ...l, type: "prop" })), odds_dec: Math.round(dec * 1000) / 1000, stake, sport: r.legs[0].sport, kickoff: gs.map(kick).sort()[0] }).select().single().then(x => { if (x.data) { S.bets.unshift(x.data); loadSocial(); } });
     }
-    S.importOpen = false; S.importText = ""; if (location.hash !== "#live") location.hash = "live"; render(); toast("Tracking your bet live");
+    S.importOpen = false; S.importText = ""; if (location.hash !== "#mybets") location.hash = "mybets"; render(); toast("Tracking your bet live");
   }
   else if (d.chalodds2) { S.chalOdds = d.chalodds2; store.set("chalOdds", S.chalOdds); render(); }
   else if (d.accawin) { S.accaWin = d.accawin; render(); }
