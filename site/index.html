@@ -871,7 +871,7 @@ h3{font-size:15px;font-weight:700}
   <span id="srcnote">Live scores and stats: ESPN feed, every 10s · Predictions refresh every 20 min · Reference prices: DraftKings feed converted to UK odds</span>
 </footer></div>
 <button class="fab" id="fab" hidden><span>Bet slip</span><span class="c" id="fabc">0</span><span id="fabo"></span></button>
-<div id="layer"></div>
+<div id="layer"></div><div id="implayer"></div>
 
 <script>
 (() => {
@@ -1668,10 +1668,24 @@ function findPlayer(idx, q) {
 }
 function parseBet(text, idx) {
   const legs = [], missing = [], om = text.match(/@\s*([0-9]+(?:\.[0-9]+)?(?:\s*\/\s*[0-9]+)?|evs|evens)/i), dec = om ? parseOdds(om[1]) : null;
+  const LEG = l => l.match(/^(.*?)\s+(?:to\s+|-\s+|:\s*)(.+)$/i) || l.match(/^(.*?)\s+((?:over\s+)?\d.*)$/i);
+  // "A 20+ points & B 6+ assists" is two legs; "A & B to score 25+ each" shares one stat
+  const groups = [];
   for (let line of text.replace(/@.*$/gm, "").split(/\n|;/)) {
     line = line.trim(); if (!line) continue;
-    let m = line.match(/^(.*?)\s+(?:to\s+|-\s+|:\s*)(.+)$/i) || line.match(/^(.*?)\s+((?:over\s+)?\d.*)$/i); if (!m) continue;
-    const names = m[1].split(/\s*(?:&|,|\band\b|\+)\s*/i).filter(Boolean), rest = m[2];
+    const targets = (line.match(/\d+(?:\.\d+)?\s*\+|over\s*\d/gi) || []).length;
+    if (targets < 2) { const m = LEG(line); if (m) groups.push({ names: m[1].split(/\s*(?:&|,|\band\b|\+)\s*/i), rest: m[2] }); continue; }
+    const statOnly = x => Object.values(PROPS).some(L => L.some(([re]) => re.test(x)));
+    let pend = [];
+    for (const part of line.split(/\s*(?:&|,|\band\b|\s\+\s)\s*/i).map(x => x.trim()).filter(Boolean)) {
+      const m = LEG(part), last = groups[groups.length - 1];
+      if (m) { groups.push({ names: [...pend, m[1]], rest: m[2] }); pend = []; }
+      else if (last && !pend.length && statOnly(part)) last.rest += ", " + part;   // "40+ points, rebounds and assists"
+      else pend.push(part);
+    }
+  }
+  for (const { names: nms, rest } of groups) {
+    const names = nms.map(x => x.trim()).filter(Boolean);
     const tgt = (rest.match(/(\d+(?:\.\d+)?)\s*\+/) || [])[1], ov = (rest.match(/over\s*(\d+(?:\.\d+)?)/i) || [])[1];
     for (const nm of names) {
       const p = findPlayer(idx, nm); if (!p) { missing.push(nm); continue; }
@@ -1712,14 +1726,27 @@ function trackerHTML(bare) {
     const overall = lost ? `<span class="st lost">Lost</span>` : hit + voids === t.legs.length && hit ? `<span class="st won">Won ✓${voids ? ` (${voids} void)` : ""}</span>` : voids === t.legs.length ? `<span class="st void">Void</span>` : lost ? `<span class="st lost">Lost</span>` : started ? `<span class="st">${hit} of ${t.legs.length} landed</span>` : `<span class="st">Not started</span>`;
     return `<article class="trk-card"><div class="trk-hd"><div><b>${t.legs.length > 1 ? `${t.legs.length}-leg player bet` : esc(t.text)}</b><small>${t.dec ? odds(t.dec) + " · " : ""}${t.stake ? `£${t.stake} returns ${money(t.stake * (t.dec || 1))}` : ""}</small></div>${overall}<button class="x" data-untrack="${t.id}" aria-label="Stop tracking">✕</button></div>${rows}</article>`; }).join("")}</div></section>`;
 }
+function impParse() { const { idx, loading } = playerIndex(), txt = S.importText || ""; return { loading, r: txt.trim() ? parseBet(txt, idx) : { legs: [], missing: [], dec: null } }; }
+function impDyn() {
+  const { loading, r } = impParse();
+  return `${loading ? `<div class="loadbox" style="padding:10px">Loading today's players…</div>` : ""}
+    ${r.legs.length || r.missing.length ? `<div class="imp-legs">${r.legs.map(l => { const g = findGame(l.sport, l.gid); return `<div class="imp-leg ok"><span>✓</span><div><b>${esc(l.name)}</b> · ${l.target}+ ${esc(l.label)}<small>${esc(l.team)} · ${g ? esc(vs(l.sport, g)) + " · " + whenLabel(kick(g)) : ""}</small></div></div>`; }).join("")}${r.missing.map(n => `<div class="imp-leg bad"><span>✗</span><div><b>${esc(n)}</b><small>Not found in today's or tomorrow's games. Check the spelling.</small></div></div>`).join("")}</div>` : ""}`;
+}
+// update only the parts that change, so the text box (and the phone keyboard) is never rebuilt
+function impRefresh() {
+  const box = $("#impdyn"); if (!box) return;
+  const html = impDyn(); if (box.dataset.h !== html) { box.innerHTML = html; box.dataset.h = html; }
+  const { r } = impParse(), o = $("#impodds"), go = $("[data-impgo]");
+  if (o && !S.impOddsTyped && document.activeElement !== o) o.value = r.dec ? odds(r.dec) : "";
+  if (go) go.disabled = !r.legs.length;
+}
 function importSheet() {
-  const { idx, loading } = playerIndex(), txt = S.importText || "", r = txt.trim() ? parseBet(txt, idx) : { legs: [], missing: [], dec: null };
+  const { r } = impParse(), txt = S.importText || "";
   return `<div class="scrim top" data-importclose></div><div class="ijsheet imp" role="dialog" aria-modal="true" aria-label="Import a bet"><button class="close sm ij-x" data-importclose aria-label="Close">✕</button>
     <div><h2>Import a bet</h2><p class="sub" style="margin:4px 0 0">Paste or type a player bet and we'll track it live.</p></div>
     <div class="field"><label for="imptext">Your bet</label><textarea id="imptext" rows="3" placeholder="e.g. Damian Lillard & Tyrese Maxey to score 25+ points each @ 3.00">${esc(txt)}</textarea></div>
     <div class="imp-ex">Examples: <button class="linkbtn" data-impex="Nicolas Jackson 2+ shots on target @ 2.50">Jackson 2+ shots on target</button> · <button class="linkbtn" data-impex="Luka Doncic 8+ assists @ 1.90">Doncic 8+ assists</button> · <button class="linkbtn" data-impex="Haaland to score @ 1.80">Haaland to score</button></div>
-    ${loading ? `<div class="loadbox" style="padding:10px">Loading today's players…</div>` : ""}
-    ${r.legs.length || r.missing.length ? `<div class="imp-legs">${r.legs.map(l => { const g = findGame(l.sport, l.gid); return `<div class="imp-leg ok"><span>✓</span><div><b>${esc(l.name)}</b> · ${l.target}+ ${esc(l.label)}<small>${esc(l.team)} · ${g ? esc(vs(l.sport, g)) + " · " + whenLabel(kick(g)) : ""}</small></div></div>`; }).join("")}${r.missing.map(n => `<div class="imp-leg bad"><span>✗</span><div><b>${esc(n)}</b><small>Not found in today's or tomorrow's games. Check the spelling.</small></div></div>`).join("")}</div>` : ""}
+    <div id="impdyn">${impDyn()}</div>
     <div class="addrow"><div class="field" style="flex:1 1 100px"><label for="impodds">Odds</label><input id="impodds" value="${r.dec ? odds(r.dec) : ""}" placeholder="3.00 or 2/1"></div><div class="field" style="flex:1 1 100px"><label for="impstake">Stake £</label><input id="impstake" type="number" inputmode="decimal" min="0" step="0.5" value="${S.stake}"></div></div>
     ${S.user ? `<label class="optrow"><input type="checkbox" id="impsave" checked> Also save to My Bets</label>` : ""}
     <button class="btn" data-impgo ${r.legs.length ? "" : "disabled"}>Track this bet</button></div>`;
@@ -2173,7 +2200,10 @@ function render() {
   else L.innerHTML = "";
   if (S.injOpen) L.insertAdjacentHTML("beforeend", injuryCard(S.injOpen));
   if (S.mateOpen && S.user) L.insertAdjacentHTML("beforeend", mateSheet(S.mateOpen));
-  if (S.importOpen) { const ae = document.activeElement, keep = ae && ae.id === "imptext" ? [ae.selectionStart, ae.selectionEnd] : null; L.insertAdjacentHTML("beforeend", importSheet()); if (keep) { const t = $("#imptext"); t.focus(); t.setSelectionRange(keep[0], keep[1]); } }
+  const IL = $("#implayer");
+  if (!S.importOpen) { if (IL.firstChild) IL.innerHTML = ""; }
+  else if (!$("#imptext")) { S.impOddsTyped = false; IL.innerHTML = importSheet(); }
+  else impRefresh();
   const dr = $(".drawer"); if (dr && dkey) { dr.dataset.key = dkey; if (same) { dr.style.animation = "none"; dr.scrollTop = keepTop; } }
   document.body.style.overflow = (S.drawer || S.slipOpen) ? "hidden" : "";
 }
@@ -2220,7 +2250,7 @@ document.addEventListener("click", e => {
   else if (d.rung) { S.rungSel = +d.rung; render(); }
   else if (d.inj) { S.injOpen = d.inj; render(); }
   else if (d.import !== undefined) { S.importOpen = true; S.slipOpen = false; render(); setTimeout(() => { const t = $("#imptext"); t && t.focus(); }, 50); }
-  else if (d.impex) { S.importText = d.impex; render(); }
+  else if (d.impex) { S.importText = d.impex; const t = $("#imptext"); if (t) t.value = d.impex; S.impOddsTyped = false; impRefresh(); }
   else if (d.untrack) { S.tracked = S.tracked.filter(t => t.id !== d.untrack); store.set("tracked", S.tracked); render(); }
   else if (d.impgo !== undefined) {
     const { idx } = playerIndex(), r = parseBet(S.importText || "", idx); if (!r.legs.length) return;
@@ -2256,7 +2286,7 @@ document.addEventListener("input", e => {
   if (e.target.id === "stake") { S.stake = Math.max(0, +e.target.value || 0); save(); const c = slipCalc(); document.querySelectorAll("#ret").forEach(r => r.textContent = money(S.stake * c.dec)); }
 });
 document.addEventListener("click", e => { if (e.target.closest("[data-injclose]")) { S.injOpen = null; render(); } if (e.target.closest("[data-importclose]")) { S.importOpen = false; render(); } });
-document.addEventListener("input", e => { if (e.target.id === "imptext") { S.importText = e.target.value; clearTimeout(S._impT); S._impT = setTimeout(render, 350); } });
+document.addEventListener("input", e => { if (e.target.id === "imptext") { S.importText = e.target.value; clearTimeout(S._impT); S._impT = setTimeout(impRefresh, 350); } if (e.target.id === "impodds") S.impOddsTyped = !!e.target.value.trim(); });
 document.addEventListener("keydown", e => { if (e.key === "Escape" && S.injOpen) { S.injOpen = null; render(); return; } if (e.key === "Escape" && (S.drawer || S.slipOpen)) { S.drawer = null; S.slipOpen = false; render(); } });
 addEventListener("hashchange", () => { if (view() === "friends" && S.user) loadSocial(); S.drawer = null; S.slipOpen = false; render(); scrollTo(0, 0); });
 setInterval(() => S.data && renderChrome(), 60000);
