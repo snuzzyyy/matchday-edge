@@ -606,6 +606,8 @@ h3{font-size:15px;font-weight:700}
 .qs{padding:7px 10px;border-radius:8px;background:var(--surface-2);border:1px solid var(--line);font-weight:700;font-size:13px;color:var(--fg-2)}
 .qs[aria-pressed=true]{background:var(--blue);border-color:var(--blue);color:#fff}
 .place{display:grid;gap:6px}
+.place-hd{display:flex;justify-content:space-between;align-items:center}
+.copysel{font-size:12px;font-weight:700;color:var(--blue-2);padding:4px 0}
 .place small{font-size:11px;color:var(--muted);font-weight:700;letter-spacing:.06em;text-transform:uppercase}
 .books2{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .books2 a{display:flex;justify-content:center;padding:9px 6px;border-radius:9px;background:var(--surface-3);color:var(--fg);font-weight:700;font-size:13px;text-decoration:none}
@@ -1038,7 +1040,8 @@ function slipHTML(mode = "rail") {
       <input class="oddin ${l.custom ? "mine" : ""}" data-legodds="${esc(l.id)}" value="${odds(l.dec)}" autocomplete="off" spellcheck="false" aria-label="Odds for ${esc(l.label)}. Type your bookie's price">
       <button class="x" data-rm="${esc(l.id)}" aria-label="Remove ${esc(l.label)}">✕</button></div>`).join("");
   const stakes = [1, 5, 10, 20].map(v => `<button class="qs" data-qstake="${v}" aria-pressed="${+S.stake === v}">£${v}</button>`).join("");
-  const books = [["Sky Bet", "https://m.skybet.com/football"], ["Paddy Power", "https://www.paddypower.com/football"], ["William Hill", "https://sports.williamhill.com/betting/en-gb/football"], ["Betfair", "https://www.betfair.com/sport/football"]].map(([t, u]) => `<a href="${u}" target="_blank" rel="noopener">${t} ↗</a>`).join("");
+  const sports = new Set(S.slip.map(l => l.sport)), bb = sports.size === 1 && sports.has("nba");
+  const books = [["Sky Bet", `https://m.skybet.com/${bb ? "basketball" : "football"}`], ["Paddy Power", `https://www.paddypower.com/${bb ? "basketball" : "football"}`], ["William Hill", `https://sports.williamhill.com/betting/en-gb/${bb ? "basketball" : "football"}`], ["Betfair", `https://www.betfair.com/sport/${bb ? "basketball" : "football"}`]].map(([t, u]) => `<a href="${u}" target="_blank" rel="noopener">${t} ↗</a>`).join("");
   return `<div class="slip ${mode}">${head}
   <div class="slip-legs">${legs}<p class="oddhint2">Price different at your bookie? Tap it and type theirs.</p></div>
   <div class="slip-ft">
@@ -1046,7 +1049,7 @@ function slipHTML(mode = "rail") {
     <div class="meter"><i style="width:${Math.max(c.p * 100, 2)}%"></i></div>
     <div class="stake2"><label for="stake">Stake</label><span class="in">£<input id="stake" type="number" inputmode="decimal" min="0" step="0.5" value="${S.stake}"></span><div class="qss">${stakes}</div></div>
     ${c.sameMatch ? `<div class="warn">Two legs are from the same game. Place this as a Bet Builder at Sky Bet or Paddy Power.</div>` : ""}
-    <div class="place"><small>Place it at</small><div class="books2">${books}</div></div>
+    <div class="place"><div class="place-hd"><small>Place it at</small><button class="copysel" data-copyslip>Copy selections</button></div><div class="books2">${books}</div></div>
     <div class="ft-links"><button class="linkbtn" data-savebet>${S.user ? "Save to My Bets" : "Sign in to save this bet"}</button>${fmt}</div>
   </div></div>`;
 }
@@ -1539,6 +1542,12 @@ document.addEventListener("click", e => {
   else if (d.close !== undefined) { S.drawer = null; S.slipOpen = false; render(); }
   else if (d.rm) { S.slip = S.slip.filter(l => l.id !== d.rm); save(); render(); }
   else if (d.clear !== undefined) { S.slip = []; save(); render(); }
+  else if (d.copyslip !== undefined) {
+    const c = slipCalc(), type = S.slip.length === 1 ? "Single" : S.slip.length === 2 ? "Double" : S.slip.length === 3 ? "Treble" : S.slip.length + "-fold acca";
+    const txt = S.slip.map((l, i) => `${i + 1}. ${l.label} @ ${odds(l.dec)}\n   ${l.match}, ${whenLabel(l.kick)}`).join("\n") + `\n\n${type} @ ${odds(c.dec)} · £${S.stake} stake returns ${money(S.stake * c.dec)}`;
+    const done = () => toast("Selections copied. Paste them anywhere"), fallback = () => { const ta = document.createElement("textarea"); ta.value = txt; ta.style.position = "fixed"; ta.style.opacity = "0"; document.body.appendChild(ta); ta.select(); try { document.execCommand("copy"); done(); } catch { toast("Couldn't copy on this device"); } ta.remove(); };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(done, fallback); else fallback();
+  }
   else if (d.qstake) { S.stake = +d.qstake; save(); render(); }
   else if (d.league) { S.league = d.league; render(); }
   else if (d.win) { S.win = d.win; render(); }
