@@ -717,6 +717,9 @@ h3{font-size:15px;font-weight:700}
 .avwrap:focus-within{outline:2px solid var(--blue-2);outline-offset:3px}
 .avcam{position:absolute;right:-2px;bottom:-2px;width:26px;height:26px;border-radius:50%;background:var(--surface-3);border:2px solid var(--surface);display:grid;place-items:center;font-size:12px}
 .fcode{font-family:var(--display);letter-spacing:.12em;color:var(--tang-2)}
+.fc-row{display:flex!important;align-items:center;gap:8px;flex-wrap:wrap;margin:2px 0}
+.fc-btn{font-size:12px;font-weight:700;color:var(--fg)!important;background:var(--surface-3);border:1px solid var(--line-2);border-radius:8px;padding:5px 9px;line-height:1}
+.fc-btn:hover{background:var(--line-2)}
 .fcode.big{font-size:30px;font-weight:800;display:block;line-height:1.1}
 .subtabs{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid var(--line)}
 .subtabs::-webkit-scrollbar{display:none}
@@ -1882,7 +1885,7 @@ function viewAccount(mode = "account") {
   const tab = ["mybets", "profile"].includes(S.acctTab) ? S.acctTab : "mybets";
   const tabs = [["mybets", "My bets"], ["profile", "Profile & settings"]];
   return `<section class="prof"><label class="avwrap" title="Change profile photo">${avatarHTML(P, 66)}<span class="avcam" aria-hidden="true">📷</span><input type="file" id="avatarFile" accept="image/*" class="sr"></label>
-    <div class="who"><b>${esc(P.display_name || "")}${badgesHTML(P)}</b>${planChip(P)}<span>${S.socialReady ? `Friend code <b class="fcode">${esc(P.friend_code || "")}</b> · ` : ""}member since ${new Date(P.created_at || S.user.created_at).toLocaleDateString("en-GB", { month: "short", year: "numeric" })}</span></div>
+    <div class="who"><b>${esc(P.display_name || "")}${badgesHTML(P)}</b>${planChip(P)}<span>${S.socialReady && P.friend_code ? `<span class="fc-row">Friend code <b class="fcode">${esc(P.friend_code)}</b><button class="fc-btn" data-copycode aria-label="Copy friend code">⧉ Copy</button><button class="fc-btn" data-invite aria-label="Share invite link">↗ Share</button></span>` : ""}member since ${new Date(P.created_at || S.user.created_at).toLocaleDateString("en-GB", { month: "short", year: "numeric" })}</span></div>
     <button class="btn ghost sm" data-signout>Sign out</button></section>
   ${m}
   <a class="friendslink" href="#friends">${avatarStack()}<span><b>Friends</b><small>${nFr ? `${nFr} friend${nFr > 1 ? "s" : ""} · feed, leaderboard and invites` : "Invite your friends and compare bets"}</small></span><span aria-hidden="true">›</span></a>
@@ -1968,7 +1971,7 @@ function boardView() {
 }
 function friendsView() {
   const P = S.profile || {}, fr = Object.values(S.friends || {});
-  return `<section class="section"><div class="invite"><div><b>Your friend code</b><span class="fcode big">${esc(P.friend_code || "…")}</span><span>Friends can type this in, or you can send them your invite link.</span></div><button class="btn sm" data-invite>Share invite link</button></div>
+  return `<section class="section"><div class="invite"><div><b>Your friend code</b><span class="fc-row"><span class="fcode big">${esc(P.friend_code || "…")}</span><button class="fc-btn" data-copycode aria-label="Copy friend code">⧉ Copy</button></span><span>Friends can type this in, or you can send them your invite link.</span></div><button class="btn sm" data-invite>Share invite link</button></div>
     <form class="addrow" id="addFriend"><div class="field"><label for="fcode">Add a friend by their code</label><input id="fcode" maxlength="6" placeholder="e.g. 7F3A9C" autocomplete="off" style="text-transform:uppercase"></div><div class="field" style="flex:0 0 auto;align-self:end"><button class="btn" type="submit">Add friend</button></div></form>
     <h2 style="margin-top:6px">Your friends</h2>
     ${fr.length ? `<div class="mates">${fr.map(f => `<div class="mate"><button class="mate-main" data-mate="${f.id}">${avatarHTML(f, 44)}<span><b>${esc(f.display_name)}${badgesHTML(f, 1)}</b><small>Tap to see their bets and £1K challenge</small></span></button><button class="x" data-unfriend="${f.id}" aria-label="Remove ${esc(f.display_name)}">✕</button></div>`).join("")}</div>` : `<div class="empty">No friends yet. Share your link or code to get started.</div>`}</section>`;
@@ -2072,6 +2075,7 @@ document.addEventListener("click", async e => {
   else if (d.mateclose !== undefined) { S.mateOpen = null; render(); }
   else if (d.unfriend) { const nm = (S.friends[d.unfriend] || {}).display_name; const r = await sb.rpc("remove_friend", { other: d.unfriend }); if (r.error) toast("Couldn't remove them"); else { toast(`Removed ${nm || "mate"}`); loadSocial(); } }
   else if (d.noavatar !== undefined) { await saveProfile({ avatar_url: null }); sb.storage.from("avatars").remove([`${S.user.id}/avatar.webp`, `${S.user.id}/avatar.jpg`]); }
+  else if (d.copycode !== undefined) { const c = (S.profile || {}).friend_code || ""; try { await navigator.clipboard.writeText(c); toast("Friend code " + c + " copied"); } catch { const ta = document.createElement("textarea"); ta.value = c; document.body.appendChild(ta); ta.select(); try { document.execCommand("copy"); toast("Friend code " + c + " copied"); } catch { toast("Your code is " + c); } ta.remove(); } }
   else if (d.invite !== undefined) {
     const link = location.origin + location.pathname + "?invite=" + encodeURIComponent((S.profile || {}).friend_code || ""), text = `Join me on Matchday Edge: live scores, best bets and a friends' leaderboard. ${link}`;
     if (navigator.share) { try { await navigator.share({ title: "Matchday Edge", text, url: link }); return; } catch {} }
