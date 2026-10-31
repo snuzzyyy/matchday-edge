@@ -710,6 +710,51 @@ h3{font-size:15px;font-weight:700}
 .ij-grid b{font-size:14px}
 .ij-days{font-size:12px;color:var(--amber);font-weight:600}
 .ij-note p{margin:4px 0 0;font-size:13.5px;line-height:1.55;color:var(--fg-2)}
+/* social */
+.av{border-radius:50%;object-fit:cover;flex:none;display:inline-grid;place-items:center;background:linear-gradient(135deg,var(--blue),var(--violet));color:#fff;font-family:var(--display);font-weight:800}
+.acct-btn img{width:100%;height:100%;border-radius:50%;object-fit:cover}
+.avwrap{position:relative;cursor:pointer;flex:none;border-radius:50%}
+.avwrap:focus-within{outline:2px solid var(--blue-2);outline-offset:3px}
+.avcam{position:absolute;right:-2px;bottom:-2px;width:26px;height:26px;border-radius:50%;background:var(--surface-3);border:2px solid var(--surface);display:grid;place-items:center;font-size:12px}
+.fcode{font-family:var(--display);letter-spacing:.12em;color:var(--tang-2)}
+.fcode.big{font-size:30px;font-weight:800;display:block;line-height:1.1}
+.subtabs{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid var(--line)}
+.subtabs::-webkit-scrollbar{display:none}
+.subtabs button{padding:10px 12px 12px;font-weight:700;font-size:13.5px;color:var(--muted);white-space:nowrap;border-bottom:3px solid transparent;margin-bottom:-1px}
+.subtabs button[aria-selected=true]{color:var(--fg);border-bottom-color:var(--tang)}
+.invite{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;background:radial-gradient(100% 160% at 100% 0%,rgba(255,122,47,.18),transparent 60%),var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+.invite div{display:grid;gap:2px;min-width:0}.invite span{font-size:12.5px;color:var(--muted)}
+.feed{display:grid;gap:10px}
+.fi{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
+.feed.compact .fi{grid-template-columns:minmax(0,1fr);padding:10px 12px}
+.fi.won{box-shadow:inset 3px 0 0 var(--win)}.fi.lost{box-shadow:inset 3px 0 0 var(--loss)}
+.fi-av{padding:0;border-radius:50%;align-self:start}
+.fi-body{display:grid;gap:6px;min-width:0}
+.fi-top{display:flex;justify-content:space-between;gap:10px;font-size:14px}
+.fi-top time{font-size:12px;color:var(--muted);white-space:nowrap}
+.fi-top .pos,.pos{color:var(--win)}.fi-top .neg,.neg{color:var(--loss)}
+.fi-bet{display:flex;justify-content:space-between;gap:10px;background:var(--bg-2);border-radius:9px;padding:8px 10px;font-weight:600;font-size:13.5px}
+.fi-bet b{font-family:var(--display);font-size:17px;white-space:nowrap}
+.fi-meta{font-size:12px;color:var(--muted)}
+.fi-acts{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.rx{display:flex;gap:6px;flex-wrap:wrap}
+.rxb{display:inline-flex;align-items:center;gap:4px;padding:5px 9px;border-radius:999px;background:var(--surface-2);border:1px solid var(--line);font-size:14px}
+.rxb span{font-size:12px;font-weight:700;color:var(--fg-2)}
+.rxb.on{background:rgba(255,122,47,.16);border-color:var(--tang)}
+.btn.tail{background:var(--surface-3);color:var(--fg)}
+.lbl{display:grid;gap:8px}
+.lbr{display:grid;grid-template-columns:28px auto minmax(0,1fr) auto;gap:12px;align-items:center;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 14px}
+.lbr.me{border-color:var(--blue);background:rgba(61,123,255,.07)}
+.lbn{font-family:var(--display);font-weight:800;font-size:20px;color:var(--muted);text-align:center}
+.lbn.top1{color:#FFC23D}.lbn.top2{color:#C8D0E0}.lbn.top3{color:#E0915A}
+.lbw{display:grid;min-width:0}.lbw b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.lbw small{font-size:12px;color:var(--muted)}
+.lbp{text-align:right;display:grid;font-family:var(--display);font-size:20px;font-weight:700}.lbp small{font-family:var(--body);font-size:11px;color:var(--muted);font-weight:600}
+.optrow{display:flex;gap:10px;align-items:center;font-size:13.5px;color:var(--fg-2)}
+.optrow input{width:18px;height:18px;accent-color:var(--blue)}
+.mates{display:grid;gap:8px}
+.mate{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:6px 10px 6px 6px}
+.mate-main{display:flex;align-items:center;gap:12px;text-align:left;padding:6px;min-width:0}
+.mate-main span{display:grid;min-width:0}.mate-main small{font-size:12px;color:var(--muted)}
 .fmt-row{display:flex;justify-content:space-between;align-items:center;font-size:12.5px;color:var(--muted)}
 .fmt-big button{display:grid;gap:1px;padding:6px 12px;text-align:center;line-height:1.15}
 .fmt-big button b{font-size:12.5px}
@@ -899,7 +944,7 @@ function renderChrome() {
   const anyLive = S.data.football.some(isLive) || S.data.nba.some(isLive);
   $("#updated").innerHTML = S.liveFail >= 2 ? `<span class="dot" style="background:var(--amber);animation:none"></span><span>Reconnecting… last ${S.liveAt ? new Date(S.liveAt).toLocaleTimeString("en-GB", { timeZone: TZ }) : hm(S.data.updated)}</span>` : S.liveAt ? `<span class="dot ${anyLive ? "red" : ""}"></span><span>${anyLive ? "Live" : "Up to date"} · ${new Date(S.liveAt).toLocaleTimeString("en-GB", { timeZone: TZ })}</span>` : `<span class="dot"></span><span>Updated ${hm(S.data.updated)}</span>`;
   $("#updated").title = "Live scores refresh every 10 seconds. Predictions refresh every 20 minutes.";
-  const ab = $("#acctBtn"); if (ab) { ab.classList.toggle("in", !!S.user); ab.innerHTML = S.user ? esc(initials()) : ab.dataset.icon || (ab.dataset.icon = ab.innerHTML); if (!S.user && ab.dataset.icon) ab.innerHTML = ab.dataset.icon; if (v === "account") ab.setAttribute("aria-current", "page"); else ab.removeAttribute("aria-current"); }
+  const ab = $("#acctBtn"); if (ab) { ab.classList.toggle("in", !!S.user); ab.innerHTML = S.user ? (S.profile && S.profile.avatar_url ? `<img src="${esc(S.profile.avatar_url)}" alt="">` : esc(initials())) : ab.dataset.icon || (ab.dataset.icon = ab.innerHTML); if (!S.user && ab.dataset.icon) ab.innerHTML = ab.dataset.icon; if (v === "account") ab.setAttribute("aria-current", "page"); else ab.removeAttribute("aria-current"); }
   const fab = $("#fab"); fab.hidden = false; $("#fabc").textContent = S.slip.length;
   $("#fabo").textContent = S.slip.length ? odds(slipCalc().dec) : "";
 }
@@ -1269,7 +1314,7 @@ function chalLogForm(C) {
 }
 function chalSettle(res, bet, match, dec) {
   const C = JSON.parse(JSON.stringify(chalNow())), stake = C.bank;
-  const entry = { date: new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short" }), bet, match: match || "", odds: S.fmt === "dec" ? dec.toFixed(2) : frac(dec), stake, result: res, ret: res === "W" ? Math.round(stake * dec * 100) / 100 : 0 };
+  const entry = { at: new Date().toISOString(), date: new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short" }), bet, match: match || "", odds: S.fmt === "dec" ? dec.toFixed(2) : frac(dec), stake, result: res, ret: res === "W" ? Math.round(stake * dec * 100) / 100 : 0 };
   C.history.unshift(entry); C.active = null; S.rungSel = null;
   if (res === "W") { C.bank = entry.ret; C.rung += 1; toast(C.rung >= C.rungs ? "You've done it! £" + C.start + " → £" + C.bank : "Nice one. Bank now £" + C.bank); }
   else { archiveAttempt(C, "lost"); toast("Unlucky. Saved to Previous challenges. Back to £" + C.start + " for attempt " + C.attempts); }
@@ -1538,6 +1583,7 @@ document.addEventListener("click", e => {
 });
 
 /* ---------- accounts (Supabase) ---------- */
+try { const inv = new URLSearchParams(location.search).get("invite"); if (inv) { localStorage.setItem("mde:invite", inv.toUpperCase()); history.replaceState(null, "", location.pathname + "#account"); } } catch {}
 const CFG = window.MDE_CONFIG || {};
 const sb = CFG.supabaseUrl && CFG.supabaseAnonKey && window.supabase ? window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseAnonKey) : null;
 Object.assign(S, { user: null, profile: null, bets: [], chal: null, waitlisted: false, board: [], authTab: "up", authMsg: null, recovery: false, betFilter: "open" });
@@ -1569,7 +1615,7 @@ async function loadAccount() {
   ]);
   S.profile = p.data || { id: uid, display_name: (S.user.user_metadata || {}).display_name || S.user.email.split("@")[0], fav_teams: [], plan: "free", show_on_leaderboard: true, created_at: S.user.created_at };
   S.bets = b.data || []; S.chal = c.data ? c.data.data : null; S.waitlisted = !!w.data; S.board = lb.data || [];
-  render();
+  render(); loadSocial();
 }
 if (sb) {
   sb.auth.onAuthStateChange((ev, session) => {
@@ -1622,26 +1668,133 @@ function viewAccount() {
       ${up ? `<p style="margin:0;font-size:12px;color:var(--muted)">18+ only. We store your email, display name and the bets you log. Nothing else.</p>` : `<button type="button" class="linkbtn" data-forgot>Forgotten your password?</button>`}</form></div>
       ${proCard()}</div>`;
   }
-  const P = S.profile || {}, favs = P.fav_teams || [];
-  const meId = S.user.id;
-  return `<section class="prof"><div class="avatar">${esc(initials())}</div><div class="who"><b>${esc(P.display_name || "")}<span class="plan ${P.plan === "pro" ? "pro" : ""}">${P.plan === "pro" ? "Pro" : "Free plan"}</span></b><span>${esc(S.user.email)} · member since ${new Date(P.created_at || S.user.created_at).toLocaleDateString("en-GB", { month: "short", year: "numeric" })}</span></div><button class="btn ghost sm" data-signout>Sign out</button></section>
+  const P = S.profile || {}, tab = S.acctTab || "feed", nFr = Object.keys(S.friends || {}).length;
+  const tabs = [["feed", "Feed"], ["board", "Leaderboard"], ["friends", `Mates${nFr ? " · " + nFr : ""}`], ["mybets", "My bets"], ["profile", "Profile"]];
+  return `<section class="prof"><label class="avwrap" title="Change profile photo">${avatarHTML(P, 66)}<span class="avcam" aria-hidden="true">📷</span><input type="file" id="avatarFile" accept="image/*" class="sr"></label>
+    <div class="who"><b>${esc(P.display_name || "")}<span class="plan ${P.plan === "pro" ? "pro" : ""}">${P.plan === "pro" ? "Pro" : "Free plan"}</span></b><span>${S.socialReady ? `Friend code <b class="fcode">${esc(P.friend_code || "")}</b> · ` : ""}member since ${new Date(P.created_at || S.user.created_at).toLocaleDateString("en-GB", { month: "short", year: "numeric" })}</span></div>
+    <button class="btn ghost sm" data-signout>Sign out</button></section>
   ${m}
-  ${statBlock()}
-  <section class="section"><div class="hd"><h2>My bets</h2><div class="chips">${[["open", "Open"], ["settled", "Settled"], ["all", "All"]].map(([k, l]) => `<button class="chip" data-betfilter="${k}" aria-pressed="${S.betFilter === k}">${l}</button>`).join("")}</div></div>
+  ${S.socialReady === false ? `<div class="warn">Photos and mates need a quick database update. Ask Claude for the steps.</div>` : ""}
+  <div class="subtabs" role="tablist">${tabs.map(([k, l]) => `<button role="tab" data-acct="${k}" aria-selected="${tab === k}">${l}</button>`).join("")}</div>
+  ${tab === "feed" ? feedView() : tab === "board" ? boardView() : tab === "friends" ? friendsView() : tab === "mybets" ? myBetsView() : profileView()}`;
+}
+/* ---------- social ---------- */
+const REACTS = [["fire", "🔥"], ["clap", "👏"], ["lol", "😂"], ["yikes", "😬"]];
+function avatarHTML(p, size = 40) {
+  p = p || {}; const nm = p.display_name || "?", ini = nm.split(/\s+/).filter(Boolean).slice(0, 2).map(x => x[0].toUpperCase()).join("");
+  return p.avatar_url ? `<img class="av" src="${esc(p.avatar_url)}" alt="" style="width:${size}px;height:${size}px">` : `<span class="av ini" style="width:${size}px;height:${size}px;font-size:${Math.round(size * .4)}px">${esc(ini)}</span>`;
+}
+const person = id => id === (S.user && S.user.id) ? S.profile : (S.friends || {})[id] || { display_name: "A mate" };
+const ago2 = iso => { const m = Math.round((Date.now() - new Date(iso)) / 6e4); return m < 1 ? "now" : m < 60 ? m + "m" : m < 1440 ? Math.round(m / 60) + "h" : Math.round(m / 1440) + "d"; };
+async function loadSocial() {
+  if (!sb || !S.user) return;
+  const fr = await sb.from("friendships").select("friend_id");
+  if (fr.error) { S.socialReady = false; render(); return; }
+  S.socialReady = true;
+  const ids = (fr.data || []).map(x => x.friend_id);
+  const [pr, bt, ch] = await Promise.all([
+    ids.length ? sb.from("profiles").select("id,display_name,avatar_url,created_at,show_on_leaderboard").in("id", ids) : { data: [] },
+    sb.from("bets").select("*").in("user_id", [S.user.id, ...ids]).order("placed_at", { ascending: false }).limit(120),
+    ids.length ? sb.from("challenges").select("user_id,data").in("user_id", ids) : { data: [] }
+  ]);
+  S.friends = Object.fromEntries((pr.data || []).map(p => [p.id, p]));
+  S.feedBets = bt.data || [];
+  S.friendChal = Object.fromEntries((ch.data || []).map(c => [c.user_id, c.data]));
+  const betIds = S.feedBets.map(b => b.id);
+  const rx = betIds.length ? await sb.from("reactions").select("bet_id,user_id,emoji").in("bet_id", betIds) : { data: [] };
+  S.reacts = {}; for (const r of rx.data || []) (S.reacts[r.bet_id] = S.reacts[r.bet_id] || []).push(r);
+  const lb = await sb.rpc("leaderboard"); if (lb.data) S.board = lb.data;
+  render();
+  try { const inv = localStorage.getItem("mde:invite"); if (inv) { localStorage.removeItem("mde:invite"); addFriend(inv); } } catch {}
+}
+async function addFriend(code) {
+  code = String(code || "").trim().toUpperCase(); if (!code) return;
+  const r = await sb.rpc("add_friend", { code });
+  if (r.error) { toast(/own code/.test(r.error.message) ? "That's your own code" : /No one/.test(r.error.message) ? "No one has that code" : "Couldn't add them. Try again"); return; }
+  toast(`You and ${r.data} are now mates`); loadSocial();
+}
+function reactBar(b) {
+  const list = (S.reacts || {})[b.id] || [], me = S.user.id;
+  return `<div class="rx">${REACTS.map(([k, e]) => { const n = list.filter(r => r.emoji === k).length, mine = list.some(r => r.emoji === k && r.user_id === me); return `<button class="rxb ${mine ? "on" : ""}" data-react="${b.id}|${k}" aria-pressed="${mine}" aria-label="React ${k}">${e}${n ? `<span>${n}</span>` : ""}</button>`; }).join("")}</div>`;
+}
+function canTail(b) { return b.result === "open" && b.user_id !== S.user.id && (b.legs || []).some(l => { const g = findGame(l.sport, l.gid); return g && isPre(g); }); }
+function feedItems() {
+  const items = [];
+  for (const b of S.feedBets || []) {
+    const who = person(b.user_id), legs = (b.legs || []).length, kind = legs > 3 ? legs + "-fold acca" : legs === 3 ? "treble" : legs === 2 ? "double" : "bet";
+    if (b.result === "open") items.push({ t: b.placed_at, b, html: `<b>${esc(who.display_name)}</b> placed a ${kind}`, tone: "" });
+    else { const pl = (+b.returns || 0) - +b.stake; items.push({ t: b.settled_at || b.placed_at, b, html: b.result === "won" ? `<b>${esc(who.display_name)}</b> won <span class="pos">+${gbp(pl)}</span>` : b.result === "lost" ? `<b>${esc(who.display_name)}</b> lost <span class="neg">${gbp(-b.stake)}</span>` : `<b>${esc(who.display_name)}</b>'s bet was void`, tone: b.result }); }
+  }
+  for (const [uid, C] of Object.entries(S.friendChal || {})) {
+    const who = person(uid);
+    for (const h of (C.history || [])) if (h.at) items.push({ t: h.at, html: h.result === "W" ? `<b>${esc(who.display_name)}</b> won a £1K challenge step and now has <span class="pos">${fmtBank(h.ret)}</span>` : `<b>${esc(who.display_name)}</b>'s £1K challenge ended on ${fmtBank(h.stake)}`, sub: `${esc(h.bet)} @ ${esc(h.odds)}`, uid });
+  }
+  return items.sort((a, b) => new Date(b.t) - new Date(a.t)).slice(0, 60);
+}
+function feedView() {
+  if (S.socialReady === undefined) return `<div class="loadbox">Loading your mates…</div>`;
+  const nFr = Object.keys(S.friends || {}).length, items = feedItems();
+  const invite = `<div class="invite"><div><b>${nFr ? "Bring more mates in" : "Add your mates"}</b><span>Share your invite link. When they sign up, you're connected automatically.</span></div><button class="btn sm" data-invite>Share invite link</button></div>`;
+  if (!items.length) return `${invite}<div class="empty art"><img src="img/empty-bets.webp" alt="" loading="lazy"><b>Nothing here yet</b><span>${nFr ? "When you or your mates save and settle bets, they show up here." : "Once your mates join, their bets and wins show up here."}</span></div>`;
+  return `${!nFr ? invite : ""}<div class="feed">${items.map(it => { const b = it.b, who = person(b ? b.user_id : it.uid);
+    return `<article class="fi ${it.tone || ""}"><button class="fi-av" data-mate="${b ? b.user_id : it.uid}" aria-label="View ${esc(who.display_name)}">${avatarHTML(who, 40)}</button><div class="fi-body"><div class="fi-top"><span>${it.html}</span><time>${ago2(it.t)}</time></div>
+      ${b ? `<div class="fi-bet"><span>${esc(b.label)}</span><b>${odds(+b.odds_dec)}</b></div><div class="fi-meta">${esc(b.match || "")}${b.result === "open" ? ` · £${(+b.stake).toFixed(2)} to return ${gbp(+b.stake * +b.odds_dec)}` : ""}</div>
+      <div class="fi-acts">${reactBar(b)}${canTail(b) ? `<button class="btn sm tail" data-tail="${b.id}">Tail this bet</button>` : ""}</div>` : `<div class="fi-meta">${it.sub || ""}</div>`}</div></article>`; }).join("")}</div>${nFr ? invite : ""}`;
+}
+function boardView() {
+  const P = S.profile || {}, meId = S.user.id;
+  const rows = S.board || [];
+  return `<section class="section">${rows.length ? `<div class="lbl">${rows.map((r, i) => { const roi = +r.staked ? Math.round(+r.profit / +r.staked * 100) : null, ch = r.user_id === meId ? S.chal : (S.friendChal || {})[r.user_id];
+      return `<button class="lbr ${r.user_id === meId ? "me" : ""}" data-mate="${r.user_id}"><span class="lbn ${i < 3 ? "top" + (i + 1) : ""}">${i + 1}</span>${avatarHTML({ display_name: r.display_name, avatar_url: r.avatar_url }, 38)}<span class="lbw"><b>${esc(r.display_name)}${r.user_id === meId ? " (you)" : ""}</b><small>${r.settled} settled · ${r.won} won${ch ? ` · £1K step ${Math.min((ch.rung || 0) + 1, ch.rungs || 10)}` : ""}</small></span><span class="lbp ${+r.profit > 0 ? "pos" : +r.profit < 0 ? "neg" : ""}">${gbp(+r.profit)}<small>${roi == null ? "–" : (roi > 0 ? "+" : "") + roi + "% ROI"}</small></span></button>`; }).join("")}</div>` : `<div class="empty">Settle a bet to get on the board.</div>`}
+    <label class="optrow"><input type="checkbox" id="lbOpt" ${P.show_on_leaderboard !== false ? "checked" : ""}> Show me on my mates' leaderboard</label></section>`;
+}
+function friendsView() {
+  const P = S.profile || {}, fr = Object.values(S.friends || {});
+  return `<section class="section"><div class="invite"><div><b>Your friend code</b><span class="fcode big">${esc(P.friend_code || "…")}</span><span>Mates can type this in, or you can send them your invite link.</span></div><button class="btn sm" data-invite>Share invite link</button></div>
+    <form class="addrow" id="addFriend"><div class="field"><label for="fcode">Add a mate by their code</label><input id="fcode" maxlength="6" placeholder="e.g. 7F3A9C" autocomplete="off" style="text-transform:uppercase"></div><div class="field" style="flex:0 0 auto;align-self:end"><button class="btn" type="submit">Add mate</button></div></form>
+    <h2 style="margin-top:6px">Your mates</h2>
+    ${fr.length ? `<div class="mates">${fr.map(f => `<div class="mate"><button class="mate-main" data-mate="${f.id}">${avatarHTML(f, 44)}<span><b>${esc(f.display_name)}</b><small>Tap to see their bets and £1K challenge</small></span></button><button class="x" data-unfriend="${f.id}" aria-label="Remove ${esc(f.display_name)}">✕</button></div>`).join("")}</div>` : `<div class="empty">No mates yet. Share your link or code to get started.</div>`}</section>`;
+}
+function myBetsView() {
+  return `${statBlock()}<section class="section"><div class="hd"><h2>My bets</h2><div class="chips">${[["open", "Open"], ["settled", "Settled"], ["all", "All"]].map(([k, l]) => `<button class="chip" data-betfilter="${k}" aria-pressed="${S.betFilter === k}">${l}</button>`).join("")}</div></div>
   <div style="display:grid;gap:8px">${betRows()}</div>
-  <form class="addrow" id="addBet"><div class="field"><label for="ab-label">Add a bet you placed</label><input id="ab-label" placeholder="e.g. Liverpool to win" required></div><div class="field" style="flex:0 1 110px"><label for="ab-odds">Odds</label><input id="ab-odds" placeholder="5/2 or 3.5" required></div><div class="field" style="flex:0 1 100px"><label for="ab-stake">Stake £</label><input id="ab-stake" type="number" inputmode="decimal" min="0" step="0.5" value="${S.stake}" required></div><div class="field" style="flex:0 0 auto;align-self:end"><button class="btn" type="submit">Add</button></div></form></section>
+  <form class="addrow" id="addBet"><div class="field"><label for="ab-label">Add a bet you placed</label><input id="ab-label" placeholder="e.g. Liverpool to win" required></div><div class="field" style="flex:0 1 110px"><label for="ab-odds">Odds</label><input id="ab-odds" placeholder="5/2 or 3.5" required></div><div class="field" style="flex:0 1 100px"><label for="ab-stake">Stake £</label><input id="ab-stake" type="number" inputmode="decimal" min="0" step="0.5" value="${S.stake}" required></div><div class="field" style="flex:0 0 auto;align-self:end"><button class="btn" type="submit">Add</button></div></form></section>`;
+}
+function profileView() {
+  const P = S.profile || {}, favs = P.fav_teams || [];
+  return `<section class="section"><h2>Your details</h2><form class="addrow" id="nameForm"><div class="field"><label for="dn">Display name</label><input id="dn" maxlength="24" value="${esc(P.display_name || "")}"></div><div class="field" style="flex:0 0 auto;align-self:end"><button class="btn ghost" type="submit">Save</button></div></form>
+    <div class="addrow"><label class="btn ghost sm" for="avatarFile2" style="cursor:pointer">📷 ${P.avatar_url ? "Change" : "Add"} profile photo</label><input type="file" id="avatarFile2" accept="image/*" class="sr">${P.avatar_url ? `<button class="btn ghost sm" data-noavatar>Remove photo</button>` : ""}</div>
+    <label class="optrow"><input type="checkbox" id="shareOpt" ${P.share_bets !== false ? "checked" : ""}> Let my mates see my bets (they can react and tail them)</label>
+    <label class="optrow"><input type="checkbox" id="lbOpt" ${P.show_on_leaderboard !== false ? "checked" : ""}> Show me on my mates' leaderboard</label></section>
   <section class="section"><h2>Favourite teams</h2><div class="favs">${favs.length ? favs.map(f => `<span class="fav">${logo(f.sport, { id: f.id, name: f.name, abbr: f.name.slice(0, 3), color: "#334155" })}${esc(f.name)}<button class="x" data-unfav="${f.sport}|${f.id}" aria-label="Remove">✕</button></span>`).join("") : `<span style="color:var(--muted)">No favourites yet. Add your teams to star them in fixtures.</span>`}</div>
   <form class="addrow" id="addFav"><div class="field"><label for="favpick">Add a team</label><input id="favpick" list="teamlist" placeholder="Start typing a team name"><datalist id="teamlist">${allTeams().map(t => `<option value="${esc(t.name)}${t.sport === "nba" ? " (NBA)" : ""}"></option>`).join("")}</datalist></div><div class="field" style="flex:0 0 auto;align-self:end"><button class="btn ghost" type="submit">Add team</button></div></form></section>
-  <section class="section"><div class="hd"><h2>Mates' leaderboard</h2><label style="font-size:13px;color:var(--muted);display:flex;gap:8px;align-items:center"><input type="checkbox" id="lbOpt" ${P.show_on_leaderboard !== false ? "checked" : ""}> Show me on it</label></div>
-  ${S.board.length ? `<div class="tw" style="padding:0"><table class="lb"><thead><tr><th>#</th><th>Player</th><th>Settled</th><th>Won</th><th>Profit</th><th>ROI</th></tr></thead><tbody>${S.board.map((r, i) => `<tr class="${r.user_id === meId ? "me" : ""}"><td>${i + 1}</td><td>${esc(r.display_name)}${r.user_id === meId ? " (you)" : ""}</td><td>${r.settled}</td><td>${r.won}</td><td class="${+r.profit > 0 ? "pos" : +r.profit < 0 ? "neg" : ""}">${gbp(+r.profit)}</td><td>${+r.staked ? Math.round(+r.profit / +r.staked * 100) + "%" : "–"}</td></tr>`).join("")}</tbody></table></div>` : `<div class="empty">Share the site with your mates. Everyone who signs up and settles a bet appears here.</div>`}
-  <div class="note">Invite your mates: send them <b>${esc(location.origin + location.pathname)}</b> and they can create their own free account.</div></section>
   ${proCard()}`;
 }
-function chalLogForm(C) {
-  const done = C.rung >= C.rungs;
-  if (done) return `<div class="chal-log"><b>You did it. £${C.start} → £${C.bank}.</b><button class="btn ghost" data-chalreset>Start a new ladder</button></div>`;
-  return `<form class="chal-log" id="chalLog"><b>Log step ${C.rung + 1}: £${C.bank} → about £${C.bank * 2}</b><div class="addrow"><div class="field"><label for="cl-bet">Your bet</label><input id="cl-bet" placeholder="e.g. Grizzlies to win" required></div><div class="field" style="flex:0 1 120px"><label for="cl-odds">Odds</label><input id="cl-odds" placeholder="EVS or 2.0" required></div></div>
-  <div class="addrow"><button class="btn win" type="submit" data-res="W">It won</button><button class="btn lose" type="submit" data-res="L">It lost</button>${C.history.length ? `<button class="btn ghost" type="button" data-chalreset style="margin-left:auto">Reset ladder</button>` : ""}</div></form>`;
+function mateSheet(uid) {
+  const me = uid === S.user.id, p = person(uid), bets = (S.feedBets || []).filter(b => b.user_id === uid), ch = me ? S.chal : (S.friendChal || {})[uid];
+  const settled = bets.filter(b => b.result !== "open"), won = settled.filter(b => b.result === "won").length, decided = settled.filter(b => b.result !== "void").length;
+  const profit = settled.reduce((a, b) => a + (+b.returns || 0) - +b.stake, 0), staked = settled.reduce((a, b) => a + +b.stake, 0);
+  const shares = me || bets.length || p.share_bets !== false;
+  return `<div class="scrim top" data-mateclose></div><div class="ijsheet" role="dialog" aria-modal="true" aria-label="${esc(p.display_name)}"><button class="close sm ij-x" data-mateclose aria-label="Close">✕</button>
+    <div class="ij-head">${avatarHTML(p, 64)}<div><h2>${esc(p.display_name)}</h2><span class="ij-team">${me ? "That's you" : "Your mate"}${p.created_at ? " · joined " + new Date(p.created_at).toLocaleDateString("en-GB", { month: "short", year: "numeric" }) : ""}</span></div></div>
+    <div class="ij-grid"><div><small>Profit / loss</small><b class="${profit > 0 ? "pos" : profit < 0 ? "neg" : ""}">${settled.length ? gbp(profit) : "–"}</b></div><div><small>Win rate</small><b>${decided ? Math.round(won / decided * 100) + "%" : "–"}</b></div>
+    <div><small>Return on stakes</small><b>${staked ? Math.round(profit / staked * 100) + "%" : "–"}</b></div><div><small>£1K challenge</small><b>${ch ? (ch.rung >= ch.rungs ? "Completed 🏆" : `Step ${(ch.rung || 0) + 1} · ${fmtBank(ch.bank)}`) : "Not started"}</b>${ch && ch.past && ch.past.length ? `<span class="ij-days">${ch.past.length} previous attempt${ch.past.length > 1 ? "s" : ""}</span>` : ""}</div></div>
+    <div class="ij-note"><small>Recent bets</small></div>
+    ${bets.length ? `<div class="feed compact">${bets.slice(0, 10).map(b => `<article class="fi ${b.result}"><div class="fi-body"><div class="fi-bet"><span>${esc(b.label)}</span><b>${odds(+b.odds_dec)}</b></div><div class="fi-meta"><span class="st ${b.result}">${b.result}</span> ${esc(b.match || "")} · £${(+b.stake).toFixed(2)} · ${ago2(b.placed_at)} ago</div>${me ? "" : `<div class="fi-acts">${reactBar(b)}${canTail(b) ? `<button class="btn sm tail" data-tail="${b.id}">Tail</button>` : ""}</div>`}</div></article>`).join("")}</div>` : `<div class="loadbox">${shares ? "No bets saved yet." : "They keep their bets private."}</div>`}</div>`;
+}
+async function uploadAvatar(file) {
+  if (!file || !/^image\//.test(file.type)) { toast("Pick a photo"); return; }
+  toast("Uploading photo…");
+  try {
+    const bmp = await createImageBitmap(file), side = Math.min(bmp.width, bmp.height), c = document.createElement("canvas"); c.width = c.height = 320;
+    c.getContext("2d").drawImage(bmp, (bmp.width - side) / 2, (bmp.height - side) / 2, side, side, 0, 0, 320, 320);
+    const blob = await new Promise(r => c.toBlob(r, "image/webp", .86)) || await new Promise(r => c.toBlob(r, "image/jpeg", .88));
+    const path = `${S.user.id}/avatar.${blob.type === "image/webp" ? "webp" : "jpg"}`;
+    const up = await sb.storage.from("avatars").upload(path, blob, { upsert: true, contentType: blob.type, cacheControl: "3600" });
+    if (up.error) throw up.error;
+    const url = sb.storage.from("avatars").getPublicUrl(path).data.publicUrl + "?v=" + Date.now();
+    await saveProfile({ avatar_url: url }); toast("Looking good");
+  } catch (err) { toast("Couldn't upload that photo"); }
 }
 async function saveChal(C) { S.chal = C; render(); const r = await sb.from("challenges").upsert({ user_id: S.user.id, data: C, updated_at: new Date().toISOString() }); if (r.error) toast("Couldn't save. Check your connection."); }
 async function saveProfile(patch) { Object.assign(S.profile, patch); render(); const r = await sb.from("profiles").update(patch).eq("id", S.user.id); if (r.error) toast("Couldn't save. Check your connection."); }
@@ -1670,6 +1823,8 @@ document.addEventListener("submit", async e => {
     if (!o) { toast("Odds look wrong. Try 5/2, EVS or 3.5"); return; }
     const r = await sb.from("bets").insert({ label: val("ab-label").trim(), odds_dec: o, stake: st }).select().single();
     if (r.error) toast("Couldn't save the bet."); else { S.bets.unshift(r.data); S.betFilter = "open"; render(); toast("Bet added"); }
+  } else if (f.id === "addFriend") { addFriend(val("fcode")); f.reset();
+  } else if (f.id === "nameForm") { const nm = val("dn").trim().slice(0, 24); if (nm) { saveProfile({ display_name: nm }); toast("Name saved"); }
   } else if (f.id === "addFav") {
     const name = val("favpick").replace(/ \(NBA\)$/, ""), nba = / \(NBA\)$/.test(val("favpick"));
     const t = allTeams().find(x => x.name === name && (x.sport === "nba") === nba);
@@ -1693,11 +1848,32 @@ document.addEventListener("click", async e => {
   }
   else if (d.signout !== undefined) { await sb.auth.signOut(); S.authMsg = null; toast("Signed out"); }
   else if (d.betfilter) { S.betFilter = d.betfilter; render(); }
+  else if (d.acct) { S.acctTab = d.acct; render(); if (d.acct === "feed" || d.acct === "board" || d.acct === "friends") loadSocial(); }
+  else if (d.mate) { S.mateOpen = d.mate; render(); }
+  else if (d.mateclose !== undefined) { S.mateOpen = null; render(); }
+  else if (d.unfriend) { const nm = (S.friends[d.unfriend] || {}).display_name; const r = await sb.rpc("remove_friend", { other: d.unfriend }); if (r.error) toast("Couldn't remove them"); else { toast(`Removed ${nm || "mate"}`); loadSocial(); } }
+  else if (d.noavatar !== undefined) { await saveProfile({ avatar_url: null }); sb.storage.from("avatars").remove([`${S.user.id}/avatar.webp`, `${S.user.id}/avatar.jpg`]); }
+  else if (d.invite !== undefined) {
+    const link = location.origin + location.pathname + "?invite=" + encodeURIComponent((S.profile || {}).friend_code || ""), text = `Join me on Matchday Edge: live scores, best bets and a mates' leaderboard. ${link}`;
+    if (navigator.share) { try { await navigator.share({ title: "Matchday Edge", text, url: link }); return; } catch {} }
+    try { await navigator.clipboard.writeText(link); toast("Invite link copied. Send it to your mates"); } catch { toast("Your link: " + link); }
+  }
+  else if (d.react) {
+    const [bid, k] = d.react.split("|"), list = (S.reacts[bid] = S.reacts[bid] || []), me = S.user.id, i = list.findIndex(r => r.emoji === k && r.user_id === me);
+    if (i >= 0) { list.splice(i, 1); render(); await sb.from("reactions").delete().eq("bet_id", bid).eq("user_id", me).eq("emoji", k); }
+    else { list.push({ bet_id: bid, user_id: me, emoji: k }); render(); const r = await sb.from("reactions").insert({ bet_id: bid, emoji: k }); if (r.error) { toast("Couldn't react"); loadSocial(); } }
+  }
+  else if (d.tail) {
+    const b = (S.feedBets || []).find(x => x.id === d.tail); if (!b) return; let added = 0;
+    for (const l of b.legs || []) { const g = findGame(l.sport, l.gid), m = g && isPre(g) && mkt(g, l.k); if (!m) continue; const leg = asLegs([{ sport: l.sport, g, m }])[0]; S.slip = S.slip.filter(x => !(x.sport === leg.sport && x.gid === leg.gid && conflicts(x.k, leg.k))); S.slip.push(leg); added++; }
+    save(); S.mateOpen = null; render(); toast(added ? `Tailed ${person(b.user_id).display_name}'s bet: ${added} leg${added > 1 ? "s" : ""} in your slip` : "Those games have already started");
+  }
   else if (d.settle) {
     const [id, res] = d.settle.split("|"), b = S.bets.find(x => x.id === id); if (!b) return;
     const returns = res === "won" ? Math.round(b.stake * b.odds_dec * 100) / 100 : res === "void" ? +b.stake : res === "lost" ? 0 : null;
-    Object.assign(b, { result: res, returns }); render();
-    const r = await sb.from("bets").update({ result: res, returns }).eq("id", id); if (r.error) toast("Couldn't save.");
+    const settled_at = res === "open" ? null : new Date().toISOString();
+    Object.assign(b, { result: res, returns, settled_at }); render();
+    let r = await sb.from("bets").update({ result: res, returns, settled_at }).eq("id", id); if (r.error) r = await sb.from("bets").update({ result: res, returns }).eq("id", id); if (r.error) toast("Couldn't save."); else loadSocial();
     sb.rpc("leaderboard").then(x => { if (x.data) { S.board = x.data; render(); } });
   }
   else if (d.delbet) { S.bets = S.bets.filter(x => x.id !== d.delbet); render(); await sb.from("bets").delete().eq("id", d.delbet); }
@@ -1722,7 +1898,7 @@ document.addEventListener("click", async e => {
     if (r.error) toast("Couldn't save the bet."); else { S.bets.unshift(r.data); toast("Saved to My Bets"); }
   }
 });
-document.addEventListener("change", e => { if (e.target.id === "lbOpt" && sb && S.user) { saveProfile({ show_on_leaderboard: e.target.checked }); sb.rpc("leaderboard").then(x => { if (x.data) { S.board = x.data; render(); } }); } });
+document.addEventListener("change", e => { if ((e.target.id === "avatarFile" || e.target.id === "avatarFile2") && sb && S.user) { uploadAvatar(e.target.files[0]); e.target.value = ""; } if (e.target.id === "shareOpt" && sb && S.user) { saveProfile({ share_bets: e.target.checked }); toast(e.target.checked ? "Mates can see your bets" : "Your bets are now private"); } if (e.target.id === "lbOpt" && sb && S.user) { saveProfile({ show_on_leaderboard: e.target.checked }); sb.rpc("leaderboard").then(x => { if (x.data) { S.board = x.data; render(); } }); } });
 
 /* ---------- render ---------- */
 function render() {
@@ -1737,6 +1913,7 @@ function render() {
   else if (S.slipOpen) L.innerHTML = slipDrawer();
   else L.innerHTML = "";
   if (S.injOpen) L.insertAdjacentHTML("beforeend", injuryCard(S.injOpen));
+  if (S.mateOpen && S.user) L.insertAdjacentHTML("beforeend", mateSheet(S.mateOpen));
   const dr = $(".drawer"); if (dr && S.drawer) { dr.dataset.key = S.drawer; if (keepTop) dr.scrollTop = keepTop; dr.style.animation = keepTop ? "none" : ""; }
   document.body.style.overflow = (S.drawer || S.slipOpen) ? "hidden" : "";
 }
