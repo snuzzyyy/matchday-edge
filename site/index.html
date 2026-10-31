@@ -531,11 +531,17 @@ h3{font-size:15px;font-weight:700}
 .msg.ok{background:rgba(34,216,143,.12);color:var(--win)}
 .msg.err{background:rgba(255,83,112,.12);color:var(--loss)}
 .linkbtn{color:var(--blue-2);font-size:13px;font-weight:600;justify-self:start}
-.prof{display:flex;align-items:center;gap:16px;flex-wrap:wrap;background:radial-gradient(90% 140% at 100% 0%,rgba(154,123,255,.25),transparent 60%),var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px}
+.prof{display:grid;gap:14px;background:radial-gradient(90% 140% at 100% 0%,rgba(154,123,255,.25),transparent 60%),var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px}
 .avatar{width:62px;height:62px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,var(--blue),var(--violet));font-family:var(--display);font-weight:800;font-size:26px;color:#fff;flex:none}
-.prof .who{flex:1;min-width:0}
-.prof .who b{font-size:20px;display:block}
-.prof .who span{color:var(--muted);font-size:13px}
+.prof-top{display:flex;align-items:center;gap:16px}
+.prof .who{flex:1;min-width:0;display:grid;gap:6px;justify-items:start}
+.prof .who b{font-size:22px;display:block;line-height:1.1;overflow-wrap:anywhere}
+.prof .who small{color:var(--muted);font-size:13px}
+.prof-bdg{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.prof-bdg .bdg{margin:0}.prof .who .prof-bdg .planchip{margin:0;display:inline-flex}
+.prof-code{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:12px}
+.prof-code small{display:block;color:var(--muted);font-size:12px;margin-bottom:2px}.prof-code .fcode{font-size:24px;font-weight:800;line-height:1}
+.prof-acts{display:flex;gap:8px}.prof-acts .fc-btn{padding:8px 12px;font-size:13px}
+.signout-row{display:flex;justify-content:center;margin:26px 0 8px}
 .plan{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:4px 9px;border-radius:999px;background:var(--surface-3);color:var(--fg-2);margin-left:6px;vertical-align:middle}
 .plan.pro{background:linear-gradient(90deg,var(--tang),#FF4F6D);color:#fff}
 .tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
@@ -871,7 +877,7 @@ h3{font-size:15px;font-weight:700}
   <span id="srcnote">Live scores and stats: ESPN feed, every 10s · Predictions refresh every 20 min · Reference prices: DraftKings feed converted to UK odds</span>
 </footer></div>
 <button class="fab" id="fab" hidden><span>Bet slip</span><span class="c" id="fabc">0</span><span id="fabo"></span></button>
-<div id="layer"></div><div id="implayer"></div>
+<div id="layer"></div><div id="implayer"></div><input type="file" id="avatarPick" accept="image/*" class="sr" tabindex="-1" aria-hidden="true">
 
 <script>
 (() => {
@@ -1040,7 +1046,7 @@ function renderChrome() {
   $("#updated").innerHTML = S.liveFail >= 2 ? `<span class="dot" style="background:var(--amber);animation:none"></span><span>Reconnecting… last ${S.liveAt ? new Date(S.liveAt).toLocaleTimeString("en-GB", { timeZone: TZ }) : hm(S.data.updated)}</span>` : S.liveAt ? `<span class="dot ${anyLive ? "red" : ""}"></span><span>${anyLive ? "Live" : "Up to date"} · ${new Date(S.liveAt).toLocaleTimeString("en-GB", { timeZone: TZ })}</span>` : `<span class="dot"></span><span>Updated ${hm(S.data.updated)}</span>`;
   $("#updated").title = "Live scores refresh every 10 seconds. Predictions refresh every 20 minutes.";
   const ab = $("#acctBtn"); if (ab) { ab.classList.toggle("in", !!S.user); ab.innerHTML = S.user ? (S.profile && S.profile.avatar_url ? `<img src="${esc(S.profile.avatar_url)}" alt="">` : esc(initials())) : ab.dataset.icon || (ab.dataset.icon = ab.innerHTML); if (!S.user && ab.dataset.icon) ab.innerHTML = ab.dataset.icon; if (v === "account") ab.setAttribute("aria-current", "page"); else ab.removeAttribute("aria-current"); }
-  const fab = $("#fab"); fab.hidden = false; $("#fabc").textContent = S.slip.length;
+  const fab = $("#fab"); fab.hidden = v === "account"; $("#fabc").textContent = S.slip.length;
   $("#fabo").textContent = S.slip.length ? odds(slipCalc().dec) : "";
 }
 
@@ -1939,13 +1945,14 @@ function viewAccount(mode = "account") {
     ${ft === "feed" ? feedView() : ft === "board" ? boardView() : friendsView()}`;
   }
 
-  return `<section class="prof"><label class="avwrap" title="Change profile photo">${avatarHTML(P, 66)}<span class="avcam" aria-hidden="true">📷</span><input type="file" id="avatarFile" accept="image/*" class="sr"></label>
-    <div class="who"><b>${esc(P.display_name || "")}${badgesHTML(P)}</b>${planChip(P)}<span>${S.socialReady && P.friend_code ? `<span class="fc-row">Friend code <b class="fcode">${esc(P.friend_code)}</b><button class="fc-btn" data-copycode aria-label="Copy friend code">⧉ Copy</button><button class="fc-btn" data-invite aria-label="Share invite link">↗ Share</button></span>` : ""}member since ${new Date(P.created_at || S.user.created_at).toLocaleDateString("en-GB", { month: "short", year: "numeric" })}</span></div>
-    <button class="btn ghost sm" data-signout>Sign out</button></section>
+  return `<section class="prof"><div class="prof-top"><label class="avwrap" for="avatarPick" title="Change profile photo">${avatarHTML(P, 72)}<span class="avcam" aria-hidden="true">📷</span></label>
+    <div class="who"><b>${esc(P.display_name || "")}</b><div class="prof-bdg">${badgesHTML(P)}${planChip(P)}</div><small>Member since ${new Date(P.created_at || S.user.created_at).toLocaleDateString("en-GB", { month: "short", year: "numeric" })}</small></div></div>
+    ${S.socialReady && P.friend_code ? `<div class="prof-code"><div><small>Friend code</small><b class="fcode">${esc(P.friend_code)}</b></div><div class="prof-acts"><button class="fc-btn" data-copycode aria-label="Copy friend code">⧉ Copy</button><button class="fc-btn" data-invite aria-label="Share invite link">↗ Share</button></div></div>` : ""}</section>
   ${m}
   <a class="friendslink" href="#friends">${avatarStack()}<span><b>Friends</b><small>${nFr ? `${nFr} friend${nFr > 1 ? "s" : ""} · feed, leaderboard and invites` : "Invite your friends and compare bets"}</small></span><span aria-hidden="true">›</span></a>
   <a class="friendslink" href="#mybets"><span class="ic-dot">${ICON.chart}</span><span><b>My Bets</b><small>${S.bets.length ? `${S.bets.length} saved · ` : ""}tracked bets, results and profit</small></span><span aria-hidden="true">›</span></a>
-  ${profileView()}`;
+  ${profileView()}
+  <div class="signout-row"><button class="btn ghost sm" data-signout>Sign out</button></div>`;
 }
 /* ---------- social ---------- */
 const badgesHTML = (p, small) => { p = p || {}; const b = p.badges || [], sm = small ? " sm" : "", out = [];
@@ -2047,7 +2054,7 @@ function myBetsView(inTab) {
 function profileView() {
   const P = S.profile || {}, favs = P.fav_teams || [];
   return `<section class="section"><h2>Your details</h2><form class="addrow" id="nameForm"><div class="field"><label for="dn">Display name</label><input id="dn" maxlength="24" value="${esc(P.display_name || "")}"></div><div class="field" style="flex:0 0 auto;align-self:end"><button class="btn ghost" type="submit">Save</button></div></form>
-    <div class="addrow"><label class="btn ghost sm" for="avatarFile2" style="cursor:pointer">📷 ${P.avatar_url ? "Change" : "Add"} profile photo</label><input type="file" id="avatarFile2" accept="image/*" class="sr">${P.avatar_url ? `<button class="btn ghost sm" data-noavatar>Remove photo</button>` : ""}</div>
+    <div class="addrow"><label class="btn ghost sm" for="avatarPick" style="cursor:pointer">📷 ${P.avatar_url ? "Change" : "Add"} profile photo</label>${P.avatar_url ? `<button class="btn ghost sm" data-noavatar>Remove photo</button>` : ""}</div>
     <label class="optrow"><input type="checkbox" id="shareOpt" ${P.share_bets !== false ? "checked" : ""}> Let my friends see my bets (they can react and tail them)</label>
     <label class="optrow"><input type="checkbox" id="lbOpt" ${P.show_on_leaderboard !== false ? "checked" : ""}> Show me on my friends' leaderboard</label></section>
   <section class="section"><h2>Favourite teams</h2><div class="favs">${favs.length ? favs.map(f => `<span class="fav">${logo(f.sport, { id: f.id, name: f.name, abbr: f.name.slice(0, 3), color: "#334155" })}${esc(f.name)}<button class="x" data-unfav="${f.sport}|${f.id}" aria-label="Remove">✕</button></span>`).join("") : `<span style="color:var(--muted)">No favourites yet. Add your teams to star them in fixtures.</span>`}</div>
@@ -2067,10 +2074,13 @@ function mateSheet(uid) {
     ${bets.length ? `<div class="feed compact">${bets.slice(0, 10).map(b => `<article class="fi ${b.result}"><div class="fi-body"><div class="fi-bet"><span>${esc(b.label)}</span><b>${odds(+b.odds_dec)}</b></div><div class="fi-meta"><span class="st ${b.result}">${b.result}</span> ${esc(b.match || "")} · £${(+b.stake).toFixed(2)} · ${ago2(b.placed_at)} ago</div>${me ? "" : `<div class="fi-acts">${reactBar(b)}${canTail(b) ? `<button class="btn sm tail" data-tail="${b.id}">Tail</button>` : ""}</div>`}</div></article>`).join("")}</div>` : `<div class="loadbox">${shares ? "No bets saved yet." : "They keep their bets private."}</div>`}</div>`;
 }
 async function uploadAvatar(file) {
-  if (!file || !/^image\//.test(file.type)) { toast("Pick a photo"); return; }
+  if (!file) return;
+  if (file.type && !/^image\//.test(file.type)) { toast("Pick a photo"); return; }
   toast("Uploading photo…");
+  let bmp;
+  try { bmp = await createImageBitmap(file); } catch { try { bmp = await new Promise((ok, no) => { const im = new Image(), u = URL.createObjectURL(file); im.onload = () => { ok(im); setTimeout(() => URL.revokeObjectURL(u), 1000); }; im.onerror = no; im.src = u; }); } catch { toast("That photo type won't open. Try a JPG or a screenshot"); return; } }
   try {
-    const bmp = await createImageBitmap(file), side = Math.min(bmp.width, bmp.height), c = document.createElement("canvas"); c.width = c.height = 320;
+    const side = Math.min(bmp.width, bmp.height), c = document.createElement("canvas"); c.width = c.height = 320;
     c.getContext("2d").drawImage(bmp, (bmp.width - side) / 2, (bmp.height - side) / 2, side, side, 0, 0, 320, 320);
     const blob = await new Promise(r => c.toBlob(r, "image/webp", .86)) || await new Promise(r => c.toBlob(r, "image/jpeg", .88));
     const path = `${S.user.id}/avatar.${blob.type === "image/webp" ? "webp" : "jpg"}`;
@@ -2184,7 +2194,7 @@ document.addEventListener("click", async e => {
     if (r.error) toast("Couldn't save the bet."); else { S.bets.unshift(r.data); toast("Saved to My Bets"); }
   }
 });
-document.addEventListener("change", e => { if ((e.target.id === "avatarFile" || e.target.id === "avatarFile2") && sb && S.user) { uploadAvatar(e.target.files[0]); e.target.value = ""; } if (e.target.id === "shareOpt" && sb && S.user) { saveProfile({ share_bets: e.target.checked }); toast(e.target.checked ? "Friends can see your bets" : "Your bets are now private"); } if (e.target.id === "lbOpt" && sb && S.user) { saveProfile({ show_on_leaderboard: e.target.checked }); sb.rpc("leaderboard").then(x => { if (x.data) { S.board = x.data; render(); } }); } });
+document.addEventListener("change", e => { if (e.target.id === "avatarPick" && sb && S.user) { uploadAvatar(e.target.files[0]); e.target.value = ""; } if (e.target.id === "shareOpt" && sb && S.user) { saveProfile({ share_bets: e.target.checked }); toast(e.target.checked ? "Friends can see your bets" : "Your bets are now private"); } if (e.target.id === "lbOpt" && sb && S.user) { saveProfile({ show_on_leaderboard: e.target.checked }); sb.rpc("leaderboard").then(x => { if (x.data) { S.board = x.data; render(); } }); } });
 
 /* ---------- render ---------- */
 function render() {
