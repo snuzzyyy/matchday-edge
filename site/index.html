@@ -637,6 +637,8 @@ h3{font-size:15px;font-weight:700}
 .seg3{display:grid;grid-template-columns:repeat(3,1fr);background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:4px;gap:4px}
 .seg3 button{padding:10px 6px;border-radius:9px;font-weight:700;font-size:13.5px;color:var(--muted)}
 .seg3 button[aria-pressed=true]{background:var(--blue);color:#fff}
+.seg3.two{grid-template-columns:1fr 1fr}
+.oddsmode{display:grid;gap:8px}
 .risk-desc{margin:-2px 0 0;font-size:12.5px;color:var(--muted)}
 .auto{display:flex;gap:8px;flex-wrap:wrap}
 .accabox{background:radial-gradient(90% 140% at 100% 0%,rgba(61,123,255,.18),transparent 60%),var(--surface);border:1px solid var(--blue);border-radius:16px;padding:16px;display:grid;gap:12px}
@@ -690,6 +692,24 @@ h3{font-size:15px;font-weight:700}
 .pt-badge.completed{background:rgba(34,216,143,.15);color:var(--win)}.pt-badge.stopped{background:var(--surface-3);color:var(--muted)}
 .pt-main{display:grid}.pt-main small{color:var(--muted);font-size:12px}
 .pt-peak{text-align:right;display:grid}.pt-peak small{font-size:11px;color:var(--muted)}.pt-peak b{font-family:var(--display);font-size:20px}
+/* injury sheet */
+.injbtn{cursor:pointer;border:1px solid transparent}
+.injbtn:hover{border-color:var(--line-2)}
+.injbtn.out{background:rgba(255,83,112,.12);color:#FF8FA0}
+.scrim.top{z-index:80}
+.ijsheet{position:fixed;z-index:81;left:50%;top:50%;transform:translate(-50%,-50%);width:min(460px,calc(100% - 24px));max-height:calc(100% - 40px);overflow-y:auto;background:var(--bg-2);border:1px solid var(--line-2);border-radius:18px;padding:20px;display:grid;gap:14px;box-shadow:0 30px 80px -20px rgba(0,0,0,.8)}
+@media (max-width:520px){.ijsheet{top:auto;bottom:0;transform:translateX(-50%);border-radius:18px 18px 0 0;width:100%;padding-bottom:calc(20px + env(safe-area-inset-bottom,0px))}}
+.ij-x{position:absolute;top:12px;right:12px}
+.ij-head{display:flex;align-items:center;gap:14px;padding-right:36px}
+.ij-head h2{font-size:22px}
+.ij-photo{width:64px;height:64px;border-radius:50%;object-fit:cover;background:var(--surface-2);flex:none;display:grid;place-items:center;font-family:var(--display);font-weight:700;color:#fff}
+.ij-team{font-size:13px;color:var(--muted)}
+.ij-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ij-grid div{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:grid;gap:2px}
+.ij-grid small,.ij-note small{font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.ij-grid b{font-size:14px}
+.ij-days{font-size:12px;color:var(--amber);font-weight:600}
+.ij-note p{margin:4px 0 0;font-size:13.5px;line-height:1.55;color:var(--fg-2)}
 .fmt-row{display:flex;justify-content:space-between;align-items:center;font-size:12.5px;color:var(--muted)}
 .fmt-big button{display:grid;gap:1px;padding:6px 12px;text-align:center;line-height:1.15}
 .fmt-big button b{font-size:12.5px}
@@ -733,12 +753,12 @@ const store = { get(k, d) { try { const v = localStorage.getItem("mde:" + k); re
                 set(k, v) { try { localStorage.setItem("mde:" + k, JSON.stringify(v)); } catch {} } };
 
 const S = { data: null, logos: {}, sport: store.get("sport", "football"), fmt: store.get("fmt", "frac"), slip: store.get("slip", []),
-            stake: store.get("stake", 5), boxSide: {}, league: "all", win: "today", drawer: null, slipOpen: false };
+            stake: store.get("stake", 5), chalOdds: store.get("chalOdds", "over"), boxSide: {}, league: "all", win: "today", drawer: null, slipOpen: false };
 const VIEWS = [["live", "Live", "Live"], ["fixtures", "Fixtures", "Games"], ["acca", "Accas", "Accas"], ["bets", "Best Bets", "Bets"], ["tables", "Tables", "Tables"], ["news", "News", "News"], ["challenge", "£1K Challenge", "£1K"]];
 const view = () => { const h = location.hash.slice(1); return h === "account" || h === "acca" || VIEWS.some(v => v[0] === h) ? h : "live"; };
 
 /* ---------- odds ---------- */
-const FR = [[1,20],[1,16],[1,14],[1,12],[1,10],[1,9],[1,8],[1,7],[1,6],[1,5],[2,9],[1,4],[2,7],[3,10],[1,3],[4,11],[2,5],[4,9],[1,2],[8,15],[4,7],[8,13],[4,6],[8,11],[4,5],[5,6],[10,11],[1,1],[21,20],[11,10],[6,5],[5,4],[11,8],[7,5],[6,4],[8,5],[13,8],[7,4],[9,5],[15,8],[2,1],[85,40],[9,4],[12,5],[5,2],[13,5],[11,4],[3,1],[10,3],[7,2],[4,1],[9,2],[5,1],[11,2],[6,1],[13,2],[7,1],[15,2],[8,1],[17,2],[9,1],[10,1],[11,1],[12,1],[14,1],[16,1],[18,1],[20,1],[22,1],[25,1],[28,1],[33,1],[40,1],[50,1],[66,1],[80,1],[100,1],[125,1],[150,1],[200,1],[250,1],[300,1],[400,1],[500,1],[750,1],[1000,1]];
+const FR = [[1,20],[1,16],[1,14],[1,12],[1,10],[1,9],[1,8],[1,7],[1,6],[1,5],[2,9],[1,4],[2,7],[3,10],[1,3],[4,11],[2,5],[4,9],[1,2],[8,15],[4,7],[8,13],[4,6],[8,11],[4,5],[5,6],[10,11],[19,20],[20,21],[1,1],[21,20],[11,10],[6,5],[5,4],[11,8],[7,5],[6,4],[8,5],[13,8],[7,4],[9,5],[15,8],[2,1],[85,40],[9,4],[12,5],[5,2],[13,5],[11,4],[3,1],[10,3],[7,2],[4,1],[9,2],[5,1],[11,2],[6,1],[13,2],[7,1],[15,2],[8,1],[17,2],[9,1],[10,1],[11,1],[12,1],[14,1],[16,1],[18,1],[20,1],[22,1],[25,1],[28,1],[33,1],[40,1],[50,1],[66,1],[80,1],[100,1],[125,1],[150,1],[200,1],[250,1],[300,1],[400,1],[500,1],[750,1],[1000,1]];
 function frac(dec) {
   if (!dec) return "–";
   if (dec > 1001) return Math.round(dec - 1).toLocaleString("en-GB") + "/1";
@@ -1168,11 +1188,12 @@ function slipHTML(mode = "rail") {
 /* ---------- challenge ---------- */
 function challengeOptions() {
   const sp = S.sport, C = candidates(sp, firstWin(sp));
-  const singles = bestPerMatch(C.filter(c => c.m.dec && c.m.dec >= 1.9 && c.m.dec <= 2.3), 4, c => c.m.p);
+  const lo = S.chalOdds === "near" ? 1.83 : 2.0;
+  const singles = bestPerMatch(C.filter(c => c.m.dec && c.m.dec >= lo && c.m.dec <= 2.4), 4, c => c.m.p);
   const legs = bestPerMatch(C.filter(c => priceOf(c.m) >= 1.33 && priceOf(c.m) <= 1.55 && c.m.p >= .68), 10, c => c.m.p);
   const doubles = [];
   for (let i = 0; i < legs.length; i++) for (let j = i + 1; j < legs.length; j++) {
-    const d = priceOf(legs[i].m) * priceOf(legs[j].m); if (d >= 1.9 && d <= 2.4) doubles.push({ a: legs[i], b: legs[j], d, p: legs[i].m.p * legs[j].m.p });
+    const d = priceOf(legs[i].m) * priceOf(legs[j].m); if (d >= lo && d <= 2.5) doubles.push({ a: legs[i], b: legs[j], d, p: legs[i].m.p * legs[j].m.p });
   }
   doubles.sort((x, y) => y.p - x.p);
   const used = new Set(), dd = [];
@@ -1228,8 +1249,10 @@ function viewChallenge() {
   ${!mine ? `<div class="note">Playing with mates? <a href="#account">Create a free account</a> to run your own ladder.</div>` : ""}
   ${done && mine ? `<div class="chal-log"><b>You did it. £${C.start} → ${fmtBank(C.bank)}.</b><button class="btn" data-chalreset>Save it and start a new ladder</button></div>` : running}
   ${!done && !A ? `<section class="section"><div class="tierhd"><span class="tag evens">Step ${C.rung + 1}</span><span class="sub" style="margin:0">Best ${S.sport === "nba" ? "NBA" : "football"} bets to turn ${fmtBank(C.bank)} into ${fmtBank(C.bank * 2)}. Pick one.</span></div>
+  <div class="oddsmode"><div class="seg3 two" role="group" aria-label="Which prices to suggest"><button data-chalodds2="over" aria-pressed="${S.chalOdds !== "near"}">Evens or bigger</button><button data-chalodds2="near" aria-pressed="${S.chalOdds === "near"}">Include just under evens</button></div>
+    <p class="risk-desc">${S.chalOdds === "near" ? "Shows prices down to 5/6. Slightly more likely to win, but a win returns a bit under double (e.g. £1 at 10/11 returns £1.91)." : "Only evens (1/1) or bigger, so every win at least doubles your bank."}</p></div>
   <div class="pgrid">${O.singles.map(single).join("")}${O.doubles.map(dbl).join("")}</div>
-  ${!O.singles.length && !O.doubles.length ? `<div class="empty">No suitable bets in the next few days. Switch sport above.</div>` : ""}
+  ${!O.singles.length && !O.doubles.length ? `<div class="empty">No suitable bets in the next few days. Switch sport above${S.chalOdds !== "near" ? ' or include prices just under evens' : ""}.</div>` : ""}
   ${mine ? `<details class="ownbet"><summary>Placed a different bet? Log it yourself</summary>${chalLogForm(C)}</details>` : ""}</section>` : ""}
   <section class="section"><div class="hd"><h2>This attempt</h2>${mine && (C.history.length || A) ? `<button class="linkbtn" data-chalreset>Give up and start again</button>` : ""}</div>${thisAttempt}</section>
   <section class="section"><h2>Previous challenges</h2>${past}</section>
@@ -1395,10 +1418,30 @@ function drawerHTML(sport, g) {
       body += `<section class="section"><h2>Box score</h2>${TT.html}${live ? `<div class="legend"><span><i class="court"></i>On court</span><span>Starters first, then bench. Swipe the table sideways for more stats.</span></div>` : ""}${side === "a" ? boxTable(a, "a", g.box.a, live) : boxTable(h, "h", g.box.h, live)}</section>`;
     } else if (pre) body += `<section class="section"><h2>Box score</h2><div class="empty">Starting line-ups and player stats appear here at tip-off.</div></section>`;
     if (g.leaders.length) body += `<section class="section"><h2>Leaders</h2><div class="trend">${g.leaders.map(l => `<div class="tbox"><div class="k">${esc(l.cat)} · ${esc(l.side === "h" ? h.abbr : a.abbr)}</div><div class="v" style="font-size:17px">${esc(l.who)}</div><div class="k">${esc(l.val)}</div></div>`).join("")}</div></section>`;
-    if (g.injuries.length) body += `<section class="section"><h2>Injuries</h2><div class="chips">${g.injuries.map(i => `<span class="pill">${esc(i.side === "h" ? h.abbr : a.abbr)} · ${esc(i.who)} · ${esc(i.status)}</span>`).join("")}</div></section>`;
+    if (g.injuries.length) body += `<section class="section"><h2>Injuries</h2><div class="chips">${g.injuries.map(i => `<button class="pill injbtn ${/out/i.test(i.status) ? "out" : ""}" data-inj="${esc(i.who)}">${esc(i.side === "h" ? h.abbr : a.abbr)} · ${esc(i.who)} · ${esc(i.status)} <span aria-hidden="true">›</span></button>`).join("")}</div><p class="colkey" style="margin:0">Tap a player for the injury details and expected return.</p></section>`;
   }
   body += `<section class="section"><h2>${pre ? "All markets" : g.status.state === "post" ? "How the markets settled" : "Markets right now"}</h2>${marketsTable(sport, g)}<p class="note">${pre ? "" : "<b>Chance now</b> works from the current score, corners and cards plus the time left, so it changes as the game goes on. "}Chance = our model's estimate. <b>Fair</b> = the price that chance is worth. Prices marked with a percentage come from the market feed where available, otherwise they show the fair price, so check your bookie before you bet.</p></section>`;
   return `<div class="scrim" data-close></div><aside class="drawer" role="dialog" aria-modal="true" aria-label="${esc(vs(sport, g))}"><div class="dr-in"><div class="dr-top"><span class="eyebrow">${esc(sport === "nba" ? "NBA" : leagueName(g.league))}${g.venue ? " · " + esc(g.venue) : ""}</span><button class="close" data-close aria-label="Close">✕</button></div>${hero}${body}</div></aside>`;
+}
+function injuryCard(name) {
+  const f = feed(`${SB}/basketball/nba/injuries`, 20 * 60e3);
+  let item = null, team = null;
+  for (const t of ((f.data || {}).injuries || [])) for (const i of t.injuries || []) if ((i.athlete || {}).displayName === name) { item = i; team = t; }
+  const body = !f.data ? `<div class="loadbox">${f.err ? "Couldn't load the injury report." : "Loading injury details…"}</div>` : !item ? `<div class="loadbox">No further details for ${esc(name)} in the injury report.</div>` : (() => {
+    const A = item.athlete || {}, d = item.details || {}, st = item.status || "", head = (A.headshot || {}).href;
+    const fmtD = x => x ? new Date(x).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" }) : "–";
+    const days = d.returnDate ? Math.ceil((new Date(d.returnDate) - Date.now()) / 864e5) : null;
+    const injury = [d.side && d.side !== "Not Specified" ? d.side : "", d.type, d.detail ? d.detail.toLowerCase() : ""].filter(Boolean).join(" ");
+    return `<div class="ij-head">${head ? `<img src="${esc(head)}" alt="" class="ij-photo">` : `<span class="ij-photo mono" style="background:#334155">${esc((A.displayName || "?").split(" ").map(x => x[0]).join("").slice(0, 2))}</span>`}
+      <div><h2>${esc(A.displayName || name)}</h2><span class="ij-team">${team ? esc(team.displayName) : ""}${A.position && A.position.abbreviation ? " · " + esc(A.position.abbreviation) : ""}${A.jersey ? " · #" + esc(A.jersey) : ""}</span></div>
+      <span class="ist ${/out/i.test(st) ? "out" : ""}" style="margin-left:auto">${esc(st)}</span></div>
+      <div class="ij-grid"><div><small>Injury</small><b>${esc(injury || "Not specified")}</b></div><div><small>Part of body</small><b>${esc(d.location || "–")}</b></div>
+      <div><small>Reported</small><b>${fmtD(item.date)}</b></div><div><small>Expected back</small><b>${d.returnDate ? fmtD(d.returnDate) : "No date given"}</b>${days != null ? `<span class="ij-days">${days > 0 ? `in about ${days} day${days === 1 ? "" : "s"}` : "any day now"}</span>` : ""}</div></div>
+      ${item.shortComment ? `<div class="ij-note"><small>Latest update</small><p>${esc(item.shortComment)}</p></div>` : ""}
+      ${item.longComment && item.longComment !== item.shortComment ? `<div class="ij-note"><small>More detail</small><p>${esc(item.longComment)}</p></div>` : ""}
+      <p class="colkey">Status from the official NBA injury report. "Out" means he won't play; "Day-To-Day" means a game-time decision.</p>`;
+  })();
+  return `<div class="scrim top" data-injclose></div><div class="ijsheet" role="dialog" aria-modal="true" aria-label="Injury details"><button class="close sm ij-x" data-injclose aria-label="Close">✕</button>${body}</div>`;
 }
 function slipDrawer() { return `<div class="scrim" data-close></div><aside class="drawer slipdr" role="dialog" aria-modal="true" aria-label="Bet slip">${slipHTML("drawer")}</aside>`; }
 
@@ -1693,6 +1736,7 @@ function render() {
   if (S.drawer) { const [sp, id] = S.drawer.split(":"); const g = findGame(sp, id); L.innerHTML = g ? drawerHTML(sp, g) : ""; if (!g) S.drawer = null; }
   else if (S.slipOpen) L.innerHTML = slipDrawer();
   else L.innerHTML = "";
+  if (S.injOpen) L.insertAdjacentHTML("beforeend", injuryCard(S.injOpen));
   const dr = $(".drawer"); if (dr && S.drawer) { dr.dataset.key = S.drawer; if (keepTop) dr.scrollTop = keepTop; dr.style.animation = keepTop ? "none" : ""; }
   document.body.style.overflow = (S.drawer || S.slipOpen) ? "hidden" : "";
 }
@@ -1730,6 +1774,8 @@ document.addEventListener("click", e => {
   else if (d.league) { S.league = d.league; render(); }
   else if (d.win) { S.win = d.win; render(); }
   else if (d.rung) { S.rungSel = +d.rung; render(); }
+  else if (d.inj) { S.injOpen = d.inj; render(); }
+  else if (d.chalodds2) { S.chalOdds = d.chalodds2; store.set("chalOdds", S.chalOdds); render(); }
   else if (d.accawin) { S.accaWin = d.accawin; render(); }
   else if (d.boxside) { const [gid, sd] = d.boxside.split("|"); S.boxSide[gid] = sd; render(); }
   else if (d.preset) { S.slip = asLegs(buildPreset(d.preset)); save(); render(); toast("Acca loaded into your slip"); }
@@ -1751,7 +1797,8 @@ document.addEventListener("click", e => { const b = e.target.closest("[data-legr
 document.addEventListener("input", e => {
   if (e.target.id === "stake") { S.stake = Math.max(0, +e.target.value || 0); save(); const c = slipCalc(); document.querySelectorAll("#ret").forEach(r => r.textContent = money(S.stake * c.dec)); }
 });
-document.addEventListener("keydown", e => { if (e.key === "Escape" && (S.drawer || S.slipOpen)) { S.drawer = null; S.slipOpen = false; render(); } });
+document.addEventListener("click", e => { if (e.target.closest("[data-injclose]")) { S.injOpen = null; render(); } });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && S.injOpen) { S.injOpen = null; render(); return; } if (e.key === "Escape" && (S.drawer || S.slipOpen)) { S.drawer = null; S.slipOpen = false; render(); } });
 addEventListener("hashchange", () => { S.drawer = null; S.slipOpen = false; render(); scrollTo(0, 0); });
 setInterval(() => S.data && renderChrome(), 60000);
 
