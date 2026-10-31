@@ -565,6 +565,18 @@ h3{font-size:15px;font-weight:700}
 .btn.pro-btn{background:linear-gradient(90deg,var(--tang),#FF4F6D);color:#fff}
 .chal-log{display:grid;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px}
 .fx .t b.isfav::before{content:"★ ";color:var(--amber)}
+/* artwork */
+.sport .spi{width:18px;height:18px;object-fit:contain}
+.sport button[aria-pressed=true] .spi{filter:saturate(1.2) brightness(.85)}
+.loading{display:grid;justify-items:center;gap:14px;padding:40px 0 80px}
+.loading .splash{width:min(260px,60vw);border-radius:22px;box-shadow:0 20px 60px -20px rgba(255,122,47,.45)}
+.empty.art,.loadbox.art{display:grid;justify-items:center;gap:6px;padding:26px 20px}
+.empty.art img,.loadbox.art img{width:min(260px,70%);height:auto;margin-bottom:6px}
+.empty.art b{color:var(--fg);font-size:15px}
+.empty-slip .es-img{width:90px;height:auto;opacity:.95}
+.acct-hero{width:100%;max-width:520px;height:auto;display:block;margin:-6px 0 6px}
+.banner{width:100%;height:auto;aspect-ratio:1024/434;object-fit:cover;border-radius:16px;display:block;border:1px solid var(--line)}
+.pro-art{width:100%;height:auto;aspect-ratio:1024/434;object-fit:cover;border-radius:12px;display:block;position:relative;z-index:1}
 .fmt-row{display:flex;justify-content:space-between;align-items:center;font-size:12.5px;color:var(--muted)}
 .fmt-big button{display:grid;gap:1px;padding:6px 12px;text-align:center;line-height:1.15}
 .fmt-big button b{font-size:12.5px}
@@ -580,8 +592,8 @@ h3{font-size:15px;font-weight:700}
         <span class="brand-txt"><span class="word">Matchday <b>Edge</b></span><span class="updated" id="updated"><span class="dot"></span><span>Loading…</span></span></span>
       </a>
       <div class="sport" role="group" aria-label="Sport">
-        <button id="sp-football" data-sport="football" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7l4 3-1.5 5h-5L8 10z"/></svg>Football</button>
-        <button id="sp-nba" data-sport="nba" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3v18M5.6 5.6c3 3 3 9.8 0 12.8M18.4 5.6c-3 3-3 9.8 0 12.8"/></svg>NBA</button>
+        <button id="sp-football" data-sport="football" aria-pressed="true"><img class="spi" src="img/icon-football.webp" alt="">Football</button>
+        <button id="sp-nba" data-sport="nba" aria-pressed="false"><img class="spi" src="img/icon-basketball.webp" alt="">NBA</button>
       </div>
       <a class="acct-btn" id="acctBtn" href="#account" aria-label="Your account"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg></a>
     </div>
@@ -590,7 +602,7 @@ h3{font-size:15px;font-weight:700}
 </header>
 
 <div class="wrap page">
-  <main id="main"><div class="loading">Loading today's games…</div></main>
+  <main id="main"><div class="loading"><img src="img/splash.webp" alt="" class="splash"><span>Loading today's games…</span></div></main>
   <aside class="rail" id="rail"></aside>
 </div>
 <div class="wrap"><footer class="foot">
@@ -810,7 +822,7 @@ function viewLive() {
   const next = all.filter(isPre).slice(0, 6);
   return `${promo()}<div class="hd"><div><h1>${sp === "nba" ? "NBA" : "Football"} live</h1><p class="sub">Scores and in-play stats update every 10 seconds. Tap any game for full stats, the timeline and every market.</p></div></div>
   ${live.length ? `<section class="section"><div class="live-grid">${live.map(g => liveCard(sp, g)).join("")}</div></section>`
-    : `<div class="empty">Nothing in play right now. ${next[0] ? `Next up: <b>${esc(vs(sp, next[0]))}</b> at ${hm(kick(next[0]))} (${dayLabel(dayKey(kick(next[0])))[0].toLowerCase()}).` : ""}</div>`}
+    : `<div class="empty art"><img src="img/empty-live.webp" alt="" loading="lazy"><b>Nothing in play right now</b><span>${next[0] ? `Next up: <b>${esc(vs(sp, next[0]))}</b> at ${hm(kick(next[0]))} (${dayLabel(dayKey(kick(next[0])))[0].toLowerCase()}).` : "Check back when games kick off."}</span></div>`}
   ${next.length && live.length ? `<section class="section"><h2>Starting soon</h2>${fixtureBlocks(sp, next, false)}</section>` : ""}
   ${!live.length && next.length ? `<section class="section"><h2>Up next</h2>${fixtureBlocks(sp, next, false)}</section>` : ""}
   ${recent.length ? `<section class="section"><h2>Latest results</h2><div class="live-grid">${recent.map(g => liveCard(sp, g)).join("")}</div></section>` : ""}`;
@@ -973,7 +985,7 @@ function viewAcca() {
 }
 const fmtRow = () => `<div class="fmt-row"><span>Odds format</span><div class="fmt fmt-big" role="group" aria-label="Odds format"><button data-fmt="frac" aria-pressed="${S.fmt === "frac"}"><b>Fractional</b><small>e.g. 5/2</small></button><button data-fmt="dec" aria-pressed="${S.fmt === "dec"}"><b>Decimal</b><small>e.g. 3.50</small></button></div></div>`;
 function slipHTML() {
-  if (!S.slip.length) return `<div class="slip"><div class="slip-hd"><h2>Bet slip</h2></div><div class="empty-slip"><b style="color:var(--fg-2)">Your slip is empty</b>Tap any price to add a selection.</div><div class="slip-ft">${fmtRow()}</div></div>`;
+  if (!S.slip.length) return `<div class="slip"><div class="slip-hd"><h2>Bet slip</h2></div><div class="empty-slip"><img src="img/empty-slip.webp" alt="" loading="lazy" class="es-img"><b style="color:var(--fg-2)">Your slip is empty</b>Tap any price to add a selection.</div><div class="slip-ft">${fmtRow()}</div></div>`;
   const c = slipCalc(), ret = S.stake * c.dec, type = S.slip.length === 1 ? "Single" : S.slip.length === 2 ? "Double" : S.slip.length === 3 ? "Treble" : S.slip.length + "-fold acca";
   return `<div class="slip"><div class="slip-hd"><h2>Bet slip <span class="badge alt">${S.slip.length}</span></h2><button class="more" data-clear>Clear all</button></div>
   <div class="slip-legs">${S.slip.map(l => `<div class="leg"><div><div class="ls">${esc(l.label)}</div><div class="lm">${esc(l.match)} · ${whenLabel(l.kick)}</div></div><div class="lp">${odds(l.dec)}<small>${l.est ? "fair" : "market"} · ${pct(l.p)}</small></div><button class="x" data-rm="${esc(l.id)}" aria-label="Remove">✕</button></div>`).join("")}</div>
@@ -1015,6 +1027,7 @@ function viewChallenge() {
   const single = c => `<article class="pick"><div class="ring" style="--p:${Math.round(c.m.p * 100)};--c:${tierColor(c.m.p)}"><span>${pct(c.m.p)}</span></div><div><div class="sel">${esc(c.m.label)}</div><div class="mt"><button class="more" data-open="${c.sport}:${c.g.id}">${esc(vs(c.sport, c.g))}</button><span>· ${whenLabel(kick(c.g))}</span></div></div><ul class="why">${reasons(c.sport, c.g, c.m).slice(0, 2).map(w => `<li>${esc(w)}</li>`).join("")}</ul><div class="pfoot"><div class="price"><span class="big">${odds(c.m.dec)}</span><small>£${C.bank} returns ${money(C.bank * c.m.dec)}</small></div><button class="add" data-leg="${c.sport}|${c.g.id}|${c.m.k}" aria-pressed="${inSlip(legId(c.sport, c.g, c.m))}">${inSlip(legId(c.sport, c.g, c.m)) ? "✓ In slip" : "+ Add to slip"}</button></div></article>`;
   const dbl = d => `<article class="pick"><div class="ring" style="--p:${Math.round(d.p * 100)};--c:${tierColor(d.p)}"><span>${pct(d.p)}</span></div><div><div class="sel">Double</div><div class="mt">Two short-priced legs that make roughly evens together</div></div><ul class="why">${[d.a, d.b].map(c => `<li>${esc(c.m.label)} (${esc(vs(c.sport, c.g))}, ${whenLabel(kick(c.g))}) · ${odds(priceOf(c.m))}</li>`).join("")}</ul><div class="pfoot"><div class="price"><span class="big">${odds(d.d)}</span><small>£${C.bank} returns ${money(C.bank * d.d)} (est.)</small></div><button class="add" data-double="${d.a.sport}|${d.a.g.id}|${d.a.m.k}|${d.b.g.id}|${d.b.m.k}">+ Load double</button></div></article>`;
   return `<div class="hd"><div><h1>£1 → £1K challenge</h1><p class="sub">Start with £1, roll the whole lot onto a bet at around evens, and double it ten times to reach £1,024. ${S.user ? "Log each result below and the ladder moves on." : "Sign in to run your own ladder."}</p></div></div>
+  <img class="banner" src="img/challenge-banner.webp" alt="A glowing staircase of ten steps rising to a trophy">
   <section class="chal-hero">
     <div class="chal-top"><div><div class="eyebrow">Current bank · step ${C.rung + 1} of ${C.rungs}</div><div class="bankv">£${C.bank}<small>→ £${C.bank * 2} next</small></div></div>
     <div><div class="eyebrow">Wins needed</div><div class="bankv" style="font-size:44px">${left}</div></div></div>
@@ -1258,7 +1271,7 @@ function viewNews() {
     const want = NF === "injuries" ? INJ_RE : NF === "transfers" ? TRF_RE : null;
     const list = items.filter(([a]) => !want || want.test(a.headline + " " + (a.description || "")));
     const loading = fs.some(([f]) => f.loading && !f.data);
-    body = list.length ? `<div class="newslist">${list.slice(0, 60).map(([a, n]) => storyHTML(a, n)).join("")}</div>` : `<div class="loadbox">${loading ? "Loading news…" : want ? "No stories about that right now." : "No news right now."}</div>`;
+    body = list.length ? `<div class="newslist">${list.slice(0, 60).map(([a, n]) => storyHTML(a, n)).join("")}</div>` : `<div class="loadbox art">${loading ? "Loading news…" : `<img src="img/empty-news.webp" alt="" loading="lazy"><span>${want ? "No stories about that right now." : "No news right now."}</span>`}</div>`;
     if (sp === "football") body = `<div class="chips scroll"><button class="chip" data-newsleague="all" aria-pressed="${!S.newsLeague || S.newsLeague === "all"}">All leagues</button>${S.data.leagues.map(l => `<button class="chip" data-newsleague="${l.id}" aria-pressed="${S.newsLeague === l.id}">${esc(l.name)}</button>`).join("")}</div>` + body;
   }
   return `<div class="hd"><div><h1>${sp === "nba" ? "NBA" : "Football"} news</h1><p class="sub">${sp === "nba" && NF === "injuries" ? "Every injured player, with teams playing soon at the top." : NF === "injuries" ? "Stories about injuries and fitness." : NF === "transfers" ? "Stories about transfers, signings and contracts." : "Latest stories. Tap one to read it in full."}</p></div>${chips}</div>${body}`;
@@ -1319,7 +1332,7 @@ function statBlock() {
 }
 function betRows() {
   const list = S.bets.filter(b => S.betFilter === "all" || (S.betFilter === "open" ? b.result === "open" : b.result !== "open"));
-  if (!list.length) return `<div class="empty">${S.betFilter === "open" ? "No open bets. Add one from your bet slip or below." : "Nothing here yet."}</div>`;
+  if (!list.length) return `<div class="empty art"><img src="img/empty-bets.webp" alt="" loading="lazy"><b>${S.betFilter === "open" ? "No open bets" : "Nothing here yet"}</b><span>${S.betFilter === "open" ? "Save a bet from your slip, or add one below." : "Settled bets will show here."}</span></div>`;
   return list.map(b => `<div class="betrow"><div><div class="bl">${esc(b.label)}</div><div class="bm">${esc(b.match || "")}${b.kickoff ? " · " + whenLabel(b.kickoff) : ""} · placed ${new Date(b.placed_at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</div></div>
     <div class="br">${odds(+b.odds_dec)}<small>£${(+b.stake).toFixed(2)} stake${b.result === "won" ? ` · <span style="color:var(--win)">+${gbp(+b.returns - +b.stake)}</span>` : b.result === "lost" ? ` · <span style="color:var(--loss)">${gbp(-b.stake)}</span>` : ` · returns ${gbp(+b.stake * +b.odds_dec)}`}</small></div>
     <div class="acts"><span class="st ${b.result}">${b.result}</span>${b.result === "open" ? `<button class="btn sm win" data-settle="${b.id}|won">Won</button><button class="btn sm lose" data-settle="${b.id}|lost">Lost</button><button class="btn sm ghost" data-settle="${b.id}|void">Void</button>` : `<button class="btn sm ghost" data-settle="${b.id}|open">Reopen</button>`}<button class="x" style="margin-left:auto" data-delbet="${b.id}" aria-label="Delete bet">✕</button></div></div>`).join("");
@@ -1333,7 +1346,7 @@ function allTeams() {
 function proCard() {
   const feats = [["Real UK bookmaker prices", "Live Sky Bet, Paddy Power, William Hill and Betfair odds side by side, with the best price highlighted."], ["Bet alerts", "A ping when one of your teams has a banker, or an in-play corners or cards angle opens up."], ["Deeper models", "Player shots, cards and points props, plus first-half and second-half markets."], ["Unlimited saved accas", "Build, save and share accas with your mates."]];
   const cta = !S.user ? `<a class="btn pro-btn" href="#account">Create a free account to join the waitlist</a>` : S.waitlisted ? `<span class="msg ok">${ICON.check.replace("<svg", '<svg style="width:16px;height:16px;vertical-align:-3px"')} You're on the waitlist. You'll hear first when Pro opens.</span>` : `<button class="btn pro-btn" data-waitlist>Join the waitlist</button><span style="color:var(--muted);font-size:13px">Free to join. No card needed.</span>`;
-  return `<section class="pro"><div class="pro-top"><div><div class="pro-badge">Matchday Edge <span>PRO</span></div><p class="sub" style="margin-top:8px">More data, sharper picks and alerts, for players who bet every week.</p></div><span class="soon">Coming soon</span></div>
+  return `<section class="pro"><img class="pro-art" src="img/pro-banner.webp" alt="Matchday Edge Pro"><div class="pro-top"><div><div class="pro-badge">Matchday Edge <span>PRO</span></div><p class="sub" style="margin-top:8px">More data, sharper picks and alerts, for players who bet every week.</p></div><span class="soon">Coming soon</span></div>
   <div class="pro-feats">${feats.map(([t, d]) => `<div class="pf">${ICON.check}<div><b>${t}</b><span>${d}</span></div></div>`).join("")}</div><div class="pro-cta">${cta}</div></section>`;
 }
 function viewAccount() {
@@ -1342,7 +1355,7 @@ function viewAccount() {
   if (S.recovery && S.user) return `<div class="hd"><div><h1>Set a new password</h1></div></div><form class="authcard" id="pwForm" style="max-width:420px"><div class="field"><label for="newpw">New password</label><input id="newpw" type="password" minlength="8" autocomplete="new-password" required></div>${m}<button class="btn" type="submit">Save password</button></form>`;
   if (!S.user) {
     const up = S.authTab === "up";
-    return `<div class="acct-grid"><div><h1>Your Matchday Edge account</h1><p class="sub">Free for you and your mates. Sign up in seconds.</p>
+    return `<div class="acct-grid"><div><img class="acct-hero" src="img/account-hero.webp" alt=""><h1>Your Matchday Edge account</h1><p class="sub">Free for you and your mates. Sign up in seconds.</p>
       <ul class="perks"><li><span class="ic">${ICON.chart}</span><div><b>Track every bet</b><span>Save bets from your slip, mark them won or lost, and see your real profit and loss.</span></div></li>
       <li><span class="ic">${ICON.ladder}</span><div><b>Your own £1 → £1K ladder</b><span>Run the challenge yourself and log each result in one tap.</span></div></li>
       <li><span class="ic">${ICON.star}</span><div><b>Favourite teams</b><span>Your teams starred in fixtures and pinned to the top.</span></div></li>
