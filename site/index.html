@@ -817,6 +817,8 @@ h3{font-size:15px;font-weight:700}
 .mgroup{display:grid;gap:8px}.mgroup + .mgroup{margin-top:14px}
 .mgroup h3{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 /* tracker */
+.trk-other{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;background:var(--surface);border:1px dashed var(--line-2);border-radius:12px;padding:10px 14px;font-size:13px;color:var(--fg-2);text-align:left}
+.trk-other b{color:var(--blue-2);white-space:nowrap}
 .trk{display:grid;gap:10px}
 .trk-card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:grid;gap:10px}
 .trk-hd{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;align-items:start}
@@ -1691,9 +1693,12 @@ function legValue(l) {
   return { v, g, on: onPitch(P), dnp: !P.starter && !P.subIn && g.status.state === "post" };
 }
 function trackerHTML() {
-  const T = S.tracked || []; if (!T.length) return "";
+  const all = S.tracked || [], sportOf = t => (t.legs[0] || {}).sport, T = all.filter(t => sportOf(t) === S.sport), other = all.length - T.length;
+  const otherName = S.sport === "nba" ? "football" : "NBA";
+  const otherNote = other ? `<button class="trk-other" data-sport="${S.sport === "nba" ? "football" : "nba"}"><span>${other} ${otherName} bet${other > 1 ? "s" : ""} being tracked</span><b>View ›</b></button>` : "";
+  if (!T.length) return otherNote ? `<section class="section">${otherNote}</section>` : "";
   for (const t of T) for (const l of t.legs) { const g = findGame(l.sport, l.gid); if (g && !isPre(g) && !(l.sport === "nba" ? g.box : g.lineups)) loadDetail(l.sport + ":" + l.gid); }
-  return `<section class="section"><div class="hd"><h2>Your tracked bets</h2><button class="btn ghost sm" data-import>+ Import a bet</button></div><div class="trk">${T.map(t => {
+  return `<section class="section"><div class="hd"><h2>Your tracked bets</h2><button class="btn ghost sm" data-import>+ Import a bet</button></div><div class="trk">${otherNote}${T.map(t => {
     let hit = 0, lost = false, started = false, voids = 0;
     const rows = t.legs.map(l => { const r = legValue(l), g = r.g, done = r.v != null && r.v >= l.target, post = g && g.status.state === "post";
       if (done) hit++; else if (r.dnp) voids++; else if (post) lost = true; if (g && !isPre(g)) started = true;
