@@ -577,6 +577,11 @@ h3{font-size:15px;font-weight:700}
 .acct-hero{width:100%;max-width:520px;height:auto;display:block;margin:-6px 0 6px}
 .banner{width:100%;height:auto;aspect-ratio:1024/434;object-fit:cover;border-radius:16px;display:block;border:1px solid var(--line)}
 .pro-art{width:100%;height:auto;aspect-ratio:1024/434;object-fit:cover;border-radius:12px;display:block;position:relative;z-index:1}
+.oddin{width:74px;background:var(--surface-2);border:1px dashed var(--line-2);border-radius:7px;color:var(--fg);font-family:var(--display);font-weight:700;font-size:17px;text-align:right;padding:3px 7px;outline:none}
+.oddin:focus{border-style:solid;border-color:var(--blue);background:var(--bg-2)}
+.oddin.mine{border-style:solid;border-color:var(--tang);color:var(--tang-2)}
+.lp small .rs{color:var(--blue-2);font-size:10px;font-weight:700;text-decoration:underline;padding:0}
+.oddhint{font-size:11.5px;color:var(--muted);padding:8px 14px;border-bottom:1px solid var(--line);background:var(--bg-2)}
 .fmt-row{display:flex;justify-content:space-between;align-items:center;font-size:12.5px;color:var(--muted)}
 .fmt-big button{display:grid;gap:1px;padding:6px 12px;text-align:center;line-height:1.15}
 .fmt-big button b{font-size:12.5px}
@@ -678,7 +683,7 @@ function toggleLeg(sport, gid, k) {
   const g = findGame(sport, gid); if (!g) return; const m = mkt(g, k); if (!m) return;
   const id = legId(sport, g, m);
   if (inSlip(id)) S.slip = S.slip.filter(l => l.id !== id);
-  else { S.slip = S.slip.filter(l => !(l.sport === sport && l.gid === gid && conflicts(l.k, k))); S.slip.push({ id, sport, gid, k, label: m.label, match: vs(sport, g), p: m.p, dec: priceOf(m), est: !m.dec, kick: kick(g) }); toast("Added to slip"); }
+  else { S.slip = S.slip.filter(l => !(l.sport === sport && l.gid === gid && conflicts(l.k, k))); S.slip.push({ id, sport, gid, k, label: m.label, match: vs(sport, g), p: m.p, dec: priceOf(m), orig: priceOf(m), est: !m.dec, estOrig: !m.dec, kick: kick(g) }); toast("Added to slip"); }
   save(); render();
 }
 function conflicts(a, b) { const grp = k => /^(1|X|2|1X|X2|12|DNB1|DNB2|ML1|ML2)$/.test(k) ? "res" : /^(O|U)\d|^U35|^O35/.test(k) ? "goals" : /^BTTS/.test(k) ? "btts" : /^SP/.test(k) ? "sp" : /^T[OU]$/.test(k) ? "tot" : k; return grp(a) === grp(b); }
@@ -967,7 +972,7 @@ function buildPreset(kind, win) {
   return [];
 }
 const PRESETS = [["safe", "Safe four", "Four bankers from different games."], ["goals", "Goals galore", "Over 1.5s, both teams to score and teams to score."], ["five", "Weekend punch", "Six legs at bigger prices for a real payout."], ["corners", "Corners & cards", "Stat markets backed by recent averages."]];
-function asLegs(list) { return list.map(({ sport, g, m }) => ({ id: legId(sport, g, m), sport, gid: g.id, k: m.k, label: m.label, match: vs(sport, g), p: m.p, dec: priceOf(m), est: !m.dec, kick: kick(g) })); }
+function asLegs(list) { return list.map(({ sport, g, m }) => ({ id: legId(sport, g, m), sport, gid: g.id, k: m.k, label: m.label, match: vs(sport, g), p: m.p, dec: priceOf(m), orig: priceOf(m), est: !m.dec, estOrig: !m.dec, kick: kick(g) })); }
 const accaWin = () => S.accaWin && upcoming(S.sport, S.accaWin).length ? S.accaWin : firstWin(S.sport);
 function presetsHTML() {
   const aw = accaWin();
@@ -988,7 +993,8 @@ function slipHTML() {
   if (!S.slip.length) return `<div class="slip"><div class="slip-hd"><h2>Bet slip</h2></div><div class="empty-slip"><img src="img/empty-slip.webp" alt="" loading="lazy" class="es-img"><b style="color:var(--fg-2)">Your slip is empty</b>Tap any price to add a selection.</div><div class="slip-ft">${fmtRow()}</div></div>`;
   const c = slipCalc(), ret = S.stake * c.dec, type = S.slip.length === 1 ? "Single" : S.slip.length === 2 ? "Double" : S.slip.length === 3 ? "Treble" : S.slip.length + "-fold acca";
   return `<div class="slip"><div class="slip-hd"><h2>Bet slip <span class="badge alt">${S.slip.length}</span></h2><button class="more" data-clear>Clear all</button></div>
-  <div class="slip-legs">${S.slip.map(l => `<div class="leg"><div><div class="ls">${esc(l.label)}</div><div class="lm">${esc(l.match)} · ${whenLabel(l.kick)}</div></div><div class="lp">${odds(l.dec)}<small>${l.est ? "fair" : "market"} · ${pct(l.p)}</small></div><button class="x" data-rm="${esc(l.id)}" aria-label="Remove">✕</button></div>`).join("")}</div>
+  <div class="oddhint">Different price at your bookie? Tap any price to change it.</div>
+  <div class="slip-legs">${S.slip.map(l => `<div class="leg"><div><div class="ls">${esc(l.label)}</div><div class="lm">${esc(l.match)} · ${whenLabel(l.kick)}</div></div><div class="lp"><input class="oddin ${l.custom ? "mine" : ""}" data-legodds="${esc(l.id)}" value="${odds(l.dec)}" autocomplete="off" spellcheck="false" aria-label="Odds for ${esc(l.label)}. Type your bookie's price"><small>${l.custom ? `your price · <button class="rs" data-legreset="${esc(l.id)}">reset</button>` : `${l.est ? "app's fair price" : "market price"} · ${pct(l.p)}`}</small></div><button class="x" data-rm="${esc(l.id)}" aria-label="Remove">✕</button></div>`).join("")}</div>
   <div class="slip-ft">
     <div class="kv"><span>${type} odds${c.est ? " (est.)" : ""}</span><b>${odds(c.dec)}</b></div>
     <div class="stake"><label for="stake">Stake</label><span class="in">£<input id="stake" type="number" inputmode="decimal" min="0" step="0.5" value="${S.stake}"></span></div>
@@ -1498,6 +1504,18 @@ document.addEventListener("click", e => {
   else if (d.double) { const [sp, g1, k1, g2, k2] = d.double.split("|"); S.slip = []; for (const [g, k] of [[g1, k1], [g2, k2]]) { const G = findGame(sp, g), m = mkt(G, k); S.slip.push(...asLegs([{ sport: sp, g: G, m }])); } save(); render(); toast("Double loaded into your slip"); }
   else if (t.id === "fab") { S.slipOpen = true; S.drawer = null; render(); }
 });
+function setLegOdds(id, raw) {
+  const l = S.slip.find(x => x.id === id); if (!l) return;
+  const d = parseOdds(raw);
+  if (!d) { toast("Use odds like 5/2, EVS or 3.5"); render(); return; }
+  if (l.orig == null) l.orig = l.dec;
+  l.dec = Math.round(d * 1000) / 1000; l.custom = Math.abs(l.dec - l.orig) > 0.0005; l.est = l.custom ? false : l.estOrig ?? l.est;
+  save(); render(); toast(l.custom ? "Price updated to " + odds(l.dec) : "Back to the app's price");
+}
+document.addEventListener("change", e => { const t = e.target; if (t.dataset && t.dataset.legodds) setLegOdds(t.dataset.legodds, t.value); });
+document.addEventListener("keydown", e => { const t = e.target; if (e.key === "Enter" && t.dataset && t.dataset.legodds) t.blur(); });
+document.addEventListener("focusin", e => { const t = e.target; if (t.dataset && t.dataset.legodds) setTimeout(() => t.select(), 0); });
+document.addEventListener("click", e => { const b = e.target.closest("[data-legreset]"); if (!b) return; const l = S.slip.find(x => x.id === b.dataset.legreset); if (l && l.orig != null) { l.dec = l.orig; l.custom = false; if (l.estOrig != null) l.est = l.estOrig; save(); render(); toast("Back to the app's price"); } });
 document.addEventListener("input", e => {
   if (e.target.id === "stake") { S.stake = Math.max(0, +e.target.value || 0); save(); const c = slipCalc(); document.querySelectorAll("#ret").forEach(r => r.textContent = money(S.stake * c.dec)); }
 });
