@@ -76,8 +76,8 @@ a{color:var(--blue-2)}
 .tl-short{display:none}
 .tab-chal .tl-long,.tab-chal .tl-short{background:linear-gradient(90deg,var(--tang-2),#FF6F91);-webkit-background-clip:text;background-clip:text;color:transparent;font-weight:700}
 @media (max-width:640px){
-  .tabs{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:0;overflow:visible}
-  .tab{justify-content:center;padding:10px 2px 12px;font-size:13px;gap:4px}
+  .tabs{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:0;overflow:visible}
+  .tab{justify-content:center;padding:10px 1px 12px;font-size:12.5px;gap:3px}
   .tab[aria-current=page]::after{left:6px;right:6px}
   .tl-long{display:none}.tl-short{display:inline}
   .tab .badge{padding:0 5px;font-size:10px;line-height:15px}
@@ -226,6 +226,44 @@ h3{font-size:15px;font-weight:700}
 .subm{font-family:var(--display);font-size:12px;font-weight:700;margin-left:4px;white-space:nowrap}
 .subm.in{color:var(--win)}.subm.out{color:var(--loss)}
 .colkey{font-size:11.5px;color:var(--muted);line-height:1.6}
+/* tables */
+.tbl{width:100%;border-collapse:collapse;font-size:13.5px;font-variant-numeric:tabular-nums}
+.tbl th{font-size:10.5px;font-weight:700;letter-spacing:.06em;color:var(--muted);text-align:center;padding:8px 6px;border-bottom:1px solid var(--line);background:var(--bg-2);white-space:nowrap}
+.tbl th.l,.tbl td.l{text-align:left}
+.tbl td{padding:8px 6px;border-bottom:1px solid var(--line);text-align:center;font-family:var(--display);font-size:15px;font-weight:600;color:var(--fg-2);white-space:nowrap}
+.tbl td.pos{width:34px;font-weight:700;color:var(--fg);box-shadow:inset 3px 0 0 var(--zc,transparent)}
+.tbl td.team{font-family:var(--body);font-size:13.5px;font-weight:600;color:var(--fg);min-width:150px}
+.tbl td.team span{display:inline-flex;align-items:center;gap:8px}
+.tbl td.team img,.tbl td.team .mono{width:20px;height:20px;font-size:8px}
+.tbl td.pts{color:var(--fg);font-weight:800}
+@media (max-width:480px){.tbl .nx{display:none}.tbl td.team{min-width:0;max-width:150px;overflow:hidden;text-overflow:ellipsis}.tbl td,.tbl th{padding-left:4px;padding-right:4px}}
+.tbl tr.fav td{background:rgba(255,194,61,.07)}
+.tbl tr.play td.team::after{content:"PLAYING";font-size:9px;font-weight:800;letter-spacing:.06em;color:var(--live);margin-left:6px}
+.zones{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--muted)}
+.zones span{display:flex;align-items:center;gap:6px}.zones i{width:10px;height:10px;border-radius:3px}
+/* news */
+.newslist{display:grid;gap:10px}
+.story{display:grid;grid-template-columns:120px minmax(0,1fr);gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px;text-decoration:none;color:var(--fg);transition:border-color .15s}
+.story:hover{border-color:var(--line-2)}
+.story img{width:120px;aspect-ratio:16/10;object-fit:cover;border-radius:8px;background:var(--surface-2);max-width:100%}
+.story h3{font-size:14.5px;line-height:1.3;margin:0}
+.story p{margin:4px 0 0;font-size:12.5px;color:var(--fg-2);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.story .meta2{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;font-size:11px;color:var(--muted);font-weight:600;align-items:center}
+.story .tagx{font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:2px 6px;border-radius:5px}
+.tagx.inj{background:rgba(255,83,112,.15);color:var(--loss)}.tagx.trf{background:rgba(61,123,255,.16);color:var(--blue-2)}
+@media (max-width:480px){.story{grid-template-columns:92px minmax(0,1fr)}.story img{width:92px}}
+.injteam{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.injteam .ih{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg-2);font-weight:700;font-size:13.5px}
+.injteam .ih img,.injteam .ih .mono{width:22px;height:22px}
+.injteam .ih .pill{margin-left:auto}
+.inj{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;padding:10px 12px;border-top:1px solid var(--line)}
+.inj b{font-size:13.5px}.inj small{grid-column:1/-1;color:var(--muted);font-size:12px;line-height:1.45}
+.ist{font-size:10.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;padding:3px 7px;border-radius:6px;background:rgba(255,194,61,.14);color:var(--amber);white-space:nowrap;align-self:start}
+.ist.out{background:rgba(255,83,112,.15);color:var(--loss)}
+.trow{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;padding:10px 12px;background:var(--surface);border:1px solid var(--line);border-radius:10px;font-size:13px;align-items:start}
+.trow img,.trow .mono{width:22px;height:22px}
+.trow small{display:block;color:var(--muted);font-size:11px;font-weight:600;margin-top:2px}
+.loadbox{padding:30px;text-align:center;color:var(--muted)}
 .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);align-items:center}
 .legend span{display:flex;align-items:center;gap:6px}
 /* rich in-play rows */
@@ -563,8 +601,8 @@ const store = { get(k, d) { try { const v = localStorage.getItem("mde:" + k); re
 
 const S = { data: null, logos: {}, sport: store.get("sport", "football"), fmt: store.get("fmt", "frac"), slip: store.get("slip", []),
             stake: store.get("stake", 5), boxSide: {}, league: "all", win: "today", drawer: null, slipOpen: false };
-const VIEWS = [["live", "Live", "Live"], ["fixtures", "Fixtures", "Fixtures"], ["bets", "Best Bets", "Bets"], ["acca", "Acca Builder", "Accas"], ["challenge", "£1K Challenge", "£1K"]];
-const view = () => { const h = location.hash.slice(1); return h === "account" || VIEWS.some(v => v[0] === h) ? h : "live"; };
+const VIEWS = [["live", "Live", "Live"], ["fixtures", "Fixtures", "Games"], ["tables", "Tables", "Tables"], ["news", "News", "News"], ["bets", "Best Bets", "Bets"], ["challenge", "£1K Challenge", "£1K"]];
+const view = () => { const h = location.hash.slice(1); return h === "account" || h === "acca" || VIEWS.some(v => v[0] === h) ? h : "live"; };
 
 /* ---------- odds ---------- */
 const FR = [[1,20],[1,16],[1,14],[1,12],[1,10],[1,9],[1,8],[1,7],[1,6],[1,5],[2,9],[1,4],[2,7],[3,10],[1,3],[4,11],[2,5],[4,9],[1,2],[8,15],[4,7],[8,13],[4,6],[8,11],[4,5],[5,6],[10,11],[1,1],[21,20],[11,10],[6,5],[5,4],[11,8],[7,5],[6,4],[8,5],[13,8],[7,4],[9,5],[15,8],[2,1],[85,40],[9,4],[12,5],[5,2],[13,5],[11,4],[3,1],[10,3],[7,2],[4,1],[9,2],[5,1],[11,2],[6,1],[13,2],[7,1],[15,2],[8,1],[17,2],[9,1],[10,1],[11,1],[12,1],[14,1],[16,1],[18,1],[20,1],[22,1],[25,1],[28,1],[33,1],[40,1],[50,1],[66,1],[80,1],[100,1],[125,1],[150,1],[200,1],[250,1],[300,1],[400,1],[500,1],[750,1],[1000,1]];
@@ -888,6 +926,7 @@ function viewBets() {
   const sec = (cls, name, desc, list) => list.length ? `<section class="section"><div class="tierhd"><span class="tag ${cls}">${name}</span><span class="sub" style="margin:0">${desc}</span></div><div class="pgrid">${list.map(pickCard).join("")}</div></section>` : "";
   return `${promo()}<div class="hd"><div><h1>Best bets</h1><p class="sub">Every market is rated by a model built on season stats and recent form, then blended with the betting market. One pick per game, so you can stack them without doubling up.</p></div>
   ${winChips()}</div>
+  ${presetsHTML()}
   <div class="tiers">
   ${sec("bank", "Bankers", "74%+ model chance. Short prices, best for acca legs.", T.bank)}
   ${sec("strong", "Strong", "60 to 74% chance at better prices.", T.strong)}
@@ -910,17 +949,19 @@ function buildPreset(kind, win) {
 const PRESETS = [["safe", "Safe four", "Four bankers from different games."], ["goals", "Goals galore", "Over 1.5s, both teams to score and teams to score."], ["five", "Weekend punch", "Six legs at bigger prices for a real payout."], ["corners", "Corners & cards", "Stat markets backed by recent averages."]];
 function asLegs(list) { return list.map(({ sport, g, m }) => ({ id: legId(sport, g, m), sport, gid: g.id, k: m.k, label: m.label, match: vs(sport, g), p: m.p, dec: priceOf(m), est: !m.dec, kick: kick(g) })); }
 const accaWin = () => S.accaWin && upcoming(S.sport, S.accaWin).length ? S.accaWin : firstWin(S.sport);
-function viewAcca() {
+function presetsHTML() {
   const aw = accaWin();
   const presets = PRESETS.filter(p => S.sport === "football" || p[0] !== "corners").map(([k, t, d]) => {
     const legs = asLegs(buildPreset(k)); if (legs.length < 2) return "";
     const c = slipCalc(legs);
     return `<button class="preset" data-preset="${k}"><span class="pt">${t}</span><span class="pd">${d}</span><span class="pd">${legs.map(l => esc(l.label) + ` <span style="color:var(--muted)">(${whenLabel(l.kick)})</span>`).join(" · ")}</span><span class="po"><b>${odds(c.dec)}</b><span class="pill ${c.p > .3 ? "good" : "hot"}">${pct(c.p)} chance</span></span></button>`;
   }).join("");
-  return `<div class="hd"><div><h1>Acca builder</h1><p class="sub">Tap a ready-made acca to load it, or add legs from Fixtures and Best Bets. The slip shows the combined price, your returns and how often the whole thing should land.</p></div></div>
-  <section class="section"><div class="hd"><h2>Ready-made accas · ${WIN_NAME[aw]}</h2><div class="chips">${["today", "tomorrow", "48h"].map(k => `<button class="chip" data-accawin="${k}" aria-pressed="${aw === k}" ${upcoming(S.sport, k).length ? "" : "disabled style=\"opacity:.4\""}>${WIN_NAME[k]}</button>`).join("")}</div></div>
+  return `<section class="section"><div class="hd"><h2>Ready-made accas · ${WIN_NAME[aw]}</h2><div class="chips">${["today", "tomorrow", "48h"].map(k => `<button class="chip" data-accawin="${k}" aria-pressed="${aw === k}" ${upcoming(S.sport, k).length ? "" : "disabled style=\"opacity:.4\""}>${WIN_NAME[k]}</button>`).join("")}</div></div>
   ${firstWin(S.sport) !== "today" && !S.accaWin ? `<div class="note">All of today's ${S.sport === "nba" ? "NBA" : "football"} has started, so these use ${WIN_NAME[aw].toLowerCase()}'s games.${S.sport === "football" && upcoming("nba", "today").length ? ` Switch to <b>NBA</b> at the top for tonight's games.` : ""}</div>` : ""}<div class="presets">${presets || `<div class="empty">Not enough upcoming games to build one.</div>`}</div></section>
-  <section class="section slipwide"><h2>Your slip</h2>${slipHTML()}</section>`;
+`;
+}
+function viewAcca() {
+  return `<div class="hd"><div><h1>Acca builder</h1><p class="sub">Tap a ready-made acca to load it, or add legs from Fixtures and Best Bets.</p></div></div>${presetsHTML()}<section class="section slipwide"><h2>Your slip</h2>${slipHTML()}</section>`;
 }
 const fmtRow = () => `<div class="fmt-row"><span>Odds format</span><div class="fmt fmt-big" role="group" aria-label="Odds format"><button data-fmt="frac" aria-pressed="${S.fmt === "frac"}"><b>Fractional</b><small>e.g. 5/2</small></button><button data-fmt="dec" aria-pressed="${S.fmt === "dec"}"><b>Decimal</b><small>e.g. 3.50</small></button></div></div>`;
 function slipHTML() {
@@ -1129,6 +1170,98 @@ function drawerHTML(sport, g) {
 }
 function slipDrawer() { return `<div class="scrim" data-close></div><aside class="drawer" role="dialog" aria-modal="true" aria-label="Bet slip"><div class="dr-in"><div class="dr-top"><span class="eyebrow">Bet slip</span><button class="close" data-close aria-label="Close">✕</button></div>${slipHTML()}</div></aside>`; }
 
+/* ---------- tables + news (fetched on demand, straight from the feed) ---------- */
+const API2 = "https://site.api.espn.com/apis/v2/sports";
+const FEEDS = {};   // url -> {data, at, err}
+function feed(url, ttl = 10 * 60e3) {
+  const f = FEEDS[url];
+  if (f && (f.loading || Date.now() - f.at < ttl)) return f;
+  const n = FEEDS[url] = { loading: true, at: Date.now(), data: f && f.data, err: false };
+  getJ(url).then(d => { n.data = d; n.err = false; }).catch(() => { n.err = true; }).finally(() => { n.loading = false; n.at = Date.now(); render(); });
+  return n;
+}
+const espnLogo = (t, sport) => {
+  const key = (sport === "nba" ? "nba" : "soccer") + "-" + t.id;
+  if (S.logos[key]) return `<img src="${S.logos[key]}" alt="" loading="lazy">`;
+  const h = ((t.logos || [])[0] || {}).href || t.logo || "";
+  if (h) return `<img src="https://a.espncdn.com/combiner/i?img=${encodeURIComponent(h.replace(/^https?:\/\/a\.espncdn\.com/, ""))}&w=40&h=40" alt="" loading="lazy">`;
+  return `<span class="mono" style="background:#${esc(t.color || "334155")}">${esc((t.abbreviation || t.displayName || "?").slice(0, 3))}</span>`;
+};
+const statMap = e => Object.fromEntries((e.stats || []).map(x => [x.name || x.type, x]));
+const playingSoon = (sport, id) => games(sport).some(g => (isLive(g) || (isPre(g) && +new Date(kick(g)) - Date.now() < 864e5)) && (g.home.id === id || g.away.id === id));
+function viewTables() {
+  const sp = S.sport;
+  if (sp === "nba") {
+    const f = feed(`${API2}/basketball/nba/standings`);
+    const body = !f.data ? `<div class="loadbox">${f.err ? "Couldn't load the standings. Pull down to try again." : "Loading standings…"}</div>` : (f.data.children || []).map(conf => {
+      const rows = [...conf.standings.entries].sort((a, b) => (+statMap(a).playoffSeed?.value || 99) - (+statMap(b).playoffSeed?.value || 99));
+      return `<section class="section"><h2>${esc(conf.name)}</h2><div class="tw" style="padding:0"><table class="tbl"><thead><tr><th>#</th><th class="l">Team</th><th>W</th><th>L</th><th>PCT</th><th>GB</th><th>L10</th><th>Strk</th><th>Home</th><th>Away</th></tr></thead><tbody>
+      ${rows.map(e => { const m = statMap(e), seed = +(m.playoffSeed || {}).value || 0, zc = seed && seed <= 6 ? "var(--win)" : seed && seed <= 10 ? "var(--amber)" : "transparent";
+        return `<tr class="${isFav("nba", e.team) ? "fav" : ""} ${playingSoon("nba", e.team.id) ? "play" : ""}"><td class="pos" style="--zc:${zc}">${seed || ""}</td><td class="team l"><span>${espnLogo(e.team, "nba")}${esc(e.team.shortDisplayName || e.team.displayName)}</span></td><td>${(m.wins || {}).displayValue ?? ""}</td><td>${(m.losses || {}).displayValue ?? ""}</td><td>${(m.winPercent || {}).displayValue ?? ""}</td><td>${(m.gamesBehind || {}).displayValue ?? ""}</td><td>${(m["Last Ten Games"] || m.lasttengames || {}).displayValue ?? ""}</td><td>${(m.streak || {}).displayValue ?? ""}</td><td>${(m.Home || m.home || {}).displayValue ?? ""}</td><td>${(m.Road || m.road || {}).displayValue ?? ""}</td></tr>`; }).join("")}
+      </tbody></table></div></section>`;
+    }).join("") + `<div class="zones"><span><i style="background:var(--win)"></i>Playoff places (1–6)</span><span><i style="background:var(--amber)"></i>Play-in (7–10)</span><span><b style="color:var(--live);font-size:10px">PLAYING</b> has a game in the next 24 hours</span></div>`;
+    return `<div class="hd"><div><h1>NBA standings</h1><p class="sub">Updated from the live feed. Swipe the table sideways for home and away records.</p></div></div>${body}`;
+  }
+  const L = S.tblLeague || "eng.1", f = feed(`${API2}/soccer/${L}/standings`);
+  const chips = `<div class="chips scroll">${S.data.leagues.map(l => `<button class="chip" data-tbl="${l.id}" aria-pressed="${L === l.id}">${esc(l.name)}</button>`).join("")}</div>`;
+  let body = `<div class="loadbox">${f.err ? "Couldn't load this table. Pull down to try again." : "Loading table…"}</div>`;
+  if (f.data) {
+    const groups = (f.data.children || [f.data]).filter(c => c.standings && c.standings.entries && c.standings.entries.length);
+    const notes = new Map();
+    body = groups.map(gp => {
+      const rows = [...gp.standings.entries].sort((a, b) => (+statMap(a).rank?.value || 99) - (+statMap(b).rank?.value || 99));
+      return `${groups.length > 1 ? `<h2>${esc(gp.name)}</h2>` : ""}<div class="tw" style="padding:0"><table class="tbl"><thead><tr><th>#</th><th class="l">Team</th><th>P</th><th>W</th><th>D</th><th>L</th><th class="nx">GF</th><th class="nx">GA</th><th>GD</th><th>Pts</th></tr></thead><tbody>
+      ${rows.map(e => { const m = statMap(e), n = e.note, zc = n && n.color ? "#" + String(n.color).replace("#", "") : "transparent"; if (n && n.description) notes.set(n.description, zc);
+        const v = k => (m[k] || {}).displayValue ?? "";
+        return `<tr class="${isFav("football", e.team) ? "fav" : ""} ${playingSoon("football", e.team.id) ? "play" : ""}"><td class="pos" style="--zc:${zc}">${v("rank")}</td><td class="team l"><span>${espnLogo(e.team, "football")}${esc(e.team.shortDisplayName || e.team.displayName)}</span></td><td>${v("gamesPlayed")}</td><td>${v("wins")}</td><td>${v("ties")}</td><td>${v("losses")}</td><td class="nx">${v("pointsFor")}</td><td class="nx">${v("pointsAgainst")}</td><td>${v("pointDifferential")}</td><td class="pts">${v("points")}</td></tr>`; }).join("")}
+      </tbody></table></div>`;
+    }).join("") + `<div class="zones">${[...notes].map(([d, c]) => `<span><i style="background:${c}"></i>${esc(d)}</span>`).join("")}<span><b style="color:var(--live);font-size:10px">PLAYING</b> has a game in the next 24 hours</span></div>`;
+  }
+  return `<div class="hd"><div><h1>League tables</h1><p class="sub">Tap a league. Your favourite teams are highlighted.</p></div></div>${chips}<section class="section">${body}</section>`;
+}
+const INJ_RE = /injur|hamstring|ruled out|sidelined|fitness|knee|ankle|groin|calf|muscle|surgery|fracture|concussion|out for|miss(es)? (the|next)|setback|doubt/i;
+const TRF_RE = /transfer|sign(s|ed|ing)?\b|loan|bid|deal|contract|move to|swoop|release clause|fee|talks|target|join(s|ed)?\b|extension|free agent/i;
+function storyHTML(a, league) {
+  const img = ((a.images || [])[0] || {}).url, link = ((a.links || {}).web || {}).href || "#", txt = (a.headline || "") + " " + (a.description || "");
+  const tags = (INJ_RE.test(txt) ? `<span class="tagx inj">Injury</span>` : "") + (TRF_RE.test(txt) ? `<span class="tagx trf">Transfer</span>` : "");
+  return `<a class="story" href="${esc(link)}" target="_blank" rel="noopener">${img ? `<img src="${esc(img)}" alt="" loading="lazy">` : `<span></span>`}<div><h3>${esc(a.headline)}</h3>${a.description ? `<p>${esc(a.description)}</p>` : ""}<div class="meta2">${tags}<span>${esc(league)}</span><span>· ${a.published ? ago(a.published) : ""}</span></div></div></a>`;
+}
+function viewNews() {
+  const sp = S.sport, NF = S.newsFilter || "all";
+  const filters = sp === "nba" ? [["all", "Latest"], ["injuries", "Injury report"], ["moves", "Signings & waivers"]] : [["all", "Latest"], ["injuries", "Injuries"], ["transfers", "Transfers"]];
+  const chips = `<div class="chips">${filters.map(([k, l]) => `<button class="chip" data-news="${k}" aria-pressed="${NF === k}">${l}</button>`).join("")}</div>`;
+  let body = "";
+  if (sp === "nba" && NF === "injuries") {
+    const f = feed(`${SB}/basketball/nba/injuries`, 20 * 60e3);
+    if (!f.data) body = `<div class="loadbox">${f.err ? "Couldn't load the injury report." : "Loading injury report…"}</div>`;
+    else {
+      const teams = [...(f.data.injuries || [])].filter(t => (t.injuries || []).length).sort((a, b) => (playingSoon("nba", b.id) - playingSoon("nba", a.id)) || a.displayName.localeCompare(b.displayName));
+      body = `<div class="newslist">${teams.map(t => `<div class="injteam"><div class="ih">${espnLogo({ id: t.id, displayName: t.displayName, logos: t.logos }, "nba")}${esc(t.displayName)}${playingSoon("nba", t.id) ? `<span class="pill hot">Plays in the next 24h</span>` : ""}</div>${t.injuries.map(i => { const st = i.status || "", d = i.details || {}; return `<div class="inj"><b>${esc((i.athlete || {}).displayName)}${d.type ? ` <span style="color:var(--muted);font-weight:500">· ${esc(d.type)}${d.detail ? " " + esc(d.detail).toLowerCase() : ""}</span>` : ""}</b><span class="ist ${/out/i.test(st) ? "out" : ""}">${esc(st)}</span><small>${esc(i.shortComment || "")}${d.returnDate ? ` <b style="color:var(--fg-2)">Expected back ${new Date(d.returnDate).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}.</b>` : ""}</small></div>`; }).join("")}</div>`).join("")}</div>`;
+    }
+  } else if (sp === "nba" && NF === "moves") {
+    const f = feed(`${SB}/basketball/nba/transactions`, 30 * 60e3);
+    body = !f.data ? `<div class="loadbox">${f.err ? "Couldn't load transactions." : "Loading…"}</div>` : `<div class="newslist">${(f.data.transactions || []).slice(0, 60).map(t => `<div class="trow">${espnLogo(t.team || {}, "nba")}<div>${esc(t.description)}<small>${esc((t.team || {}).displayName || "")} · ${new Date(t.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</small></div></div>`).join("")}</div>`;
+  } else {
+    const srcs = sp === "nba" ? [["basketball/nba", "NBA"]] : (S.newsLeague && S.newsLeague !== "all" ? [["soccer/" + S.newsLeague, leagueName(S.newsLeague)]] : [["soccer/eng.1", "Premier League"], ["soccer/uefa.champions", "Champions League"], ["soccer/esp.1", "La Liga"], ["soccer/ita.1", "Serie A"], ["soccer/ger.1", "Bundesliga"], ["soccer/fra.1", "Ligue 1"], ["soccer/eng.2", "Championship"], ["soccer/sco.1", "Scottish Premiership"]]);
+    const fs = srcs.map(([p, n]) => [feed(`${SB}/${p}/news?limit=${sp === "nba" ? 40 : 20}`), n]);
+    const seen = new Set(), items = [];
+    for (const [f, n] of fs) for (const a of ((f.data || {}).articles || [])) { if (seen.has(a.id) || !a.headline) continue; seen.add(a.id); items.push([a, n]); }
+    items.sort((x, y) => new Date(y[0].published) - new Date(x[0].published));
+    const want = NF === "injuries" ? INJ_RE : NF === "transfers" ? TRF_RE : null;
+    const list = items.filter(([a]) => !want || want.test(a.headline + " " + (a.description || "")));
+    const loading = fs.some(([f]) => f.loading && !f.data);
+    body = list.length ? `<div class="newslist">${list.slice(0, 60).map(([a, n]) => storyHTML(a, n)).join("")}</div>` : `<div class="loadbox">${loading ? "Loading news…" : want ? "No stories about that right now." : "No news right now."}</div>`;
+    if (sp === "football") body = `<div class="chips scroll"><button class="chip" data-newsleague="all" aria-pressed="${!S.newsLeague || S.newsLeague === "all"}">All leagues</button>${S.data.leagues.map(l => `<button class="chip" data-newsleague="${l.id}" aria-pressed="${S.newsLeague === l.id}">${esc(l.name)}</button>`).join("")}</div>` + body;
+  }
+  return `<div class="hd"><div><h1>${sp === "nba" ? "NBA" : "Football"} news</h1><p class="sub">${sp === "nba" && NF === "injuries" ? "Every injured player, with teams playing soon at the top." : NF === "injuries" ? "Stories about injuries and fitness." : NF === "transfers" ? "Stories about transfers, signings and contracts." : "Latest stories. Tap one to read it in full."}</p></div>${chips}</div>${body}`;
+}
+document.addEventListener("click", e => {
+  const t = e.target.closest("button"); if (!t) return; const d = t.dataset;
+  if (d.tbl) { S.tblLeague = d.tbl; render(); }
+  else if (d.news) { S.newsFilter = d.news; render(); }
+  else if (d.newsleague) { S.newsLeague = d.newsleague; render(); }
+});
+
 /* ---------- accounts (Supabase) ---------- */
 const CFG = window.MDE_CONFIG || {};
 const sb = CFG.supabaseUrl && CFG.supabaseAnonKey && window.supabase ? window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseAnonKey) : null;
@@ -1316,7 +1449,7 @@ function render() {
   if (!S.data) return;
   renderChrome();
   const v = view();
-  $("#main").innerHTML = v === "account" ? viewAccount() : v === "fixtures" ? viewFixtures() : v === "bets" ? viewBets() : v === "acca" ? viewAcca() : v === "challenge" ? viewChallenge() : viewLive();
+  $("#main").innerHTML = v === "account" ? viewAccount() : v === "tables" ? viewTables() : v === "news" ? viewNews() : v === "fixtures" ? viewFixtures() : v === "bets" ? viewBets() : v === "acca" ? viewAcca() : v === "challenge" ? viewChallenge() : viewLive();
   $("#rail").innerHTML = v === "acca" ? "" : slipHTML();
   const L = $("#layer"), prevDr = $(".drawer"), keepTop = prevDr && S.drawer && prevDr.dataset.key === S.drawer ? prevDr.scrollTop : 0;
   if (S.drawer) { const [sp, id] = S.drawer.split(":"); const g = findGame(sp, id); L.innerHTML = g ? drawerHTML(sp, g) : ""; if (!g) S.drawer = null; }
@@ -1329,7 +1462,7 @@ function render() {
 document.addEventListener("click", e => {
   const t = e.target.closest("button,[data-close]"); if (!t) return;
   const d = t.dataset;
-  if (d.sport) { S.sport = d.sport; S.league = "all"; store.set("sport", S.sport); render(); }
+  if (d.sport) { S.sport = d.sport; S.league = "all"; S.newsFilter = "all"; store.set("sport", S.sport); render(); }
   else if (d.fmt) { S.fmt = d.fmt; store.set("fmt", S.fmt); render(); }
   else if (d.leg) { const [sp, id, k] = d.leg.split("|"); const keep = S.drawer; toggleLeg(sp, id, k); S.drawer = keep; if (keep) render(); }
   else if (d.open) { S.drawer = d.open; S.slipOpen = false; render(); const dr = $(".drawer"); dr && dr.scrollTo(0, 0); loadDetail(d.open); }
