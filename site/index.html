@@ -82,10 +82,20 @@ a{color:var(--blue-2)}
 .tab[aria-current=page]{color:var(--fg)}
 .tab[aria-current=page]::after{content:"";position:absolute;left:10px;right:10px;bottom:0;height:3px;border-radius:3px 3px 0 0;background:linear-gradient(90deg,var(--tang),var(--blue))}
 .tl-short{display:none}
+.tab .ti{display:none}
+.tbadge{position:absolute;top:-5px;right:-9px;min-width:16px;height:16px;padding:0 4px;border-radius:999px;background:var(--live);color:#fff;font-size:10px;font-weight:800;line-height:16px;text-align:center;box-shadow:0 0 0 2px var(--bg-2)}
+.tbadge.alt{background:var(--blue)}
 .tab-chal .tl-long,.tab-chal .tl-short{background:linear-gradient(90deg,var(--tang-2),#FF6F91);-webkit-background-clip:text;background-clip:text;color:transparent;font-weight:700}
 @media (max-width:640px){
-  .tabs{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:0;overflow:visible}
-  .tab{justify-content:center;padding:10px 0 12px;font-size:11.5px;gap:2px;letter-spacing:-.01em}
+  .tabs{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:0;overflow:visible;padding-top:2px}
+  .tab{flex-direction:column;justify-content:center;align-items:center;padding:7px 0 9px;font-size:10.5px;font-weight:600;gap:4px;letter-spacing:0;color:var(--muted)}
+  .tab .ti{display:block;position:relative;width:22px;height:22px}
+  .tab .ti svg{width:22px;height:22px;display:block}
+  .tab .badge.dk{display:none}
+  .tab[aria-current=page]{color:var(--fg)}
+  .tab[aria-current=page] .ti{color:var(--tang)}
+  .tab[aria-current=page]::after{left:22%;right:22%;height:3px}
+  .tab-chal .tl-long,.tab-chal .tl-short{background:none;-webkit-background-clip:initial;background-clip:initial;color:inherit}
   .tab .badge{padding:0 4px;font-size:9.5px;line-height:14px}
   .tab[aria-current=page]::after{left:6px;right:6px}
   .tl-long{display:none}.tl-short{display:inline}
@@ -870,6 +880,16 @@ const store = { get(k, d) { try { const v = localStorage.getItem("mde:" + k); re
 const S = { data: null, logos: {}, sport: store.get("sport", "football"), fmt: store.get("fmt", "frac"), slip: store.get("slip", []),
             stake: store.get("stake", 5), chalOdds: store.get("chalOdds", "over"), boxSide: {}, league: "all", win: "today", drawer: null, slipOpen: false };
 const VIEWS = [["live", "Live", "Live"], ["fixtures", "Fixtures", "Games"], ["acca", "Accas", "Accas"], ["bets", "Best Bets", "Bets"], ["friends", "Friends", "Friends"], ["tables", "Tables", "Tables"], ["news", "News", "News"], ["challenge", "£1K Challenge", "£1K"]];
+const TAB_ICONS = (() => { const svg = p => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`; return {
+  live: svg('<circle cx="12" cy="12" r="2.2"/><path d="M7.8 7.8a6 6 0 000 8.4M16.2 7.8a6 6 0 010 8.4M5 5a10 10 0 000 14M19 5a10 10 0 010 14"/>'),
+  fixtures: svg('<rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/>'),
+  acca: svg('<path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/>'),
+  bets: svg('<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1"/>'),
+  friends: svg('<circle cx="9" cy="8.5" r="3.3"/><path d="M3 19.5c.9-3.3 3.3-5 6-5s5.1 1.7 6 5"/><path d="M16 5.6a3.2 3.2 0 010 6M17.6 14.6c1.6.7 2.8 2.3 3.4 4.9"/>'),
+  tables: svg('<rect x="3.5" y="4" width="17" height="16" rx="2.5"/><path d="M3.5 9.5h17M3.5 14.8h17M9 9.5V20"/>'),
+  news: svg('<path d="M5 4.5h11.5V19a1.5 1.5 0 001.5 1.5H6.5A1.5 1.5 0 015 19z"/><path d="M16.5 8.5H19a1 1 0 011 1V19a1.5 1.5 0 01-1.5 1.5M8 8.5h5.5M8 12h5.5M8 15.5h3.5"/>'),
+  challenge: svg('<path d="M8 4h8v5a4 4 0 01-8 0z"/><path d="M8 6H5a2 2 0 002 4h1M16 6h3a2 2 0 01-2 4h-1M12 13v3.5M8.5 20h7M9.5 20l.5-3.5h4l.5 3.5"/>')
+}; })();
 const view = () => { const h = location.hash.slice(1); return h === "account" || VIEWS.some(v => v[0] === h) ? h : "live"; };
 
 /* ---------- odds ---------- */
@@ -1008,7 +1028,8 @@ function tiers(sport, win) {
 /* ---------- render: chrome ---------- */
 function renderChrome() {
   const v = view(), live = games(S.sport).filter(isLive).length;
-  $("#tabs").innerHTML = VIEWS.map(([id, label, short]) => `<a class="tab ${id === "challenge" ? "tab-chal" : ""}" href="#${id}" ${v === id ? 'aria-current="page"' : ""}><span class="tl-long">${label}</span><span class="tl-short">${short}</span>${id === "live" && live ? `<span class="badge">${live}</span>` : ""}${id === "acca" && S.slip.length ? `<span class="badge alt">${S.slip.length}</span>` : ""}</a>`).join("");
+  $("#tabs").innerHTML = VIEWS.map(([id, label, short]) => { const n = id === "live" ? live : id === "acca" ? S.slip.length : 0;
+    return `<a class="tab" href="#${id}" ${v === id ? 'aria-current="page"' : ""}><span class="ti" aria-hidden="true">${TAB_ICONS[id] || ""}${n ? `<span class="tbadge ${id === "live" ? "" : "alt"}">${n}</span>` : ""}</span><span class="tl-long">${label}</span><span class="tl-short">${short}</span>${n ? `<span class="badge dk ${id === "live" ? "" : "alt"}">${n}</span>` : ""}</a>`; }).join("");
   for (const b of document.querySelectorAll("[data-sport]")) b.setAttribute("aria-pressed", b.dataset.sport === S.sport);
   for (const b of document.querySelectorAll("[data-fmt]")) b.setAttribute("aria-pressed", b.dataset.fmt === S.fmt);
   const anyLive = S.data.football.some(isLive) || S.data.nba.some(isLive);
@@ -1681,7 +1702,7 @@ function trackerHTML() {
       return `<div class="tl-leg ${done ? "hit" : r.dnp ? "void" : post ? "miss" : ""}"><div class="tl-top"><b>${esc(l.name)}</b><span>${esc(l.team)} · ${esc(state)}${r.on && isLive(g) ? ` · <span class="court-inline">on ${l.sport === "nba" ? "court" : "pitch"}</span>` : ""}</span></div>
         <div class="tl-bar"><i style="width:${pctv * 100}%"></i></div><div class="tl-num"><span>${r.v == null ? (g && isPre(g) ? `Needs ${l.target}+ ${esc(l.label)}` : r.dnp ? "Not in the squad tonight" : "Waiting for stats…") : `<b>${r.v}</b> / ${l.target} ${esc(l.label)}`}</span><span>${done ? "✓ Landed" : r.dnp ? "Void · not playing" : post ? "✗ Missed" : l.target - (r.v || 0) > 0 && r.v != null ? `${l.target - r.v} to go` : ""}</span></div></div>`; }).join("");
     const overall = lost ? `<span class="st lost">Lost</span>` : hit + voids === t.legs.length && hit ? `<span class="st won">Won ✓${voids ? ` (${voids} void)` : ""}</span>` : voids === t.legs.length ? `<span class="st void">Void</span>` : lost ? `<span class="st lost">Lost</span>` : started ? `<span class="st">${hit} of ${t.legs.length} landed</span>` : `<span class="st">Not started</span>`;
-    return `<article class="trk-card"><div class="trk-hd"><div><b>${esc(t.text)}</b><small>${t.dec ? odds(t.dec) + " · " : ""}${t.stake ? `£${t.stake} returns ${money(t.stake * (t.dec || 1))}` : ""}</small></div>${overall}<button class="x" data-untrack="${t.id}" aria-label="Stop tracking">✕</button></div>${rows}</article>`; }).join("")}</div></section>`;
+    return `<article class="trk-card"><div class="trk-hd"><div><b>${t.legs.length > 1 ? `${t.legs.length}-leg player bet` : esc(t.text)}</b><small>${t.dec ? odds(t.dec) + " · " : ""}${t.stake ? `£${t.stake} returns ${money(t.stake * (t.dec || 1))}` : ""}</small></div>${overall}<button class="x" data-untrack="${t.id}" aria-label="Stop tracking">✕</button></div>${rows}</article>`; }).join("")}</div></section>`;
 }
 function importSheet() {
   const { idx, loading } = playerIndex(), txt = S.importText || "", r = txt.trim() ? parseBet(txt, idx) : { legs: [], missing: [], dec: null };
