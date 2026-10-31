@@ -31,12 +31,10 @@ $$;
 revoke all on function public.leaderboard() from public, anon;
 grant execute on function public.leaderboard() to authenticated;
 
--- Give the owner Pro + the OWNER and DEV badges (matches the account by its sign-in email)
+-- Give the owner Pro + the OWNER and DEV badges (matches the account by its friend code)
 update public.profiles
 set plan = 'pro', badges = array['owner','dev']
-where id = (select id from auth.users where lower(email) = lower('rhysh1264@gmail.com'));
+where friend_code = '690481';
 
 -- Shows the result: you should see one row with plan = pro and badges = {owner,dev}
-select p.display_name, u.email, p.plan, p.badges
-from public.profiles p join auth.users u on u.id = p.id
-where lower(u.email) = lower('rhysh1264@gmail.com');
+select display_name, plan, badges from public.profiles where friend_code = '690481';
