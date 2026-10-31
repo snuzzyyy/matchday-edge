@@ -26,6 +26,8 @@ jobs:
           restore-keys: espn-
       - name: Pull fixtures, stats and odds; run the model
         run: python3 engine/build.py || echo "build failed, deploying last committed data"
+      - name: Stamp the build so open apps update themselves
+        run: sed -i "s/name=\"mde-build\" content=\"dev\"/name=\"mde-build\" content=\"${GITHUB_SHA::7}\"/" site/index.html
       - name: Publish site to gh-pages
         run: |
           cd site

@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0D1324">
+<meta name="mde-build" content="dev">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Matchday Edge">
@@ -1576,6 +1577,21 @@ async function reloadSnapshot() {
 setInterval(liveTick, 10000);
 setInterval(reloadSnapshot, 10 * 60e3);
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") liveTick(); });
+
+/* ---------- self-update: when a new version is published, reload into it (keeps your place) ---------- */
+const BUILD = (document.querySelector('meta[name="mde-build"]') || {}).content || "dev";
+async function checkVersion() {
+  if (BUILD === "dev" || document.visibilityState === "hidden") return;
+  try {
+    const html = await (await fetch("./?b=" + Date.now(), { cache: "no-store" })).text();
+    const m = html.match(/name="mde-build" content="([^"]+)"/);
+    const ae = document.activeElement, typing = ae && (ae.tagName === "INPUT" || ae.tagName === "SELECT");
+    if (m && m[1] !== BUILD && m[1] !== "dev" && !typing) { saveView(); location.replace(location.pathname + "?v=" + m[1] + location.hash); }
+  } catch {}
+}
+setInterval(checkVersion, 3 * 60e3);
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") checkVersion(); });
+setTimeout(checkVersion, 5000);
 
 /* keep the viewer's place (open match, team toggle, scroll) across live republishes */
 const viewState = () => ({ drawer: S.drawer, slipOpen: S.slipOpen, boxSide: S.boxSide, sport: S.sport, win: S.win, league: S.league, accaWin: S.accaWin, y: scrollY, dy: ($(".drawer") || {}).scrollTop || 0, t: Date.now() });
