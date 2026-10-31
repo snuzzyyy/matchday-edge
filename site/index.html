@@ -8,6 +8,13 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Matchday Edge">
+<meta name="description" content="Live football and NBA scores, in-play stats, model-rated best bets, accas and league tables.">
+<meta property="og:title" content="Matchday Edge">
+<meta property="og:description" content="Live stats. Smarter bets. Football and NBA live scores, best bets, accas and tables.">
+<meta property="og:image" content="https://snuzzyyy.github.io/matchday-edge/og.png">
+<meta property="og:url" content="https://snuzzyyy.github.io/matchday-edge/">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="manifest" href="manifest.json">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="config.js"></script>
@@ -50,8 +57,8 @@ a{color:var(--blue-2)}
 .top{position:sticky;top:env(safe-area-inset-top,0px);z-index:50;background:linear-gradient(180deg,var(--bg-2),rgba(13,19,36,.94));backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
 .bar{display:flex;align-items:center;gap:14px;padding-block:12px;flex-wrap:wrap}
 .brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--fg)}
-.mark{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--tang),#FF4F6D 60%,var(--blue) 140%);display:grid;place-items:center;box-shadow:0 6px 18px -6px rgba(255,122,47,.6)}
-.mark svg{width:20px;height:20px}
+.mark{width:38px;height:38px;border-radius:10px;overflow:hidden;flex:none;box-shadow:0 6px 18px -8px rgba(255,122,47,.7),inset 0 0 0 1px rgba(255,255,255,.06)}
+.mark img{width:100%;height:100%;display:block;border-radius:inherit}
 .word{font-family:var(--display);font-style:italic;font-weight:800;font-size:23px;letter-spacing:.02em;line-height:1;text-transform:uppercase}
 .word b{color:var(--tang)}
 .sport{display:flex;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:3px;margin-left:auto}
@@ -569,7 +576,7 @@ h3{font-size:15px;font-weight:700}
   <div class="wrap">
     <div class="bar">
       <a class="brand" href="#live" aria-label="Matchday Edge home">
-        <span class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17l5-6 4 3 7-9"/><path d="M15 5h5v5"/></svg></span>
+        <span class="mark"><img src="mark.png" alt="" width="34" height="34"></span>
         <span class="brand-txt"><span class="word">Matchday <b>Edge</b></span><span class="updated" id="updated"><span class="dot"></span><span>Loading…</span></span></span>
       </a>
       <div class="sport" role="group" aria-label="Sport">
