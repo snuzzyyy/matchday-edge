@@ -426,6 +426,9 @@ h3{font-size:15px;font-weight:700}
 @media (max-width:640px){.bar{gap:10px;padding-block:12px 8px}.word{font-size:19px}.mark{width:34px;height:34px}.sport button{padding:6px 11px;font-size:12.5px}h1{font-size:30px}}
 @media (max-width:360px){.sport svg{display:none}}
 .fmt-row{display:flex;justify-content:space-between;align-items:center;font-size:12.5px;color:var(--muted)}
+.fmt-big button{display:grid;gap:1px;padding:6px 12px;text-align:center;line-height:1.15}
+.fmt-big button b{font-size:12.5px}
+.fmt-big button small{font-size:10.5px;font-weight:600;opacity:.75}
 .toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:700;z-index:90;font-size:13px}
 </style>
 
@@ -822,7 +825,7 @@ function viewAcca() {
   ${firstWin(S.sport) !== "today" && !S.accaWin ? `<div class="note">All of today's ${S.sport === "nba" ? "NBA" : "football"} has started, so these use ${WIN_NAME[aw].toLowerCase()}'s games.${S.sport === "football" && upcoming("nba", "today").length ? ` Switch to <b>NBA</b> at the top for tonight's games.` : ""}</div>` : ""}<div class="presets">${presets || `<div class="empty">Not enough upcoming games to build one.</div>`}</div></section>
   <section class="section slipwide"><h2>Your slip</h2>${slipHTML()}</section>`;
 }
-const fmtRow = () => `<div class="fmt-row"><span>Show odds as</span><div class="fmt" role="group" aria-label="Odds format"><button data-fmt="frac" aria-pressed="${S.fmt === "frac"}">Fractional</button><button data-fmt="dec" aria-pressed="${S.fmt === "dec"}">Decimal</button></div></div>`;
+const fmtRow = () => `<div class="fmt-row"><span>Odds format</span><div class="fmt fmt-big" role="group" aria-label="Odds format"><button data-fmt="frac" aria-pressed="${S.fmt === "frac"}"><b>Fractional</b><small>e.g. 5/2</small></button><button data-fmt="dec" aria-pressed="${S.fmt === "dec"}"><b>Decimal</b><small>e.g. 3.50</small></button></div></div>`;
 function slipHTML() {
   if (!S.slip.length) return `<div class="slip"><div class="slip-hd"><h2>Bet slip</h2></div><div class="empty-slip"><b style="color:var(--fg-2)">Your slip is empty</b>Tap any price to add a selection.</div><div class="slip-ft">${fmtRow()}</div></div>`;
   const c = slipCalc(), ret = S.stake * c.dec, type = S.slip.length === 1 ? "Single" : S.slip.length === 2 ? "Double" : S.slip.length === 3 ? "Treble" : S.slip.length + "-fold acca";
