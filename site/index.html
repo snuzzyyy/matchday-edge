@@ -582,6 +582,42 @@ h3{font-size:15px;font-weight:700}
 .oddin.mine{border-style:solid;border-color:var(--tang);color:var(--tang-2)}
 .lp small .rs{color:var(--blue-2);font-size:10px;font-weight:700;text-decoration:underline;padding:0}
 .oddhint{font-size:11.5px;color:var(--muted);padding:8px 14px;border-bottom:1px solid var(--line);background:var(--bg-2)}
+/* bet slip v2 */
+.slip-hd .hd-acts{display:flex;align-items:center;gap:12px}
+.close.sm{width:32px;height:32px;border-radius:9px}
+.leg2{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:13px 14px;border-bottom:1px solid var(--line)}
+.leg2 .ls{font-weight:700;font-size:15px;line-height:1.3}
+.leg2 .lm{font-size:12.5px;color:var(--muted);margin-top:2px}
+.leg2 .lcap{font-size:11.5px;color:var(--muted);margin-top:4px}
+.leg2 .rs{color:var(--blue-2);font-size:11.5px;font-weight:700;text-decoration:underline;padding:0}
+.leg2 .oddin{width:78px;font-size:19px;padding:6px 8px}
+.oddhint2{margin:0;padding:10px 14px;font-size:12px;color:var(--muted)}
+.sum3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.sum3 div{display:grid;gap:1px}
+.sum3 small{font-size:11px;color:var(--muted);font-weight:600;white-space:nowrap}
+.sum3 b{font-family:var(--display);font-size:24px;font-weight:700;line-height:1.1}
+.sum3 b.ret{color:var(--win)}
+.sum3 div:last-child{text-align:right}
+.stake2{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.stake2 label{font-size:13px;color:var(--fg-2);font-weight:600}
+.stake2 .in{display:flex;align-items:center;background:var(--surface-2);border:1px solid var(--line-2);border-radius:9px;padding:0 10px;width:86px;color:var(--fg-2)}
+.stake2 input{width:100%;background:none;border:0;color:var(--fg);font-family:var(--display);font-size:19px;font-weight:700;padding:7px 0 7px 2px;outline:none}
+.qss{display:flex;gap:6px;margin-left:auto}
+.qs{padding:7px 10px;border-radius:8px;background:var(--surface-2);border:1px solid var(--line);font-weight:700;font-size:13px;color:var(--fg-2)}
+.qs[aria-pressed=true]{background:var(--blue);border-color:var(--blue);color:#fff}
+.place{display:grid;gap:6px}
+.place small{font-size:11px;color:var(--muted);font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.books2{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.books2 a{display:flex;justify-content:center;padding:9px 6px;border-radius:9px;background:var(--surface-3);color:var(--fg);font-weight:700;font-size:13px;text-decoration:none}
+.books2 a:hover{background:var(--line-2)}
+.ft-links{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;font-size:12.5px;color:var(--muted)}
+.fmt.sm button{padding:5px 9px;font-size:11.5px}
+/* phone: full-screen slip with the summary pinned to the bottom */
+.drawer.slipdr{width:min(520px,100%);padding:0;display:flex;flex-direction:column}
+.slip.drawer{border:0;border-radius:0;max-height:none;flex:1;display:flex;flex-direction:column;background:var(--bg-2)}
+.slip.drawer .slip-hd{position:sticky;top:0;z-index:2;padding-top:calc(12px + env(safe-area-inset-top,0px))}
+.slip.drawer .slip-legs{overflow:visible;flex:1}
+.slip.drawer .slip-ft{position:sticky;bottom:0;padding-bottom:calc(14px + env(safe-area-inset-bottom,0px));box-shadow:0 -12px 24px -12px rgba(0,0,0,.6);border-top:1px solid var(--line);background:var(--surface)}
 .fmt-row{display:flex;justify-content:space-between;align-items:center;font-size:12.5px;color:var(--muted)}
 .fmt-big button{display:grid;gap:1px;padding:6px 12px;text-align:center;line-height:1.15}
 .fmt-big button b{font-size:12.5px}
@@ -989,22 +1025,29 @@ function viewAcca() {
   return `<div class="hd"><div><h1>Acca builder</h1><p class="sub">Tap a ready-made acca to load it, or add legs from Fixtures and Best Bets.</p></div></div>${presetsHTML()}<section class="section slipwide"><h2>Your slip</h2>${slipHTML()}</section>`;
 }
 const fmtRow = () => `<div class="fmt-row"><span>Odds format</span><div class="fmt fmt-big" role="group" aria-label="Odds format"><button data-fmt="frac" aria-pressed="${S.fmt === "frac"}"><b>Fractional</b><small>e.g. 5/2</small></button><button data-fmt="dec" aria-pressed="${S.fmt === "dec"}"><b>Decimal</b><small>e.g. 3.50</small></button></div></div>`;
-function slipHTML() {
-  if (!S.slip.length) return `<div class="slip"><div class="slip-hd"><h2>Bet slip</h2></div><div class="empty-slip"><img src="img/empty-slip.webp" alt="" loading="lazy" class="es-img"><b style="color:var(--fg-2)">Your slip is empty</b>Tap any price to add a selection.</div><div class="slip-ft">${fmtRow()}</div></div>`;
-  const c = slipCalc(), ret = S.stake * c.dec, type = S.slip.length === 1 ? "Single" : S.slip.length === 2 ? "Double" : S.slip.length === 3 ? "Treble" : S.slip.length + "-fold acca";
-  return `<div class="slip"><div class="slip-hd"><h2>Bet slip <span class="badge alt">${S.slip.length}</span></h2><button class="more" data-clear>Clear all</button></div>
-  <div class="oddhint">Different price at your bookie? Tap any price to change it.</div>
-  <div class="slip-legs">${S.slip.map(l => `<div class="leg"><div><div class="ls">${esc(l.label)}</div><div class="lm">${esc(l.match)} · ${whenLabel(l.kick)}</div></div><div class="lp"><input class="oddin ${l.custom ? "mine" : ""}" data-legodds="${esc(l.id)}" value="${odds(l.dec)}" autocomplete="off" spellcheck="false" aria-label="Odds for ${esc(l.label)}. Type your bookie's price"><small>${l.custom ? `your price · <button class="rs" data-legreset="${esc(l.id)}">reset</button>` : `${l.est ? "app's fair price" : "market price"} · ${pct(l.p)}`}</small></div><button class="x" data-rm="${esc(l.id)}" aria-label="Remove">✕</button></div>`).join("")}</div>
+function slipHTML(mode = "rail") {
+  const drawer = mode === "drawer", n = S.slip.length;
+  const closeBtn = drawer ? `<button class="close sm" data-close aria-label="Close bet slip">✕</button>` : "";
+  const head = `<div class="slip-hd"><h2>Bet slip${n ? ` <span class="badge alt">${n}</span>` : ""}</h2><div class="hd-acts">${n ? `<button class="more" data-clear>Clear all</button>` : ""}${closeBtn}</div></div>`;
+  const fmt = `<div class="fmt sm" role="group" aria-label="Odds format"><button data-fmt="frac" aria-pressed="${S.fmt === "frac"}">Fractional</button><button data-fmt="dec" aria-pressed="${S.fmt === "dec"}">Decimal</button></div>`;
+  if (!n) return `<div class="slip ${mode}">${head}<div class="empty-slip"><img src="img/empty-slip.webp" alt="" loading="lazy" class="es-img"><b style="color:var(--fg-2)">Your slip is empty</b>Tap any price to add a selection.</div><div class="slip-ft"><div class="ft-links"><span>Odds shown as</span>${fmt}</div></div></div>`;
+  const c = slipCalc(), ret = S.stake * c.dec, type = n === 1 ? "Single" : n === 2 ? "Double" : n === 3 ? "Treble" : n + "-fold";
+  const legs = S.slip.map(l => `<div class="leg2">
+      <div class="lg-main"><div class="ls">${esc(l.label)}</div><div class="lm">${esc(l.match)} · ${whenLabel(l.kick)}</div>
+        <div class="lcap">${l.custom ? `<span style="color:var(--tang-2)">Your price</span> · <button class="rs" data-legreset="${esc(l.id)}">reset to ${odds(l.orig)}</button>` : `${pct(l.p)} chance · ${l.est ? "app's fair price" : "market price"}`}</div></div>
+      <input class="oddin ${l.custom ? "mine" : ""}" data-legodds="${esc(l.id)}" value="${odds(l.dec)}" autocomplete="off" spellcheck="false" aria-label="Odds for ${esc(l.label)}. Type your bookie's price">
+      <button class="x" data-rm="${esc(l.id)}" aria-label="Remove ${esc(l.label)}">✕</button></div>`).join("");
+  const stakes = [1, 5, 10, 20].map(v => `<button class="qs" data-qstake="${v}" aria-pressed="${+S.stake === v}">£${v}</button>`).join("");
+  const books = [["Sky Bet", "https://m.skybet.com/football"], ["Paddy Power", "https://www.paddypower.com/football"], ["William Hill", "https://sports.williamhill.com/betting/en-gb/football"], ["Betfair", "https://www.betfair.com/sport/football"]].map(([t, u]) => `<a href="${u}" target="_blank" rel="noopener">${t} ↗</a>`).join("");
+  return `<div class="slip ${mode}">${head}
+  <div class="slip-legs">${legs}<p class="oddhint2">Price different at your bookie? Tap it and type theirs.</p></div>
   <div class="slip-ft">
-    <div class="kv"><span>${type} odds${c.est ? " (est.)" : ""}</span><b>${odds(c.dec)}</b></div>
-    <div class="stake"><label for="stake">Stake</label><span class="in">£<input id="stake" type="number" inputmode="decimal" min="0" step="0.5" value="${S.stake}"></span></div>
-    <div class="kv"><span>Potential return</span><b class="ret" id="ret">${money(ret)}</b></div>
-    <div style="display:grid;gap:6px"><div class="kv"><span>Chance it all lands</span><b>${pct(c.p)}</b></div><div class="meter"><i style="width:${Math.max(c.p * 100, 2)}%"></i></div></div>
+    <div class="sum3"><div><small>${type} odds${c.est ? " · est." : ""}</small><b>${odds(c.dec)}</b></div><div><small>Chance it lands</small><b>${pct(c.p)}</b></div><div><small>Returns</small><b class="ret" id="ret">${money(ret)}</b></div></div>
+    <div class="meter"><i style="width:${Math.max(c.p * 100, 2)}%"></i></div>
+    <div class="stake2"><label for="stake">Stake</label><span class="in">£<input id="stake" type="number" inputmode="decimal" min="0" step="0.5" value="${S.stake}"></span><div class="qss">${stakes}</div></div>
     ${c.sameMatch ? `<div class="warn">Two legs are from the same game. Place this as a Bet Builder at Sky Bet or Paddy Power.</div>` : ""}
-    ${c.est ? `<div class="note" style="padding:9px 11px">Some legs use our fair price. Your bookie's price will usually be a little shorter.</div>` : ""}
-    <button class="btn ghost" data-savebet>${S.user ? "Save to My Bets" : "Sign in to save this bet"}</button>
-    ${fmtRow()}
-    <div class="books"><a href="https://m.skybet.com/football" target="_blank" rel="noopener">Sky Bet ↗</a><a href="https://www.paddypower.com/football" target="_blank" rel="noopener">Paddy Power ↗</a><a href="https://sports.williamhill.com/betting/en-gb/football" target="_blank" rel="noopener">William Hill ↗</a><a href="https://www.betfair.com/sport/football" target="_blank" rel="noopener">Betfair ↗</a></div>
+    <div class="place"><small>Place it at</small><div class="books2">${books}</div></div>
+    <div class="ft-links"><button class="linkbtn" data-savebet>${S.user ? "Save to My Bets" : "Sign in to save this bet"}</button>${fmt}</div>
   </div></div>`;
 }
 
@@ -1195,7 +1238,7 @@ function drawerHTML(sport, g) {
   body += `<section class="section"><h2>${pre ? "All markets" : g.status.state === "post" ? "How the markets settled" : "Markets right now"}</h2>${marketsTable(sport, g)}<p class="note">${pre ? "" : "<b>Chance now</b> works from the current score, corners and cards plus the time left, so it changes as the game goes on. "}Chance = our model's estimate. <b>Fair</b> = the price that chance is worth. Prices marked with a percentage come from the market feed where available, otherwise they show the fair price, so check your bookie before you bet.</p></section>`;
   return `<div class="scrim" data-close></div><aside class="drawer" role="dialog" aria-modal="true" aria-label="${esc(vs(sport, g))}"><div class="dr-in"><div class="dr-top"><span class="eyebrow">${esc(sport === "nba" ? "NBA" : leagueName(g.league))}${g.venue ? " · " + esc(g.venue) : ""}</span><button class="close" data-close aria-label="Close">✕</button></div>${hero}${body}</div></aside>`;
 }
-function slipDrawer() { return `<div class="scrim" data-close></div><aside class="drawer" role="dialog" aria-modal="true" aria-label="Bet slip"><div class="dr-in"><div class="dr-top"><span class="eyebrow">Bet slip</span><button class="close" data-close aria-label="Close">✕</button></div>${slipHTML()}</div></aside>`; }
+function slipDrawer() { return `<div class="scrim" data-close></div><aside class="drawer slipdr" role="dialog" aria-modal="true" aria-label="Bet slip">${slipHTML("drawer")}</aside>`; }
 
 /* ---------- tables + news (fetched on demand, straight from the feed) ---------- */
 const API2 = "https://site.api.espn.com/apis/v2/sports";
@@ -1496,6 +1539,7 @@ document.addEventListener("click", e => {
   else if (d.close !== undefined) { S.drawer = null; S.slipOpen = false; render(); }
   else if (d.rm) { S.slip = S.slip.filter(l => l.id !== d.rm); save(); render(); }
   else if (d.clear !== undefined) { S.slip = []; save(); render(); }
+  else if (d.qstake) { S.stake = +d.qstake; save(); render(); }
   else if (d.league) { S.league = d.league; render(); }
   else if (d.win) { S.win = d.win; render(); }
   else if (d.accawin) { S.accaWin = d.accawin; render(); }
