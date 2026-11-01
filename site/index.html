@@ -170,6 +170,14 @@ h3{font-size:15px;font-weight:700}
 .cmp i{display:block;height:100%;border-radius:5px;transition:width .3s}
 .cmp .h{background:var(--blue)}.cmp .a{background:var(--tang)}
 .btiles{display:grid;gap:8px}
+/* ---- tidy-up: no repeated page titles under the Games/Bets switcher, and use the width on bigger screens ---- */
+.subnav + .hd h1{display:none}.subnav + .hd .sub{margin-top:0}.subnav + .hd{align-items:center}
+.setgrid{display:grid;gap:24px}
+@media (min-width:900px){
+  .setgrid{grid-template-columns:1fr 1fr;align-items:start}
+  .trk,.btiles.wide,.ag-list,.newslist,.feed{grid-template-columns:repeat(auto-fill,minmax(380px,1fr));align-items:start}
+  img.banner{aspect-ratio:auto;height:220px;object-position:center 12%}
+}
 .gtips{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(320px,1fr))}
 @media (max-width:700px){.gtips{grid-template-columns:minmax(0,1fr)}}
 .gtip{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
@@ -2369,7 +2377,7 @@ function viewMyBets() {
     ${hand.length ? `<section class="section"><h2>To settle</h2><p class="sub" style="margin:-6px 0 0">Bets you typed in yourself aren't linked to a game, so mark these when they finish.</p><div style="display:grid;gap:8px">${hand.map(b => betRow(b)).join("")}</div></section>` : ""}
     ${!cards.length && !hand.length ? `<div class="empty art"><img src="img/empty-bets.webp" alt="" loading="lazy"><b>No open bets</b><span>Import a bet, or save one from your bet slip.</span></div>` : ""}
     ${bets.length ? statBlock() : ""}
-    ${settled.length ? `<section class="section"><h2>Settled</h2><div style="display:grid;gap:8px">${settled.slice(0, S.showAllSettled ? 500 : 8).map(betTile).join("")}</div>${settled.length > 8 && !S.showAllSettled ? `<button class="linkbtn" data-allsettled>Show all ${settled.length}</button>` : ""}</section>` : ""}
+    ${settled.length ? `<section class="section"><h2>Settled</h2><div class="btiles wide">${settled.slice(0, S.showAllSettled ? 500 : 8).map(betTile).join("")}</div>${settled.length > 8 && !S.showAllSettled ? `<button class="linkbtn" data-allsettled>Show all ${settled.length}</button>` : ""}</section>` : ""}
     <details class="handadd"><summary><span class="ic-dot">＋</span><span><b>Add a bet by hand</b><small>For bets you can't import. You'll mark these won or lost yourself.</small></span></summary>
       <form id="addBet" class="handform"><div class="field hf-bet"><label for="ab-label">Bet</label><input id="ab-label" placeholder="e.g. Liverpool to win" required></div>
       <div class="field"><label for="ab-odds">Odds</label><input id="ab-odds" placeholder="5/2" required></div><div class="field"><label for="ab-stake">Stake £</label><input id="ab-stake" type="number" inputmode="decimal" min="0" step="0.5" value="${S.stake}" required></div>
@@ -2383,7 +2391,7 @@ function myBetsView(inTab) {
 function profileView() {
   const P = S.profile || {}, favs = P.fav_teams || [];
   const sw = (id, on, title, sub) => `<label class="setrow sw"><span><b>${title}</b><small>${sub}</small></span><input type="checkbox" id="${id}" ${on ? "checked" : ""}><span class="sw-ui" aria-hidden="true"></span></label>`;
-  return `<section class="section"><h2>Your details</h2><div class="setcard">
+  return `<div class="setgrid"><section class="section"><h2>Your details</h2><div class="setcard">
     <form class="setrow namerow" id="nameForm"><label for="dn"><small>Display name</small></label><input id="dn" maxlength="24" value="${esc(P.display_name || "")}" autocomplete="nickname"><button class="btn ghost sm" type="submit">Save</button></form>
     <div class="setrow"><span>${avatarHTML(P, 40)}</span><span><b>Profile photo</b><small>Or tap your picture at the top</small></span><span class="rowbtns"><button type="button" class="btn ghost sm" data-pickphoto>${P.avatar_url ? "Change" : "Add"}</button>${P.avatar_url ? `<button class="btn ghost sm" data-noavatar>Remove</button>` : ""}</span></div></div></section>
   ${walletSection(sw)}
@@ -2392,7 +2400,7 @@ function profileView() {
     ${sw("lbOpt", P.show_on_leaderboard !== false, "Show me on the leaderboard", "Your friends' profit leaderboard")}</div></section>
   <section class="section"><h2>Favourite teams</h2><div class="setcard"><div class="setrow favwrap"><div class="favs">${favs.length ? favs.map(f => `<span class="fav">${logo(f.sport, { id: f.id, name: f.name, abbr: f.name.slice(0, 3), color: "#334155" })}${esc(f.name)}<button class="x" data-unfav="${f.sport}|${f.id}" aria-label="Remove">✕</button></span>`).join("") : `<small>None yet. Your teams get starred in fixtures and highlighted in tables.</small>`}</div></div>
   <form class="setrow namerow" id="addFav"><label for="favpick"><small>Add a team</small></label><input id="favpick" list="teamlist" placeholder="Start typing a team"><datalist id="teamlist">${allTeams().map(t => `<option value="${esc(t.name)}${t.sport === "nba" ? " (NBA)" : ""}"></option>`).join("")}</datalist><button class="btn ghost sm" type="submit">Add</button></form></div></section>
-  ${proCard()}`;
+  </div>${proCard()}`;
 }
 function mateSheet(uid) {
   const me = uid === S.user.id, p = person(uid), bets = (S.feedBets || []).filter(b => b.user_id === uid), ch = chalPick(me ? S.chalAll : (S.friendChal || {})[uid]);
