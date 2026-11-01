@@ -170,6 +170,8 @@ h3{font-size:15px;font-weight:700}
 .cmp i{display:block;height:100%;border-radius:5px;transition:width .3s}
 .cmp .h{background:var(--blue)}.cmp .a{background:var(--tang)}
 .btiles{display:grid;gap:8px}
+.acmode{margin-bottom:-6px}.acmode .dot{width:7px;height:7px;display:inline-block;vertical-align:1px}
+.ag-score{font-family:var(--display);font-weight:700;font-size:16px;color:var(--fg);padding:0 2px}.live-tag{display:inline-flex;align-items:center;gap:5px;color:var(--live);font-weight:700}.live-tag .dot{width:7px;height:7px}
 a.prof-bdg{text-decoration:none}
 .pk-hero{display:grid;gap:14px;border-radius:16px;padding:18px;border:1px solid var(--line);background:radial-gradient(90% 160% at 100% 0%,rgba(61,123,255,.22),transparent 60%),var(--surface)}
 .pk-hero.pro{border-color:rgba(255,190,60,.45);background:radial-gradient(90% 160% at 100% 0%,rgba(255,190,60,.28),transparent 60%),radial-gradient(70% 140% at 0% 100%,rgba(255,122,47,.18),transparent 60%),var(--surface)}
@@ -1454,7 +1456,47 @@ function legFor(sport, g) {
   const ok = o.filter(x => x.ok); return (ok[0] || o[0] || {}).m;
 }
 function accaGames() { const w = S.accaWin && upcoming(S.sport, S.accaWin).length ? S.accaWin : firstWin(S.sport); return { w, list: upcoming(S.sport, w) }; }
+function pushLiveLeg(sp, g, m) {
+  const id = `${sp}:${g.id}:${m.k}:live`, dec = Math.round(100 / m.p) / 100;
+  S.slip = S.slip.filter(l => l.id !== id && !(l.sport === sp && l.gid === g.id && conflicts(l.k, m.k)));
+  S.slip.push({ id, sport: sp, gid: g.id, k: m.k, label: m.label + " (in-play)", match: vs(sp, g), p: m.p, dec, orig: dec, est: true, estOrig: true, kick: kick(g), live: true });
+}
+// ---------- in-play accas: the safest live bet in each game that's on now ----------
+function liveAccaLeg(sp, g) {
+  const r = RISK[S.accaRisk || "safe"], pick = (S.accaLivePick || {})[g.id];
+  const o = liveMarkets(sp, g).filter(m => m.state === "open" && !SKIP.has(m.k) && m.p <= .95 && 1 / m.p >= 1.05).sort((a, b) => b.p - a.p);
+  if (pick) { const c = o.find(m => m.k === pick); if (c) return { m: c, o }; }
+  return { m: o.find(m => 1 / m.p >= r.min && m.p >= r.pmin) || o[0], o };
+}
+const accaModeSeg = () => `<div class="seg3 two acmode" role="group" aria-label="Pre-match or in-play"><button data-accamode="pre" aria-pressed="${S.accaMode !== "live"}">Pre-match</button><button data-accamode="live" aria-pressed="${S.accaMode === "live"}">${games(S.sport).some(isLive) ? '<span class="dot red"></span> ' : ""}In-play</button></div>`;
+function viewAccaLive() {
+  const sp = S.sport, risk = S.accaRisk || "safe", live = games(sp).filter(isLive);
+  S.accaLiveSel = S.accaLiveSel || {}; const sel = (S.accaLiveSel[sp] || []).filter(id => live.some(g => g.id === id)); S.accaLiveSel[sp] = sel;
+  const head = `<div class="hd"><div><h1>In-play acca</h1><p class="sub">Tap games that are on now. We pick the safest live bet in each, from the score and time left.</p></div></div>${accaModeSeg()}
+    <div class="acca-ctrl"><div class="seg3" role="group" aria-label="Safety level">${Object.entries(RISK).map(([k, r]) => `<button data-accarisk="${k}" aria-pressed="${risk === k}">${r.name}</button>`).join("")}</div><p class="risk-desc">${RISK[risk].desc}</p></div>`;
+  if (!live.length) { const nx = games(sp).filter(isPre).sort((a, b) => new Date(kick(a)) - new Date(kick(b)))[0];
+    return `${head}<div class="empty art"><img src="img/empty-live.webp" alt="" loading="lazy"><b>Nothing in play right now</b><span>${nx ? `Next up: <b>${esc(vs(sp, nx))}</b> ${whenLabel(kick(nx))}. Come back when it kicks off.` : "Check back when games kick off."}</span></div>`; }
+  const legs = sel.map(id => findGame(sp, id)).filter(Boolean).map(g => ({ g, ...liveAccaLeg(sp, g) })).filter(x => x.m);
+  const dec = legs.reduce((a, x) => a * (1 / x.m.p), 1), p = legs.reduce((a, x) => a * x.m.p, 1);
+  const type = legs.length === 1 ? "Single" : legs.length === 2 ? "Double" : legs.length === 3 ? "Treble" : legs.length + "-fold acca";
+  const sc = g => { const L = sp === "nba" ? g.away : g.home, R = sp === "nba" ? g.home : g.away; return `${esc(L.name)} ${esc(L.score)}–${esc(R.score)} ${esc(R.name)}`; };
+  const summary = legs.length ? `<section class="accabox"><div class="ab-hd"><h2>Your in-play acca</h2><button class="more" data-accaliveclear>Clear</button></div>
+    <div class="ab-legs">${legs.map(({ g, m, o }) => `<div class="ab-leg"><div class="abl-main"><div class="abl-match"><span class="dot red"></span> ${sc(g)} · ${esc(clockLabel(sp, g))}</div>
+      <label class="sr" for="lalt-${g.id}">Bet for ${esc(vs(sp, g))}</label><select id="lalt-${g.id}" data-accalivealt="${g.id}">${o.slice(0, 12).map(x => `<option value="${x.k}" ${x.k === m.k ? "selected" : ""}>${esc(x.label)} · ${pct(x.p)} now · ${odds(1 / x.p)}</option>`).join("")}</select></div>
+      <div class="abl-p"><b>${odds(1 / m.p)}</b><small>${pct(m.p)}</small></div><button class="x" data-accalive="${g.id}" aria-label="Remove ${esc(vs(sp, g))}">✕</button></div>`).join("")}</div>
+    <div class="sum3"><div><small>${type} fair odds</small><b>${odds(dec)}</b></div><div><small>Chance it lands</small><b>${pct(p)}</b></div><div><small>£${S.stake} returns</small><b class="ret">${money(S.stake * dec)}</b></div></div>
+    <div class="meter"><i style="width:${Math.max(p * 100, 2)}%"></i></div>
+    <div class="warn">In-play prices move every minute. These are our fair prices: check your bookie's live odds before you bet.</div>
+    <button class="btn" data-accaliveslip>Add in-play ${type.toLowerCase()} to bet slip</button></section>` : "";
+  const rows = `<div class="ag-list">${live.map(g => { const on = sel.includes(g.id), { m } = liveAccaLeg(sp, g);
+    return `<button class="ag ${on ? "on" : ""}" data-accalive="${g.id}" aria-pressed="${on}"><span class="ag-tick" aria-hidden="true">${on ? "✓" : "+"}</span>
+      <span class="ag-main"><span class="ag-teams">${logo(sp, sp === "nba" ? g.away : g.home)}<b>${esc(sp === "nba" ? g.away.name : g.home.name)}</b><span class="ag-score">${esc((sp === "nba" ? g.away : g.home).score)}–${esc((sp === "nba" ? g.home : g.away).score)}</span>${logo(sp, sp === "nba" ? g.home : g.away)}<b>${esc(sp === "nba" ? g.home.name : g.away.name)}</b></span>
+      <span class="ag-meta"><span class="live-tag"><span class="dot red"></span>${esc(clockLabel(sp, g))}</span>${sp === "football" ? " · " + esc(leagueName(g.league)) : ""}</span>
+      ${m ? `<span class="ag-pick"><span>${esc(m.label)}</span><b style="color:${tierColor(m.p)}">${pct(m.p)} now</b></span>` : `<span class="ag-pick"><span>No safe live bet right now</span><b></b></span>`}</span></button>`; }).join("")}</div>`;
+  return `${head}${summary}<section class="section"><h2>On now · ${live.length} game${live.length > 1 ? "s" : ""}</h2>${rows}</section>`;
+}
 function viewAcca() {
+  if (S.accaMode === "live") return viewAccaLive();
   const sp = S.sport, { w, list } = accaGames(), sel = accaSel().filter(id => list.some(g => g.id === id) || findGame(sp, id) && isPre(findGame(sp, id)));
   S.accaSel[sp] = sel;
   const risk = S.accaRisk || "safe";
@@ -1477,6 +1519,7 @@ function viewAcca() {
         <span class="ag-meta">${hm(kick(g))}${sp === "football" ? " · " + esc(leagueName(g.league)) : ""}</span>
         ${m ? `<span class="ag-pick"><span>${esc(m.label)}</span><b style="color:${tierColor(m.p)}">${pct(m.p)}</b></span>` : ""}</span></button>`; }).join("")}</div></div>`).join("");
   return `<div class="hd"><div><h1>Acca builder</h1><p class="sub">Tap the games you want and we'll pick the safest bet in each.</p></div></div>
+  ${accaModeSeg()}
   <div class="acca-ctrl"><div class="seg3" role="group" aria-label="Safety level">${Object.entries(RISK).map(([k, r]) => `<button data-accarisk="${k}" aria-pressed="${risk === k}">${r.name}</button>`).join("")}</div>
     <p class="risk-desc">${RISK[risk].desc}</p>
     <div class="chips">${["today", "tomorrow", "48h", "week"].map(k => `<button class="chip" data-accawin="${k}" aria-pressed="${w === k}" ${upcoming(sp, k).length ? "" : "disabled style=\"opacity:.4\""}>${WIN_NAME[k]}</button>`).join("")}</div>
@@ -2823,7 +2866,7 @@ document.addEventListener("click", e => {
     const [sp, gid, k] = d.liveleg.split("|"), g = findGame(sp, gid), m = g && liveLegFor(sp, g, k); if (!m) return;
     const id = `${sp}:${gid}:${k}:live`, keep = S.drawer;
     if (inSlip(id)) S.slip = S.slip.filter(l => l.id !== id);
-    else { const dec = Math.round(100 / m.p) / 100; S.slip = S.slip.filter(l => !(l.sport === sp && l.gid === gid && conflicts(l.k, k))); S.slip.push({ id, sport: sp, gid, k, label: m.label + " (in-play)", match: vs(sp, g), p: m.p, dec, orig: dec, est: true, estOrig: true, kick: kick(g), live: true }); toast("In-play bet added. Check your bookie's live price"); }
+    else { pushLiveLeg(sp, g, m); toast("In-play bet added. Check your bookie's live price"); }
     save(); S.drawer = keep; render();
   }
   else if (d.leg) { const [sp, id, k] = d.leg.split("|"); const keep = S.drawer; toggleLeg(sp, id, k); S.drawer = keep; if (keep) render(); }
@@ -2884,6 +2927,14 @@ document.addEventListener("click", e => {
       toast(on ? `Unfollowed ${person(id).display_name}` : `Following ${person(id).display_name}`); loadSocial();
     });
   }
+  else if (d.accamode) { S.accaMode = d.accamode; render(); }
+  else if (d.accalive) { const sp = S.sport, a = (S.accaLiveSel = S.accaLiveSel || {})[sp] = S.accaLiveSel[sp] || [], i = a.indexOf(d.accalive); if (i >= 0) a.splice(i, 1); else a.push(d.accalive); render(); }
+  else if (d.accaliveclear !== undefined) { (S.accaLiveSel || {})[S.sport] = []; S.accaLivePick = {}; render(); }
+  else if (d.accaliveslip !== undefined) {
+    const sp = S.sport, gs = ((S.accaLiveSel || {})[sp] || []).map(id => findGame(sp, id)).filter(g => g && isLive(g)); let n = 0;
+    for (const g of gs) { const { m } = liveAccaLeg(sp, g); if (m) { pushLiveLeg(sp, g, m); n++; } }
+    save(); S.slipOpen = innerWidth <= 1100; render(); toast(n ? "In-play acca added to your slip. Check your bookie's live prices" : "Those games have finished");
+  }
   else if (d.iosx !== undefined) { store.set("iosTipX", true); render(); }
   else if (d.impex) { S.importText = d.impex; const t = $("#imptext"); if (t) t.value = d.impex; S.impOddsTyped = false; impRefresh(); }
   else if (d.untrack) { S.tracked = S.tracked.filter(t => t.id !== d.untrack); store.set("tracked", S.tracked); render(); }
@@ -2914,7 +2965,7 @@ function setLegOdds(id, raw) {
   l.dec = Math.round(d * 1000) / 1000; l.custom = Math.abs(l.dec - l.orig) > 0.0005; l.est = l.custom ? false : l.estOrig ?? l.est;
   save(); render(); toast(l.custom ? "Price updated to " + odds(l.dec) : "Back to the app's price");
 }
-document.addEventListener("change", e => { const t = e.target; if (t.dataset && t.dataset.legodds) setLegOdds(t.dataset.legodds, t.value); if (t.dataset && t.dataset.chalodds !== undefined && S.user) { const o = parseOdds(t.value); if (!o) { toast("Use odds like 5/2, EVS or 3.5"); $("#main")._h = null; render(); } else { const C = JSON.parse(JSON.stringify(chalNow())); if (C.active) { C.active.custom = true; C.active.dec = Math.round(o * 1000) / 1000; saveChal(C); } } } if (t.dataset && t.dataset.accaalt) { S.accaPick = S.accaPick || {}; S.accaPick[t.dataset.accaalt] = t.value; render(); } });
+document.addEventListener("change", e => { const t = e.target; if (t.dataset && t.dataset.accalivealt) { (S.accaLivePick = S.accaLivePick || {})[t.dataset.accalivealt] = t.value; render(); } if (t.dataset && t.dataset.legodds) setLegOdds(t.dataset.legodds, t.value); if (t.dataset && t.dataset.chalodds !== undefined && S.user) { const o = parseOdds(t.value); if (!o) { toast("Use odds like 5/2, EVS or 3.5"); $("#main")._h = null; render(); } else { const C = JSON.parse(JSON.stringify(chalNow())); if (C.active) { C.active.custom = true; C.active.dec = Math.round(o * 1000) / 1000; saveChal(C); } } } if (t.dataset && t.dataset.accaalt) { S.accaPick = S.accaPick || {}; S.accaPick[t.dataset.accaalt] = t.value; render(); } });
 document.addEventListener("keydown", e => { const t = e.target; if (e.key === "Enter" && t.dataset && t.dataset.legodds) t.blur(); });
 document.addEventListener("focusin", e => { const t = e.target; if (t.dataset && t.dataset.legodds) setTimeout(() => t.select(), 0); });
 document.addEventListener("click", e => { const b = e.target.closest("[data-legreset]"); if (!b) return; const l = S.slip.find(x => x.id === b.dataset.legreset); if (l && l.orig != null) { l.dec = l.orig; l.custom = false; if (l.estOrig != null) l.est = l.estOrig; save(); render(); toast("Back to the app's price"); } });
