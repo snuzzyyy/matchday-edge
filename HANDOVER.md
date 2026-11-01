@@ -15,6 +15,8 @@ Last updated: 1 Nov 2026, end of the second build session.
 > - Player bets are kept out of Tips, Top picks, presets, the game page's "Best bets" and import matching (`marketIn`). Game page shows a table per player under "Player bets".
 > - Also fixed: in-play "or choose one yourself" collapsed on every 10 s redraw (`S.addOpen`); acca → slip now uses exactly the legs on screen (`S._accaLegs` / `S._accaLiveLegs`); phone-tracked bet copies are matched to saved bets by legs (`localTracked`, `legSig`) and clear themselves after the game (`pruneTracked`).
 > - Not done (v2): live player-bet chances in the in-play acca.
+> - Later the same session: Ctrl+V / drag-drop screenshot import on PC (`importShot`, also reads "@ 2.10" / "@210" odds); Sky stat specials ("A, B & C 7+ shots between them" → one leg with `group: [{pid,name,side,gid,team}]`, summed by `legValue` and `engine/settle.py`; "(N so far)" ignored); same-player multi-leg cards titled "Name · N bets"; £1K stake box (`data-chalstake`: sets `C.bank`, wallet moves by the difference, lower = `C.taken`, higher = `C.added`).
+> - Commits from this sandbox are authored as Claude <noreply@anthropic.com> (a stop hook requires it).
 
 The owner asked for this last and is waiting on it. Their words: *"include player points etc and be able to add more than 3 and be able to swap some out"*. Their screenshot was an NBA same-game acca (Celtics @ Magic) where the only same-game options were the total, the handicap and the winner, so the builder ran out of bets to add. Do this first, in this order.
 
