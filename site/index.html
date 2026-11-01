@@ -1392,19 +1392,27 @@ function activeResult(A) {   // once the game(s) finish, read the result from th
   for (const l of A.legs) { const g = findGame(l.sport, l.gid); if (!g || g.status.state !== "post") { all = false; continue; } const m = liveMarkets(l.sport, g).find(x => x.k === l.k); if (!m) { all = false; continue; } if (m.state === "lost") anyLost = true; else if (m.state !== "won") all = false; }
   return anyLost ? "L" : all ? "W" : null;
 }
+// the real ladder: actual banks for steps already won, the picked bet's real return next, then evens after that
+function chalPath(C) {
+  const won = [...C.history].reverse().filter(h => h.result === "W").map(h => +h.ret), out = [C.start];
+  for (let i = 1; i <= C.rungs; i++) out.push(i <= C.rung && won[i - 1] != null ? won[i - 1] : i === C.rung + 1 && C.active ? C.bank * C.active.dec : out[i - 1] * 2);
+  if (C.rung <= C.rungs) out[C.rung] = C.bank;
+  return out.map(v => Math.round(v * 100) / 100);
+}
+const ladderLabel = v => v >= 1000 ? "£" + (v / 1000).toFixed(1).replace(/\.0$/, "") + "k" : v < 10 ? "£" + (Math.round(v * 10) / 10) : "£" + Math.round(v);   // short labels so 11 bars fit on a phone; exact amounts show above and in the step card
 function rungDetail(C, i) {
-  const stake = C.start * 2 ** i, chrono = [...C.history].reverse(), h = chrono[i];
+  const P = chalPath(C), stake = P[i], chrono = [...C.history].reverse(), h = chrono[i];
   if (i < C.rung && h) return `<b>Step ${i + 1} · <span style="color:var(--win)">Won ✓</span></b><span>${esc(h.bet)}${h.match ? ` · ${esc(h.match)}` : ""}</span><span class="rd-num">${esc(h.odds)} · £${h.stake} → £${h.ret} · ${esc(h.date)}</span>`;
   if (i === C.rung && C.rung < C.rungs) return C.active ? `<b>Step ${i + 1} · <span style="color:var(--blue-2)">Running</span></b><span>${esc(C.active.label)} · ${esc(C.active.match)}</span><span class="rd-num">${odds(C.active.dec)} · £${C.bank} to return ${money(C.bank * C.active.dec)}</span>` : `<b>Step ${i + 1} · No bet picked yet</b><span>Choose one of the suggestions below with "Use for step ${i + 1}".</span>`;
-  if (i >= C.rungs) return `<b>${C.rung >= C.rungs ? "Finished 🏆" : "The finish line"}</b><span>£${C.start} turned into ${fmtBank(stake)}.</span>`;
-  return `<b>Step ${i + 1} · Locked</b><span>Stake about £${stake} to win about £${stake * 2}. Opens after step ${i}.</span>`;
+  if (i >= C.rungs) return `<b>${C.rung >= C.rungs ? "Finished 🏆" : "The finish line"}</b><span>${C.rung >= C.rungs ? `£${C.start} turned into ${money(stake)}.` : `On your prices so far, and evens from here, you'd finish on ${money(stake)}.`}</span>`;
+  return `<b>Step ${i + 1} · Locked</b><span>Stake about ${money(stake)} to return about ${money(P[i + 1] || stake * 2)}${i > C.rung + 1 || !C.active ? " at evens" : ""}. Opens after step ${i}.</span>`;
 }
 function viewChallenge() {
   const C = chalNow(), mine = !!S.user;
-  const rungs = Array.from({ length: C.rungs + 1 }, (_, i) => C.start * 2 ** i);
+  const rungs = chalPath(C), maxR = Math.max(...rungs);
   const left = Math.max(0, C.rungs - C.rung), O = challengeOptions(), pAt = p => Math.pow(p, left);
   const sel = S.rungSel != null && S.rungSel <= C.rungs ? S.rungSel : Math.min(C.rung, C.rungs);
-  const ladder = rungs.map((v, i) => `<button class="rung ${i < C.rung ? "done" : i === C.rung ? "now" : ""} ${i === sel ? "sel" : ""}" data-rung="${i}" aria-label="Step ${i + 1}"><i style="height:${18 + i * 11}px"></i><span>${fmtBank(v)}</span></button>`).join("");
+  const ladder = rungs.map((v, i) => `<button class="rung ${i < C.rung ? "done" : i === C.rung ? "now" : ""} ${i === sel ? "sel" : ""}" data-rung="${i}" aria-label="Step ${i + 1}"><i style="height:${18 + i * 11}px"></i><span>${ladderLabel(v)}</span></button>`).join("");
   const useBtn = (attr, label) => mine ? (C.rung >= C.rungs ? "" : `<button class="add" ${attr}>${label}</button>`) : `<a class="add" href="#account" style="text-decoration:none">Sign in to use</a>`;
   const stepWord = `Use for step ${C.rung + 1}`;
   const single = c => `<article class="pick"><div class="ring" style="--p:${Math.round(c.m.p * 100)};--c:${tierColor(c.m.p)}"><span>${pct(c.m.p)}</span></div><div><div class="sel">${esc(c.m.label)}</div><div class="mt"><button class="more" data-open="${c.sport}:${c.g.id}">${esc(vs(c.sport, c.g))}</button><span>· ${whenLabel(kick(c.g))}</span></div></div><ul class="why">${reasons(c.sport, c.g, c.m).slice(0, 2).map(w => `<li>${esc(w)}</li>`).join("")}</ul><div class="pfoot"><div class="price"><span class="big">${odds(c.m.dec)}</span><small>£${C.bank} returns ${money(C.bank * c.m.dec)}</small></div>${useBtn(`data-chaluse="${c.sport}|${c.g.id}|${c.m.k}"`, stepWord)}</div></article>`;
@@ -1423,7 +1431,7 @@ function viewChallenge() {
   return `<div class="hd"><div><h1>£1 → £1K challenge</h1><p class="sub">Start with £1, roll the whole lot onto a bet at around evens, and double it ten times to reach £1,024. ${mine ? "Pick a bet for the current step, then mark it won or lost." : "Sign in to run your own ladder."}</p></div></div>
   <img class="banner" src="img/challenge-banner.webp" alt="A glowing staircase of ten steps rising to a trophy">
   <section class="chal-hero">
-    <div class="chal-top"><div><div class="eyebrow">Attempt ${C.attempts || 1} · ${done ? "complete" : `step ${C.rung + 1} of ${C.rungs}`}</div><div class="bankv">${fmtBank(C.bank)}<small>${done ? "🏆" : `→ ${fmtBank(C.bank * 2)} next`}</small></div></div>
+    <div class="chal-top"><div><div class="eyebrow">Attempt ${C.attempts || 1} · ${done ? "complete" : `step ${C.rung + 1} of ${C.rungs}`}</div><div class="bankv">${fmtBank(C.bank)}<small>${done ? "🏆" : `→ ${money(rungs[C.rung + 1])} next`}</small></div></div>
     <div><div class="eyebrow">Wins needed</div><div class="bankv" style="font-size:44px">${left}</div></div></div>
     <div class="ladder" aria-label="Challenge ladder. Tap a step to see it.">${ladder}</div>
     <div class="rdetail" aria-live="polite">${rungDetail(C, sel)}</div>
