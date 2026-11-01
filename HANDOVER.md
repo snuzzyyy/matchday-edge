@@ -91,7 +91,7 @@ For every NBA game that is `pre` and starts within ~36 hours:
 
 ## 1. What it is
 
-**Matchday Edge** is a UK sports-betting companion app for **football (9 leagues) and the NBA**, built for the owner (GitHub **snuzzyyy**, display name **Snuzzy**, friend code **690481**) and their friends.
+**Matchday Edge** is a UK sports-betting companion app for **football (14 leagues incl. League One/Two, Eredivisie, Portugal, MLS) and the NBA**, built for the owner (GitHub **snuzzyyy**, display name **Snuzzy**, friend code **690481**) and their friends.
 
 It does:
 - live scores and stats, a prediction model on every market, tips for every game
