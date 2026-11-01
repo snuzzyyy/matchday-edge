@@ -950,7 +950,7 @@ body.spooky .top{background:radial-gradient(60% 140% at 100% 0%,rgba(255,122,47,
 .qlinks .btn{padding:10px}
 /* full-screen game page */
 .drawer.full{width:100%;padding-top:0;border-left:0}
-.drawer.full .dr-in{max-width:960px;margin:0 auto;padding-top:14px}
+.drawer.full .dr-in{max-width:960px;margin:0 auto;padding-top:14px}.g-cols{display:flex;flex-direction:column;gap:22px}.g-col{display:contents}.gx{order:var(--o);min-width:0}@media (min-width:1100px){.drawer.full .dr-in{max-width:1380px}.g-col{display:flex;flex-direction:column;gap:22px;min-width:0}.g-cols{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);align-items:start;gap:26px}}.pop-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}.pop-card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px;display:grid;gap:8px;align-content:start}.pop-hd{display:flex;justify-content:space-between;align-items:center}.pop-hd b{font-family:var(--display);font-size:22px}.pop-card ul{margin:0;padding-left:16px;display:grid;gap:3px;font-size:13px}.pop-card li small{color:var(--muted)}.pop-ft{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12.5px;color:var(--fg-2)}.pop-singles{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px;margin-top:10px}.pop-s{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:6px 6px 6px 12px;font-size:13.5px}.pop-s .odd{width:76px;flex:none}
 .gtop{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:14px;padding:calc(10px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) 10px max(16px,env(safe-area-inset-left,0px));background:rgba(13,19,36,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
 .gback{font-weight:700;font-size:15px;color:var(--fg);padding:6px 10px 6px 4px;border-radius:8px}
 .gback:hover{background:var(--surface-2)}
@@ -2108,6 +2108,22 @@ function onCourt(g) {
 }
 // names and percentages sit above a slim bar, so a 0% or 100% side never gets squashed
 const probBar = parts => `<div class="probwrap"><div class="problab">${parts.map(([c, name, p]) => `<span class="${c}"><i></i>${esc(name)} <b>${pct(p)}</b></span>`).join("")}</div><div class="probbar">${parts.map(([c, , p]) => `<div class="${c}" style="flex:${Math.max(p, .02)}"></div>`).join("")}</div></div>`;
+function popularHTML(sport, g) {
+  if (g.status.state === "post") return "";
+  const live = isLive(g), price = live ? m => livePrice(m.p) : priceOf;
+  const opts = live ? liveMarkets(sport, g).filter(m => m.state === "open" && !SKIP.has(m.k) && m.p <= .97) : legOptions(sport, g).map(x => x.m);
+  const B = withBundles(opts, price).filter(b => b.bundle), used = new Set(), picks = [];
+  for (const [t, name] of [[2, "Around evens"], [3, "Around 2/1"], [6, "Around 5/1"]]) {
+    const c = B.filter(b => { const d = bundlePrice(price)(b); return d >= t * .8 && d <= t * 1.35 && !used.has(b.k); }).sort((x, y) => y.p - x.p)[0];
+    if (c) { used.add(c.k); picks.push({ name, b: c, d: bundlePrice(price)(c) }); }
+  }
+  const keys = sport === "nba" ? ["ML1", "ML2", "SP1", "SP2", "TO", "TU"] : ["1", "X", "2", "O25", "U25", "BTTS"], sing = keys.map(k => opts.find(m => m.k === k)).filter(Boolean);
+  if (!picks.length && !sing.length) return "";
+  const cards = picks.map(({ name, b, d }) => `<div class="pop-card"><div class="pop-hd"><span class="tag evens">${name}</span><b>${odds(d)}</b></div><ul>${b.legs.map(m => `<li>${esc(m.label)} <small>${pct(m.p)}</small></li>`).join("")}</ul><div class="pop-ft"><span>${pct(b.p)} chance${live ? " now" : ""}</span><button class="btn sm" data-gbb="${sport}|${g.id}|${b.legs.map(m => m.k).join(",")}|${live ? 1 : 0}">Add to slip</button></div></div>`).join("");
+  const sBtn = m => live ? `<button class="odd addlive" data-liveleg="${sport}|${g.id}|${m.k}"><span class="pr">${odds(livePrice(m.p))}</span><span class="pp">${pct(m.p)}</span></button>` : oddBtn(sport, g, m.k);
+  return `<section class="section"><h2>Popular bets${live ? asOf(g) : ""}</h2>${cards ? `<p class="sub" style="margin:-6px 0 8px">Ready-made bet builders for this game. Your bookie prices bet builders differently, so check theirs.</p><div class="pop-grid">${cards}</div>` : ""}
+    ${sing.length ? `<div class="pop-singles">${sing.map(m => `<div class="pop-s"><span>${esc(m.label)}</span>${sBtn(m)}</div>`).join("")}</div>` : ""}</section>`;
+}
 function drawerHTML(sport, g) {
   const h = g.home, a = g.away, live = isLive(g), pre = isPre(g);
   const L = sport === "nba" ? a : h, R = sport === "nba" ? h : a;
@@ -2151,9 +2167,11 @@ function drawerHTML(sport, g) {
   }
   sec.markets = (sec.markets || "") + `<section class="section"><h2>${pre ? "All markets" : g.status.state === "post" ? "How the markets settled" : "Markets right now"}</h2>${marketsTable(sport, g)}<p class="note">${pre ? "" : "<b>Chance now</b> works from the current score, corners and cards plus the time left, so it changes as the game goes on. "}Chance = our model's estimate. <b>Fair</b> = the price that chance is worth. Prices marked with a percentage come from the market feed where available, otherwise they show the fair price, so check your bookie before you bet.</p></section>`;
   const ended = g.status.state === "post";
-  body = (sec.win || "") + (live ? anglesHTML(sport, g) : "") + (ended ? "" : bestForGame(sport, g)) + (live ? (sec.stats || "") : "")
-    + `<section class="section"><h2>${pre ? "All markets" : ended ? "How the markets settled" : "Markets right now"}</h2>${marketGroups(sport, g)}<p class="note">${pre ? "Tap a price to add it to your slip." : ended ? "" : "<b>Chance now</b> works from the current score and stats plus the time left. Tap + to add an in-play bet at its fair price."}</p></section>`
-    + (live ? "" : (sec.stats || "")) + (sec.quarters || "") + (sec.lineups || "") + (sec.timeline || "") + (sec.leaders || "") + (sec.injuries || "") + (sec.form || "");
+  const marketsSec = `<section class="section"><h2>${pre ? "All markets" : ended ? "How the markets settled" : "Markets right now"}</h2>${marketGroups(sport, g)}<p class="note">${pre ? "Tap a price to add it to your slip." : ended ? "" : "<b>Chance now</b> works from the current score and stats plus the time left. Tap + to add an in-play bet at its fair price."}</p></section>`;
+  const o = (n, h) => h ? `<div class="gx" style="--o:${n}">${h}</div>` : "";   /* phones: one column in this order; wide screens: the game on the left, the bets on the right */
+  const gameCol = o(1, sec.win) + o(2, live ? anglesHTML(sport, g) : "") + o(5, live || ended ? sec.stats : "") + o(7, sec.quarters) + o(8, sec.lineups) + o(9, sec.timeline) + o(10, sec.leaders) + o(11, sec.injuries) + o(12, pre ? sec.stats : "") + o(13, sec.form);
+  const betCol = o(3, ended ? "" : popularHTML(sport, g)) + o(4, ended ? "" : bestForGame(sport, g)) + o(6, marketsSec);
+  body = `<div class="g-cols"><div class="g-col">${gameCol}</div><div class="g-col">${betCol}</div></div>`;
   return `<div class="scrim" data-close></div><aside class="drawer full" role="dialog" aria-modal="true" aria-label="${esc(vs(sport, g))}"><div class="gtop"><button class="gback" data-close aria-label="Back">‹ Back</button><span class="eyebrow">${esc(sport === "nba" ? "NBA" : leagueName(g.league))}${g.venue ? " · " + esc(g.venue) : ""}</span></div><div class="dr-in">${hero}${body}</div></aside>`;
 }
 function injuryCard(name) {
@@ -3528,6 +3546,9 @@ document.addEventListener("click", async e => {
   const d = t.dataset;
   if (d.sport) { S.sport = d.sport; S.league = "all"; S.newsFilter = "all"; store.set("sport", S.sport); render(); }
   else if (d.fmt) { S.fmt = d.fmt; store.set("fmt", S.fmt); render(); }
+  else if (d.gbb) { const [sp, gid, ks, lv] = d.gbb.split("|"), g = findGame(sp, gid); if (!g) return; let n = 0;
+    for (const k of ks.split(",")) { if (lv === "1") { const m = liveLegFor(sp, g, k); if (m) { pushLiveLeg(sp, g, m); n++; } } else { const m = mkt(g, k); if (!m) continue; const leg = asLegs([{ sport: sp, g, m }])[0]; S.slip = S.slip.filter(l => l.id !== leg.id && !(l.sport === sp && l.gid === gid && conflicts(l.k, k))); S.slip.push(leg); n++; } }
+    S.slipTot = null; save(); render(); toast(n ? `Added ${n} bets from this game to your slip. Check your bookie's bet builder price` : "Those bets have closed"); }
   else if (d.liveleg) {
     const [sp, gid, k] = d.liveleg.split("|"), g = findGame(sp, gid), m = g && liveLegFor(sp, g, k); if (!m) return;
     const id = `${sp}:${gid}:${k}:live`, keep = S.drawer;
