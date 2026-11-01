@@ -170,6 +170,7 @@ h3{font-size:15px;font-weight:700}
 .cmp i{display:block;height:100%;border-radius:5px;transition:width .3s}
 .cmp .h{background:var(--blue)}.cmp .a{background:var(--tang)}
 .btiles{display:grid;gap:8px}
+.walbig{font-family:var(--display);font-size:24px!important;font-weight:700;line-height:1.1}
 .linkleg{width:100%;text-align:left;background:none;border-left:0;border-right:0;border-bottom:0;color:inherit;font:inherit;cursor:pointer;padding-left:0;padding-right:0;border-radius:0}.linkleg:hover .tl-top b{color:var(--blue-2)}
 .mchips{display:flex;flex-wrap:wrap;gap:8px}.mchip{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:var(--fg-2);background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:5px 10px}.mchip img{width:16px;height:16px}
 .mate-empty{padding:18px 12px}.mate-empty img{max-width:140px}
@@ -2121,6 +2122,7 @@ async function loadAccount() {
     sb.from("pro_waitlist").select("user_id").eq("user_id", uid).maybeSingle(),
     sb.rpc("leaderboard")
   ]);
+  const wl = await sb.from("wallets").select("*").eq("user_id", uid).maybeSingle(); S.walletReady = !wl.error; S.wallet = wl.data || null;
   S.profile = p.data || { id: uid, display_name: (S.user.user_metadata || {}).display_name || S.user.email.split("@")[0], fav_teams: [], plan: "free", show_on_leaderboard: true, created_at: S.user.created_at };
   S.bets = b.data || []; S.chalAll = splitChal(c.data ? c.data.data : null); S.waitlisted = !!w.data; S.board = lb.data || [];
   render(); loadSocial();
@@ -2231,6 +2233,8 @@ async function loadSocial() {
   S.friends = Object.fromEntries((pr.data || []).map(p => [p.id, p]));
   S.feedBets = bt.data || [];
   S.friendChal = Object.fromEntries((ch.data || []).map(c => [c.user_id, c.data]));
+  const fw = ids.length && S.walletReady ? await sb.from("wallets").select("user_id,amount,is_public").in("user_id", ids) : { data: [] };
+  S.friendWallets = Object.fromEntries((fw.data || []).filter(w => w.is_public).map(w => [w.user_id, w]));
   const betIds = S.feedBets.map(b => b.id);
   const rx = betIds.length ? await sb.from("reactions").select("bet_id,user_id,emoji").in("bet_id", betIds) : { data: [] };
   S.reacts = {}; for (const r of rx.data || []) (S.reacts[r.bet_id] = S.reacts[r.bet_id] || []).push(r);
@@ -2297,7 +2301,7 @@ function viewMyBets() {
   const live = cards.length ? `<section class="section"><h2>Live & upcoming</h2><div class="trk">${cards.map(betCard).join("")}</div></section>` : "";
   if (!sb || !S.user) return `${head}${live}${cards.length ? "" : `<div class="empty art"><img src="img/empty-bets.webp" alt="" loading="lazy"><b>No bets yet</b><span>Import a bet to follow it live, e.g. "Haaland to score @ 1.80".</span></div>`}
     <a class="strip" href="#account"><span class="ic-dot">${ICON.chart}</span><span><b>Save your bets</b><small>Sign in free to keep your bets and see your profit.</small></span><span aria-hidden="true">›</span></a>`;
-  return `${head}${live}
+  return `${head}${walletStrip()}${live}
     ${hand.length ? `<section class="section"><h2>To settle</h2><p class="sub" style="margin:-6px 0 0">Bets you typed in yourself aren't linked to a game, so mark these when they finish.</p><div style="display:grid;gap:8px">${hand.map(b => betRow(b)).join("")}</div></section>` : ""}
     ${!cards.length && !hand.length ? `<div class="empty art"><img src="img/empty-bets.webp" alt="" loading="lazy"><b>No open bets</b><span>Import a bet, or save one from your bet slip.</span></div>` : ""}
     ${bets.length ? statBlock() : ""}
@@ -2318,6 +2322,7 @@ function profileView() {
   return `<section class="section"><h2>Your details</h2><div class="setcard">
     <form class="setrow namerow" id="nameForm"><label for="dn"><small>Display name</small></label><input id="dn" maxlength="24" value="${esc(P.display_name || "")}" autocomplete="nickname"><button class="btn ghost sm" type="submit">Save</button></form>
     <div class="setrow"><span>${avatarHTML(P, 40)}</span><span><b>Profile photo</b><small>Or tap your picture at the top</small></span><span class="rowbtns"><button type="button" class="btn ghost sm" data-pickphoto>${P.avatar_url ? "Change" : "Add"}</button>${P.avatar_url ? `<button class="btn ghost sm" data-noavatar>Remove</button>` : ""}</span></div></div></section>
+  ${walletSection(sw)}
   <section class="section"><h2>Privacy</h2><div class="setcard">
     ${sw("shareOpt", P.share_bets !== false, "Friends can see my bets", "They can react to them and tail them")}
     ${sw("lbOpt", P.show_on_leaderboard !== false, "Show me on the leaderboard", "Your friends' profit leaderboard")}</div></section>
@@ -2334,6 +2339,7 @@ function mateSheet(uid) {
   return `<div class="scrim top" data-mateclose></div><div class="ijsheet" role="dialog" aria-modal="true" aria-label="${esc(p.display_name)}"><button class="close sm ij-x" data-mateclose aria-label="Close">✕</button>
     <div class="ij-head">${avatarHTML(p, 64)}<div><h2>${esc(p.display_name)}</h2>${badgesHTML(p) || p.plan === "pro" ? `<div class="bdgrow">${badgesHTML(p)}${p.plan === "pro" ? planChip(p) : ""}</div>` : ""}<span class="ij-team">${me ? "That's you" : "Friend"}${p.created_at ? " · joined " + new Date(p.created_at).toLocaleDateString("en-GB", { month: "short", year: "numeric" }) : ""}${p.friend_code ? ` · code <b class="fcode">${esc(p.friend_code)}</b>` : ""}</span></div></div>
     ${settled.length ? `<div class="pnlrow"><div><small>Profit</small><b class="${profit > 0 ? "pos" : profit < 0 ? "neg" : ""}">${gbp(profit)}</b></div><div><small>Win rate</small><b>${decided ? Math.round(won / decided * 100) + "%" : "–"}</b></div><div><small>Return</small><b>${staked ? (profit > 0 ? "+" : "") + Math.round(profit / staked * 100) + "%" : "–"}</b></div><div><small>Settled</small><b>${settled.length}</b></div></div>` : ""}
+    ${!me && (S.friendWallets || {})[uid] ? `<div class="mchips"><span class="mchip">💷 Balance ${money(+S.friendWallets[uid].amount)}</span></div>` : ""}
     ${ladders.length ? `<div class="mchips">${ladders.map(([sp, C]) => `<span class="mchip"><img src="img/${sp === "nba" ? "icon-basketball" : "icon-football"}.webp" alt="">£1K ${SPN[sp]} · ${C.rung >= C.rungs ? "Done 🏆" : `step ${(C.rung || 0) + 1} · ${money(+C.bank)}`}</span>`).join("")}</div>` : ""}
     ${(p.fav_teams || []).length ? `<h3 class="bv-h">Favourite teams</h3><div class="favs">${p.fav_teams.map(f => `<span class="fav">${logo(f.sport, { id: f.id, name: f.name, abbr: f.name.slice(0, 3), color: "#334155" })}${esc(f.name)}</span>`).join("")}</div>` : ""}
     ${bets.length ? `<h3 class="bv-h">Recent bets</h3><div class="btiles">${bets.slice(0, 10).map(betTile).join("")}</div>`
@@ -2382,8 +2388,9 @@ document.addEventListener("submit", async e => {
     const o = parseOdds(val("ab-odds")), st = +val("ab-stake");
     if (!o) { toast("Odds look wrong. Try 5/2, EVS or 3.5"); return; }
     const r = await sb.from("bets").insert({ label: val("ab-label").trim(), odds_dec: o, stake: st }).select().single();
-    if (r.error) toast("Couldn't save the bet."); else { S.bets.unshift(r.data); S.betFilter = "open"; render(); toast("Bet added"); }
+    if (r.error) toast("Couldn't save the bet."); else { S.bets.unshift(r.data); walletAdjust(-(+r.data.stake)); S.betFilter = "open"; render(); toast("Bet added"); }
   } else if (f.id === "addFriend") { addFriend(val("fcode")); f.reset();
+  } else if (f.id === "walletForm") { const v = parseFloat(val("walamt")); if (!(v >= 0)) { toast("Enter an amount"); return; } S.walletEdit = false; walletSet(Math.round(v * 100) / 100); toast("Balance saved");
   } else if (f.id === "nameForm") { const nm = val("dn").trim().slice(0, 24); if (nm) { saveProfile({ display_name: nm }); toast("Name saved"); }
   } else if (f.id === "addFav") {
     const name = val("favpick").replace(/ \(NBA\)$/, ""), nba = / \(NBA\)$/.test(val("favpick"));
@@ -2438,7 +2445,7 @@ document.addEventListener("click", async e => {
     if (res === "open") { const k = store.get("noAuto", []); if (!k.includes(id)) store.set("noAuto", [...k, id].slice(-200)); }   // reopened by hand: leave it alone
     settleBet(b, res);
   }
-  else if (d.delbet) { S.bets = S.bets.filter(x => x.id !== d.delbet); render(); await sb.from("bets").delete().eq("id", d.delbet); }
+  else if (d.delbet) { const db = S.bets.find(x => x.id === d.delbet); if (db && S.wallet) walletAdjust((new Date(db.placed_at) >= new Date(S.wallet.set_at) ? +db.stake : 0) - credit(db)); S.bets = S.bets.filter(x => x.id !== d.delbet); render(); await sb.from("bets").delete().eq("id", d.delbet); }
   else if (d.unfav) { const [sp, id] = d.unfav.split("|"); saveProfile({ fav_teams: (S.profile.fav_teams || []).filter(x => !(x.sport === sp && x.id === id)) }); }
   else if (d.waitlist !== undefined) { const r = await sb.from("pro_waitlist").upsert({ user_id: S.user.id }); if (r.error) toast("Couldn't join. Try again."); else { S.waitlisted = true; render(); toast("You're on the Pro waitlist"); } }
   else if (d.chalreset !== undefined) { const C = JSON.parse(JSON.stringify(chalNow())); if (C.history.length || C.rung) archiveAttempt(C, C.rung >= C.rungs ? "completed" : "stopped"); else Object.assign(C, { active: null }); S.rungSel = null; saveChal(C); toast("New ladder started"); }
@@ -2457,10 +2464,10 @@ document.addEventListener("click", async e => {
     if (!S.slip.length) return;
     const c = slipCalc(), row = { label: S.slip.map(l => l.label).join(" + "), match: [...new Set(S.slip.map(l => l.match))].join(", "), legs: S.slip, odds_dec: Math.round(c.dec * 1000) / 1000, stake: S.stake, sport: S.slip[0].sport, kickoff: S.slip.map(l => l.kick).sort()[0] };
     const r = await sb.from("bets").insert(row).select().single();
-    if (r.error) toast("Couldn't save the bet."); else { S.bets.unshift(r.data); toast("Saved to My Bets"); }
+    if (r.error) toast("Couldn't save the bet."); else { S.bets.unshift(r.data); walletAdjust(-(+r.data.stake)); toast("Saved to My Bets"); }
   }
 });
-document.addEventListener("change", e => { if (e.target.id === "avatarPick" && sb && S.user) { S._picked = true; uploadAvatar(e.target.files[0]); e.target.value = ""; } if (e.target.id === "shareOpt" && sb && S.user) { saveProfile({ share_bets: e.target.checked }); toast(e.target.checked ? "Friends can see your bets" : "Your bets are now private"); } if (e.target.id === "lbOpt" && sb && S.user) { saveProfile({ show_on_leaderboard: e.target.checked }); sb.rpc("leaderboard").then(x => { if (x.data) { S.board = x.data; render(); } }); } });
+document.addEventListener("change", e => { if (e.target.id === "walletPub" && sb && S.user && S.wallet) { S.wallet.is_public = e.target.checked; sb.from("wallets").update({ is_public: e.target.checked }).eq("user_id", S.user.id); toast(e.target.checked ? "Friends can see your balance" : "Your balance is private"); render(); } if (e.target.id === "avatarPick" && sb && S.user) { S._picked = true; uploadAvatar(e.target.files[0]); e.target.value = ""; } if (e.target.id === "shareOpt" && sb && S.user) { saveProfile({ share_bets: e.target.checked }); toast(e.target.checked ? "Friends can see your bets" : "Your bets are now private"); } if (e.target.id === "lbOpt" && sb && S.user) { saveProfile({ show_on_leaderboard: e.target.checked }); sb.rpc("leaderboard").then(x => { if (x.data) { S.board = x.data; render(); } }); } });
 
 /* ---------- iPhone: suggest adding to the home screen (Safari only, once) ---------- */
 const IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
@@ -2503,10 +2510,32 @@ function cashGo(mode) {
   S.cashOpen = null; S.rungSel = null; saveChal(C);
 }
 /* ---------- automatic settling from final scores and player stats ---------- */
+const credit = b => b.result === "won" ? (+b.returns || 0) : b.result === "void" ? +b.stake : 0;
+async function walletAdjust(delta) {
+  if (!S.wallet || !delta) return;
+  S.wallet.amount = Math.round((+S.wallet.amount + delta) * 100) / 100; render();
+  await sb.from("wallets").update({ amount: S.wallet.amount, updated_at: new Date().toISOString() }).eq("user_id", S.user.id);
+}
+async function walletSet(amount) {
+  const now = new Date().toISOString(), row = { user_id: S.user.id, amount, set_at: now, updated_at: now, is_public: S.wallet ? !!S.wallet.is_public : false };
+  S.wallet = row; render(); const r = await sb.from("wallets").upsert(row); if (r.error) toast("Couldn't save your balance");
+}
+function walletSection(sw) {
+  if (S.walletReady === false) return `<section class="section"><h2>Balance</h2><div class="setcard"><div class="setrow favwrap"><small>Balance tracking needs a quick database update. Ask Claude for the steps.</small></div></div></section>`;
+  const W = S.wallet, open = (S.bets || []).filter(b => b.result === "open").reduce((a, b) => a + +b.stake, 0);
+  const form = `<form class="setrow namerow" id="walletForm"><label for="walamt"><small>${W ? "Correct your balance (£)" : "Your betting balance (£)"}</small></label><input id="walamt" type="number" inputmode="decimal" step="0.01" min="0" placeholder="e.g. 50.00" value="${W ? (+W.amount).toFixed(2) : ""}"><button class="btn ghost sm" type="submit">${W ? "Save" : "Set"}</button></form>`;
+  return `<section class="section"><h2>Balance</h2><div class="setcard">
+    ${W && !S.walletEdit ? `<div class="setrow"><span class="ic-dot">💷</span><span><b class="walbig">${money(+W.amount)}</b><small>${open ? money(open) + " in open bets · " : ""}updates as your bets settle</small></span><button class="btn ghost sm" data-walletedit>Edit</button></div>` : form}
+    ${W ? sw("walletPub", !!W.is_public, "Show my balance to friends", "Off unless you switch it on") : `<div class="setrow favwrap"><small>Enter what's in your bookie account. Saving a bet takes the stake off, and a win adds the returns.</small></div>`}</div></section>`;
+}
+const walletStrip = () => !S.user || S.walletReady === false ? "" : S.wallet
+  ? `<a class="strip" href="#account"><span class="ic-dot">💷</span><span><b>Balance ${money(+S.wallet.amount)}</b><small>${(() => { const o = (S.bets || []).filter(b => b.result === "open").reduce((a, b) => a + +b.stake, 0); return o ? money(o) + " in open bets · " : ""; })()}${S.wallet.is_public ? "friends can see it" : "private"}</small></span><span aria-hidden="true">›</span></a>`
+  : `<a class="strip" href="#account"><span class="ic-dot">💷</span><span><b>Track your balance</b><small>It updates itself as your bets settle</small></span><span aria-hidden="true">›</span></a>`;
 async function settleBet(b, res, auto) {
+  const before = credit(b);
   const returns = res === "won" ? Math.round(b.stake * b.odds_dec * 100) / 100 : res === "void" ? +b.stake : res === "lost" ? 0 : null;
   const settled_at = res === "open" ? null : new Date().toISOString();
-  Object.assign(b, { result: res, returns, settled_at }); render();
+  Object.assign(b, { result: res, returns, settled_at }); render(); walletAdjust(credit(b) - before);
   if (auto) toast(res === "won" ? `Winner! ${b.label.length > 40 ? b.label.slice(0, 40) + "…" : b.label} returned ${money(returns)}` : `Settled as lost: ${b.label.length > 44 ? b.label.slice(0, 44) + "…" : b.label}`);
   let r = await sb.from("bets").update({ result: res, returns, settled_at }).eq("id", b.id); if (r.error) r = await sb.from("bets").update({ result: res, returns }).eq("id", b.id); if (r.error) toast("Couldn't save."); else loadSocial();
   sb.rpc("leaderboard").then(x => { if (x.data) { S.board = x.data; render(); } });
@@ -2632,6 +2661,7 @@ document.addEventListener("click", e => {
   else if (d.allsettled !== undefined) { S.showAllSettled = true; render(); }
   else if (d.betview) { S.betView = d.betview; const b = [...(S.feedBets || []), ...(S.bets || [])].find(x => x.id === d.betview); for (const l of (b && b.legs) || []) { const g = l.gid && findGame(l.sport, l.gid); if (l.pid && g && !isPre(g)) loadDetail(l.sport + ":" + l.gid); } render(); }
   else if (d.betviewx !== undefined) { S.betView = null; render(); }
+  else if (d.walletedit !== undefined) { S.walletEdit = true; render(); setTimeout(() => { const i = $("#walamt"); i && i.focus(); }, 50); }
   else if (d.iosx !== undefined) { store.set("iosTipX", true); render(); }
   else if (d.impex) { S.importText = d.impex; const t = $("#imptext"); if (t) t.value = d.impex; S.impOddsTyped = false; impRefresh(); }
   else if (d.untrack) { S.tracked = S.tracked.filter(t => t.id !== d.untrack); store.set("tracked", S.tracked); render(); }
@@ -2642,7 +2672,7 @@ document.addEventListener("click", e => {
     S.tracked = [t, ...(S.tracked || [])]; store.set("tracked", S.tracked);
     if (S.user && sb && ($("#impsave") || {}).checked && dec) {
       const gs = [...new Set(r.legs.map(l => l.gid))].map(id => r.legs.find(l => l.gid === id)).map(l => findGame(l.sport, l.gid)).filter(Boolean);
-      sb.from("bets").insert({ label: text, match: gs.map(g => vs(r.legs[0].sport, g)).join(", "), legs: r.legs.map(l => ({ ...l, type: "prop" })), odds_dec: Math.round(dec * 1000) / 1000, stake, sport: r.legs[0].sport, kickoff: gs.map(kick).sort()[0] }).select().single().then(x => { if (x.data) { S.bets.unshift(x.data); loadSocial(); } });
+      sb.from("bets").insert({ label: text, match: gs.map(g => vs(r.legs[0].sport, g)).join(", "), legs: r.legs.map(l => ({ ...l, type: "prop" })), odds_dec: Math.round(dec * 1000) / 1000, stake, sport: r.legs[0].sport, kickoff: gs.map(kick).sort()[0] }).select().single().then(x => { if (x.data) { S.bets.unshift(x.data); walletAdjust(-(+x.data.stake)); loadSocial(); } });
     }
     S.importOpen = false; S.importText = ""; S.impOdds = ""; S.impOddsTyped = false; S.impStake = null; saveImpDraft(); if (location.hash !== "#mybets") location.hash = "mybets"; render(); toast("Tracking your bet live");
   }
