@@ -826,6 +826,11 @@ h3{font-size:15px;font-weight:700}
 .trk-other{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;background:var(--surface);border:1px dashed var(--line-2);border-radius:12px;padding:10px 14px;font-size:13px;color:var(--fg-2);text-align:left}
 .trk-other b{color:var(--blue-2);white-space:nowrap}
 .trk{display:grid;gap:10px}
+.shgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.shopt{display:grid;justify-items:center;gap:7px;padding:10px 2px;border-radius:12px;color:var(--fg);text-decoration:none;font-size:12.5px;font-weight:600;background:none;border:0;font-family:inherit;cursor:pointer}
+.shopt:hover,.shopt:active{background:var(--surface-3)}
+.shic{width:50px;height:50px;border-radius:50%;display:grid;place-items:center}.shic svg{width:24px;height:24px}
+.shlink{font-size:12.5px;color:var(--muted);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:9px 12px;overflow-wrap:anywhere}
 .iostip{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:12px;align-items:center;background:radial-gradient(80% 160% at 100% 0%,rgba(61,123,255,.28),transparent 60%),var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 12px 12px 14px;margin-bottom:16px}
 .iostip img{width:44px;height:44px;border-radius:11px}.iostip b{display:block;font-size:14.5px}.iostip span{font-size:13px;color:var(--fg-2)}.iostip span b{display:inline;font-size:inherit;color:var(--fg)}
 .shr{display:inline-block;width:12px;height:14px;vertical-align:-2px;border:1.6px solid currentColor;border-top:0;border-radius:0 0 2px 2px;position:relative;margin:0 2px}.shr::before{content:"↑";position:absolute;left:50%;top:-9px;transform:translateX(-50%);font-size:12px;line-height:1;font-weight:700}
@@ -969,6 +974,25 @@ function slipCalc(legs = S.slip) {
   const dec = legs.reduce((a, l) => a * l.dec, 1), p = legs.reduce((a, l) => a * l.p, 1);
   const sameMatch = new Set(legs.map(l => l.gid)).size < legs.length;
   return { dec, p, est: legs.some(l => l.est), sameMatch };
+}
+function copyText(txt, msg) {
+  const ok = () => toast(msg), fb = () => { const ta = document.createElement("textarea"); ta.value = txt; ta.style.position = "fixed"; ta.style.opacity = "0"; document.body.appendChild(ta); ta.select(); try { document.execCommand("copy"); ok(); } catch { toast(txt); } ta.remove(); };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(ok, fb); else fb();
+}
+function inviteText() {
+  const code = (S.profile || {}).friend_code || "", link = location.origin + location.pathname + "?invite=" + encodeURIComponent(code);
+  return { link, text: `Join me on Matchday Edge: live scores, best bets and a friends' leaderboard. My friend code is ${code}. ${link}` };
+}
+function shareSheet() {
+  const { link, text } = inviteText(), t = encodeURIComponent(text);
+  const opt = (href, ic, label, bg, blank) => `<a class="shopt" href="${href}" ${blank ? 'target="_blank" rel="noopener"' : ""} data-shareclose><span class="shic" style="background:${bg}">${ic}</span>${label}</a>`;
+  return `<div class="scrim top" data-shareclose></div><div class="ijsheet" role="dialog" aria-modal="true" aria-label="Invite friends"><button class="close sm ij-x" data-shareclose aria-label="Close">✕</button>
+    <div><h2>Invite friends</h2><p class="sub" style="margin:4px 0 0">When they sign up with your link, you're connected automatically.</p></div>
+    <div class="shgrid">${opt("https://wa.me/?text=" + t, `<svg viewBox="0 0 24 24" fill="#fff"><path d="M12 2a10 10 0 00-8.6 15.1L2 22l5-1.3A10 10 0 1012 2zm0 18.2a8.2 8.2 0 01-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1112 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.6.8-.8 1-.3.2-.5.1a6.7 6.7 0 01-3.3-2.9c-.2-.4.2-.4.7-1.3a.4.4 0 000-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 00-.7.3 3 3 0 00-.9 2.2 5.2 5.2 0 001.1 2.7 11.8 11.8 0 004.5 4c1.7.7 2.3.8 3.2.6a2.7 2.7 0 001.8-1.2 2.2 2.2 0 00.1-1.3c0-.1-.2-.2-.5-.3z"/></svg>`, "WhatsApp", "#25D366", true)}
+      ${opt("sms:?&body=" + t, `<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"><path d="M4 5h16v11H9l-5 4z"/></svg>`, "Messages", "#3D7BFF")}
+      ${opt("mailto:?subject=" + encodeURIComponent("Join me on Matchday Edge") + "&body=" + t, `<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>`, "Email", "#8A5CFF")}
+      <button class="shopt" data-sharecopy><span class="shic" style="background:var(--surface-3)"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1"/></svg></span>Copy link</button></div>
+    <div class="shlink">${esc(link)}</div></div>`;
 }
 let toastT; function toast(msg) { const L = $("#layer"); let t = $(".toast"); if (!t) { t = document.createElement("div"); t.className = "toast"; document.body.appendChild(t); } t.textContent = msg; clearTimeout(toastT); toastT = setTimeout(() => t.remove(), 1400); }
 
@@ -2155,10 +2179,12 @@ document.addEventListener("click", async e => {
   else if (d.noavatar !== undefined) { await saveProfile({ avatar_url: null }); sb.storage.from("avatars").remove([`${S.user.id}/avatar.webp`, `${S.user.id}/avatar.jpg`]); }
   else if (d.copycode !== undefined) { const c = (S.profile || {}).friend_code || ""; try { await navigator.clipboard.writeText(c); toast("Friend code " + c + " copied"); } catch { const ta = document.createElement("textarea"); ta.value = c; document.body.appendChild(ta); ta.select(); try { document.execCommand("copy"); toast("Friend code " + c + " copied"); } catch { toast("Your code is " + c); } ta.remove(); } }
   else if (d.invite !== undefined) {
-    const link = location.origin + location.pathname + "?invite=" + encodeURIComponent((S.profile || {}).friend_code || ""), text = `Join me on Matchday Edge: live scores, best bets and a friends' leaderboard. ${link}`;
-    if (navigator.share) { try { await navigator.share({ title: "Matchday Edge", text, url: link }); return; } catch {} }
-    try { await navigator.clipboard.writeText(link); toast("Invite link copied. Send it to your friends"); } catch { toast("Your link: " + link); }
+    const { link, text } = inviteText();
+    // the phone's own share menu where the browser has one (iPhone Safari, Chrome); otherwise our own sheet (the Android app)
+    if (navigator.share) { try { await navigator.share({ title: "Matchday Edge", text }); } catch (err) { if (err && err.name !== "AbortError") { S.shareOpen = true; render(); } } return; }
+    S.shareOpen = true; render();
   }
+  else if (d.sharecopy !== undefined) { const { link } = inviteText(); S.shareOpen = false; render(); copyText(link, "Invite link copied. Paste it to your friends"); }
   else if (d.react) {
     const [bid, k] = d.react.split("|"), list = (S.reacts[bid] = S.reacts[bid] || []), me = S.user.id, i = list.findIndex(r => r.emoji === k && r.user_id === me);
     if (i >= 0) { list.splice(i, 1); render(); await sb.from("reactions").delete().eq("bet_id", bid).eq("user_id", me).eq("emoji", k); }
@@ -2223,6 +2249,7 @@ function render() {
   else L.innerHTML = "";
   if (S.injOpen) L.insertAdjacentHTML("beforeend", injuryCard(S.injOpen));
   if (S.mateOpen && S.user) L.insertAdjacentHTML("beforeend", mateSheet(S.mateOpen));
+  if (S.shareOpen && S.user) L.insertAdjacentHTML("beforeend", shareSheet());
   const IL = $("#implayer");
   if (!S.importOpen) { if (IL.firstChild) IL.innerHTML = ""; }
   else if (!$("#imptext")) { S.impOddsTyped = false; IL.innerHTML = importSheet(); }
@@ -2309,7 +2336,7 @@ document.addEventListener("click", e => { const b = e.target.closest("[data-legr
 document.addEventListener("input", e => {
   if (e.target.id === "stake") { S.stake = Math.max(0, +e.target.value || 0); save(); const c = slipCalc(); document.querySelectorAll("#ret").forEach(r => r.textContent = money(S.stake * c.dec)); }
 });
-document.addEventListener("click", e => { if (e.target.closest("[data-injclose]")) { S.injOpen = null; render(); } if (e.target.closest("[data-importclose]")) { S.importOpen = false; render(); } });
+document.addEventListener("click", e => { if (e.target.closest("[data-injclose]")) { S.injOpen = null; render(); } const shc = e.target.closest("[data-shareclose]"); if (shc && S.shareOpen) { if (shc.tagName === "A") setTimeout(() => { S.shareOpen = false; render(); }, 400); else { S.shareOpen = false; render(); } } if (e.target.closest("[data-importclose]")) { S.importOpen = false; render(); } });
 document.addEventListener("input", e => { if (e.target.id === "imptext") { S.importText = e.target.value; clearTimeout(S._impT); S._impT = setTimeout(impRefresh, 350); } if (e.target.id === "impodds") S.impOddsTyped = !!e.target.value.trim(); });
 document.addEventListener("keydown", e => { if (e.key === "Escape" && S.injOpen) { S.injOpen = null; render(); return; } if (e.key === "Escape" && (S.drawer || S.slipOpen)) { S.drawer = null; S.slipOpen = false; render(); } });
 addEventListener("hashchange", () => { if (view() === "friends" && S.user) loadSocial(); S.drawer = null; S.slipOpen = false; render(); scrollTo(0, 0); });
