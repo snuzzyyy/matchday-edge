@@ -103,8 +103,8 @@ a{color:var(--blue-2)}
 }
 .promo{display:flex;align-items:center;gap:14px;flex-wrap:wrap;justify-content:space-between;text-decoration:none;color:var(--fg);border-radius:14px;padding:14px 16px;border:1px solid var(--line);background:radial-gradient(80% 160% at 100% 0%,rgba(255,122,47,.3),transparent 60%),radial-gradient(70% 160% at 0% 100%,rgba(61,123,255,.25),transparent 60%),var(--surface)}
 .promo:hover{border-color:var(--tang)}
-.subnav{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:4px;padding:4px;background:var(--surface);border:1px solid var(--line);border-radius:14px;margin-bottom:-6px}
-.subnav a{display:flex;align-items:center;justify-content:center;gap:6px;padding:10px 6px;border-radius:10px;color:var(--muted);font-weight:700;font-size:14px;text-decoration:none;white-space:nowrap}
+.subnav{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(max-content,1fr);gap:2px;padding:4px;background:var(--surface);border:1px solid var(--line);border-radius:14px;margin-bottom:-6px}
+.subnav a{display:flex;align-items:center;justify-content:center;gap:6px;padding:10px clamp(6px,2.4vw,22px);border-radius:10px;color:var(--muted);font-weight:700;font-size:14px;text-decoration:none;white-space:nowrap}@media (max-width:420px){.subnav a{font-size:13px}}
 .subnav a[aria-current=page]{background:var(--surface-3);color:var(--fg);box-shadow:inset 0 -2px 0 var(--tang)}
 .subnav .badge{padding:0 6px;font-size:10.5px;line-height:16px}
 .strips{display:grid;gap:10px}
@@ -228,9 +228,7 @@ a.prof-bdg{text-decoration:none}
   .setgrid{grid-template-columns:1fr 1fr;align-items:start}
   .btiles.wide,.ag-list,.newslist{grid-template-columns:repeat(auto-fill,minmax(380px,1fr));align-items:start}
   div.feed{display:block;columns:380px;column-gap:12px}div.feed>*{break-inside:avoid;margin-bottom:12px;width:100%}
-  div.trk{grid-template-columns:1fr}div.trk.chal-row{grid-template-columns:repeat(auto-fill,minmax(360px,1fr))}
-  .bc-legs{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));column-gap:22px}
-  .trk:not(.chal-row) .bc-money,.trk:not(.chal-row) .bc-money.four{grid-template-columns:repeat(3,minmax(90px,max-content)) 1fr;column-gap:34px}.trk:not(.chal-row) .bc-money:not(.four) > span:last-of-type{text-align:left}   /* cards stack in columns, no gaps under short ones */
+  div.trk:not(.chal-row){display:block;columns:400px;column-gap:14px}div.trk:not(.chal-row)>*{break-inside:avoid;margin-bottom:14px;width:100%}div.trk.chal-row{grid-template-columns:repeat(auto-fill,minmax(360px,1fr))}   /* cards stack in columns, no gaps under short ones */
   img.banner{aspect-ratio:auto;height:220px;object-position:center 12%}
 }
 .gtips{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(320px,1fr))}
@@ -503,7 +501,7 @@ a.prof-bdg{text-decoration:none}
 .stake label{font-size:13px;color:var(--fg-2);flex:1}
 .stake .in{display:flex;align-items:center;background:var(--surface-2);border:1px solid var(--line-2);border-radius:8px;padding:0 10px;width:110px}
 .stake input{width:100%;background:none;border:0;color:var(--fg);font-family:var(--display);font-size:18px;font-weight:700;padding:7px 0;outline:none}
-.meter{height:8px;border-radius:8px;background:var(--surface-3);overflow:hidden}.bc-chance{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:12.5px;color:var(--fg-2);margin-bottom:-4px}.bc-chance small{color:var(--muted);font-size:11px}.bc-chance b{font-family:var(--display);font-size:20px}.bc-meter{height:10px}.tl-pc{font-weight:700;white-space:nowrap}.mleg{display:flex;gap:8px;margin-top:8px}.bc-money{display:grid;grid-template-columns:repeat(3,1fr);gap:4px 8px;background:var(--bg-2);border-radius:10px;padding:9px 14px}.bc-legs{display:grid}.trk-card .trk-hd b{font-size:15.5px}.bc-money.four{grid-template-columns:repeat(4,1fr)}.swipe-hint{display:none}@media (max-width:899px){.trk.chal-row{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:10px;scrollbar-width:none;margin-right:-16px;padding-right:16px}.trk.chal-row::-webkit-scrollbar{display:none}.trk.chal-row>*{flex:0 0 86%;scroll-snap-align:start}.swipe-hint{display:block;font-size:12px;color:var(--muted);margin:6px 0 0;text-align:right}}.bc-money .bc-meter{grid-column:1 / -1;height:6px;margin-top:4px}.bc-money span{display:grid;gap:1px}.bc-money small{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em}.bc-money b{font-family:var(--display);font-size:19px;color:var(--fg)}.bc-money b.pos{color:var(--win)}.bc-money > span:last-of-type{text-align:right}.imp-leg.man > span:first-child{color:var(--amber)}
+.meter{height:8px;border-radius:8px;background:var(--surface-3);overflow:hidden}.bc-chance{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:12.5px;color:var(--fg-2);margin-bottom:-4px}.bc-chance small{color:var(--muted);font-size:11px}.bc-chance b{font-family:var(--display);font-size:20px}.bc-meter{height:10px}.tl-pc{font-weight:700;white-space:nowrap}.mleg{display:flex;gap:8px;margin-top:8px}.trk-card{gap:6px;padding:12px 14px 10px}.trk-card .bc-money{background:none;padding:2px 0 4px;border-bottom:1px solid var(--line);border-radius:0;gap:2px 10px}.trk-card .bc-money b{font-size:17px}.trk-card .bc-money small{font-size:10.5px}.trk-card .bc-money .bc-meter{height:4px;margin-top:5px}.trk-card .tl-leg{grid-template-columns:18px minmax(0,1fr) auto;grid-template-areas:'ic nm val' 'ic mt st' 'ic bar bar';column-gap:8px;row-gap:1px;padding:8px 0 6px;border-top:0;border-bottom:1px solid rgba(255,255,255,.05)}.trk-card .tl-leg:last-child{border-bottom:0}.trk-card .tl-leg::before{grid-area:ic;content:'•';color:var(--blue-2);font-size:18px;line-height:16px;text-align:center}.trk-card .tl-leg.hit::before{content:'✓';color:var(--win);font-size:14px;font-weight:800}.trk-card .tl-leg.miss::before{content:'✗';color:var(--loss);font-size:14px;font-weight:800}.trk-card .tl-leg.void::before{content:'–';color:var(--muted)}.trk-card .tl-top,.trk-card .tl-num{display:contents}.trk-card .tl-top b{grid-area:nm;font-size:13.5px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.trk-card .tl-top span{grid-area:mt;text-align:left;font-size:11.5px}.trk-card .tl-top .tl-and{grid-area:nm}.trk-card .tl-num > span:first-child{grid-area:val;text-align:right;font-size:12px;white-space:nowrap}.trk-card .tl-num > span:last-child{grid-area:st;text-align:right;font-size:11.5px;white-space:nowrap}.trk-card .tl-num b{font-size:15px}.trk-card .tl-bar{grid-area:bar;height:3px;margin-top:5px}.trk-card .tl-pps,.trk-card .tl-teams,.trk-card .mleg{grid-column:2 / -1}.trk-card .tl-top .tl-pc{font-size:11.5px;font-weight:700}.bc-money{display:grid;grid-template-columns:repeat(3,1fr);gap:4px 8px;background:var(--bg-2);border-radius:10px;padding:9px 14px}.bc-legs{display:grid}.trk-card .trk-hd b{font-size:15.5px}.bc-money.four{grid-template-columns:repeat(4,1fr)}.swipe-hint{display:none}@media (max-width:899px){.trk.chal-row{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:10px;scrollbar-width:none;margin-right:-16px;padding-right:16px}.trk.chal-row::-webkit-scrollbar{display:none}.trk.chal-row>*{flex:0 0 86%;scroll-snap-align:start}.swipe-hint{display:block;font-size:12px;color:var(--muted);margin:6px 0 0;text-align:right}}.bc-money .bc-meter{grid-column:1 / -1;height:6px;margin-top:4px}.bc-money span{display:grid;gap:1px}.bc-money small{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em}.bc-money b{font-family:var(--display);font-size:19px;color:var(--fg)}.bc-money b.pos{color:var(--win)}.bc-money > span:last-of-type{text-align:right}.imp-leg.man > span:first-child{color:var(--amber)}
 .meter i{display:block;height:100%;border-radius:8px;background:linear-gradient(90deg,var(--live),var(--amber),var(--win))}
 .books{display:flex;flex-wrap:wrap;gap:6px}
 .books a{font-size:11.5px;font-weight:700;padding:6px 9px;border-radius:6px;text-decoration:none;color:var(--fg);background:var(--surface-3)}
@@ -1062,7 +1060,7 @@ const TAB_ICONS = (() => { const svg = p => `<svg viewBox="0 0 24 24" fill="none
   challenge: svg('<path d="M8 4h8v5a4 4 0 01-8 0z"/><path d="M8 6H5a2 2 0 002 4h1M16 6h3a2 2 0 01-2 4h-1M12 13v3.5M8.5 20h7M9.5 20l.5-3.5h4l.5 3.5"/>')
 }; })();
 const NAV = [["live", "Live", ["live"], "live"], ["games", "Games", ["fixtures", "tables", "news"], "fixtures"], ["betsg", "Bets", ["bets", "acca", "multi", "mybets", "stats"], "bets"], ["challenge", "£1K Challenge", ["challenge"], "challenge"], ["friends", "Friends", ["friends"], "friends"]];
-const SUBNAME = { fixtures: "Fixtures", tables: "Tables", news: "News", bets: "Tips", acca: "Accas", multi: "Multi", mybets: "My Bets", stats: "Stats" };
+const SUBNAME = { fixtures: "Fixtures", tables: "Tables", news: "News", bets: "Tips", acca: "Accas", multi: "Multi-sport", mybets: "My Bets", stats: "Stats" };
 const navOf = v => NAV.find(n => n[2].includes(v));
 S.lastSub = store.get("lastSub", {});
 const view = () => { const h = location.hash.slice(1); return h === "account" || h === "perks" || h === "stats" || VIEWS.some(v => v[0] === h) ? h : "live"; };
@@ -2642,8 +2640,9 @@ function legChance(l) {
 /* each open leg shows its own chance too, so the bet's total makes sense */
 function withPc(i, l) {
   const h = i.html; if (i.st === "hit" || i.st === "miss" || i.st === "void" || /chance now/.test(h)) return h;
-  const c = legChance(l), k = h.indexOf('<div class="tl-num"><span>'); if (c == null || k < 0) return h;
-  const e = h.indexOf("</span>", k + 26); return h.slice(0, e) + ` <span class="tl-pc" style="color:${tierColor(c)}">· ${pct(c)} chance</span>` + h.slice(e);
+  const c = legChance(l), k = h.indexOf('<div class="tl-top">'); if (c == null || k < 0) return h;
+  const end = h.indexOf("</div>", k), e = h.lastIndexOf("</span>", end); if (e < k) return h;   /* on the grey line under the bet's name */
+  return h.slice(0, e) + ` · <span class="tl-pc" style="color:${tierColor(c)}">${pct(c)} chance</span>` + h.slice(e);
 }
 function betChance(legs) { let p = 1, unknown = 0; for (const l of legs) { const c = legChance(l); if (c == null) unknown++; else p *= c; } return { p, unknown }; }
 function betCard(t) {
