@@ -173,6 +173,8 @@ h3{font-size:15px;font-weight:700}
 .chaltag{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--tang);text-decoration:none;margin-bottom:2px}.trk-card.chalcard{border-color:rgba(255,122,47,.45)}
 .sgopt{font-size:13px;color:var(--fg-2);margin:2px 0 0}
 .ab-leg.extra{margin-left:18px;border-left:2px solid var(--blue)}.abl-x{display:block;font-size:14px;font-weight:600;margin-top:2px}
+.addmore-row{display:grid;gap:6px;margin:-2px 0 4px}.addbest{width:100%;text-align:left;background:rgba(61,123,255,.1);border:1px dashed var(--blue-2);color:var(--fg-2);font:inherit;font-size:13px;border-radius:10px;padding:9px 12px;cursor:pointer}.addbest b{color:var(--fg)}
+.addpick summary{cursor:pointer;font-size:12.5px;color:var(--muted);padding:2px 4px}.addpick[open] summary{margin-bottom:6px}
 select.addmore{width:100%;background:none;border:1px dashed var(--line-2);color:var(--blue-2);font:inherit;font-weight:700;font-size:13px;border-radius:10px;padding:9px 10px;margin:-2px 0 4px}
 .pchart{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 12px 10px 52px;touch-action:pan-y}
 .pchart svg{display:block;width:100%;height:170px;overflow:visible}.pc-zero{stroke:var(--line-2);stroke-width:1;stroke-dasharray:3 4}
@@ -1536,8 +1538,14 @@ function withExtras(legs, store, find, price, opts) {
   return out;
 }
 const extraRow = (x, price, rmAttr) => `<div class="ab-leg extra"><div class="abl-main"><div class="abl-match">＋ Same game${x.auto ? " · picked for you" : ""}</div><b class="abl-x">${esc(x.m.label)}</b></div><div class="abl-p"><b>${odds(price(x.m))}</b><small>${pct(x.m.p)}</small></div><button class="x" ${rmAttr}="${x.g.id}|${x.m.k}" aria-label="Remove ${esc(x.m.label)}">✕</button></div>`;
-const addMoreSel = (g, chosen, opts, price, attr) => { const free = opts.filter(m => !chosen.some(k => k === m.k || conflicts(k, m.k)));
-  return free.length ? `<label class="sr" for="${attr}-${g.id}">Add another bet from ${esc(vs(S.sport, g))}</label><select class="addmore" id="${attr}-${g.id}" ${attr}="${g.id}"><option value="">＋ Add another bet from this game</option>${free.map(m => `<option value="${m.k}">${esc(m.label)} · ${pct(m.p)} · ${odds(price(m))}</option>`).join("")}</select>` : ""; };
+const addMoreSel = (g, chosen, opts, price, attr) => {
+  const free = opts.filter(m => !chosen.some(k => k === m.k || conflicts(k, m.k)));
+  // the one we'd add: likeliest bet from a different kind (result / goals / corners / cards), not one that just repeats another
+  const groups = new Set(chosen.map(SG_GROUP)), isRes = k => /^(1|2|DNB1|DNB2|1X|X2)$/.test(k);
+  const best = free.filter(m => !groups.has(SG_GROUP(m.k)) && price(m) >= 1.08 && !(/^(HO|AO)/.test(m.k) && chosen.some(isRes)) && !(isRes(m.k) && chosen.some(k => /^(HO|AO)/.test(k))) && m.p >= .5).sort((a, b) => b.p - a.p)[0];
+  if (!free.length) return "";
+  return `<div class="addmore-row">${best ? `<button class="addbest" ${attr}-best="${g.id}|${best.k}">＋ Add the likeliest extra bet: <b>${esc(best.label)}</b> · ${pct(best.p)} · ${odds(price(best))}</button>` : ""}
+    <details class="addpick"><summary>or choose one yourself</summary><label class="sr" for="${attr}-${g.id}">Add another bet from ${esc(vs(S.sport, g))}</label><select class="addmore" id="${attr}-${g.id}" ${attr}="${g.id}"><option value="">Pick a bet from this game…</option>${free.map(m => `<option value="${m.k}">${esc(m.label)} · ${pct(m.p)} · ${odds(price(m))}</option>`).join("")}</select></details></div>`; };
 const sameGameNote = all => all.some(x => x.extra) ? `<div class="note">Bets from the same game are linked, so your bookie's bet builder price will be different from this estimate.</div>` : "";
 function accaPreLegs(sp, ids) {
   const gs = ids.map(id => findGame(sp, id)).filter(Boolean);
@@ -3267,6 +3275,7 @@ document.addEventListener("click", e => {
   }
   else if (d.shotpick !== undefined) { const f = $("#shotPick"); f.value = ""; f.click(); }
   else if (d.statrange) { S.statRange = d.statrange; render(); }
+  else if (t.hasAttribute("data-accaxadd-best") || t.hasAttribute("data-accalxadd-best")) { const live = t.hasAttribute("data-accalxadd-best"), [gid, k] = t.getAttribute(live ? "data-accalxadd-best" : "data-accaxadd-best").split("|"), st = live ? (S.accaLiveX = S.accaLiveX || {}) : (S.accaX = S.accaX || {}); st[gid] = [...(st[gid] || []), k]; render(); }
   else if (d.accaxrm || d.accalxrm) { const live = !!d.accalxrm, [gid, k] = (d.accaxrm || d.accalxrm).split("|"), st = live ? S.accaLiveX || {} : S.accaX || {};
     if ((st[gid] || []).includes(k)) st[gid] = st[gid].filter(x => x !== k);
     else { const main = document.querySelector(`[data-${live ? "accalivealt" : "accaalt"}="${gid}"]`); if (main) (live ? (S.accaLivePick = S.accaLivePick || {}) : (S.accaPick = S.accaPick || {}))[gid] = main.value; }
