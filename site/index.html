@@ -170,6 +170,21 @@ h3{font-size:15px;font-weight:700}
 .cmp i{display:block;height:100%;border-radius:5px;transition:width .3s}
 .cmp .h{background:var(--blue)}.cmp .a{background:var(--tang)}
 .btiles{display:grid;gap:8px}
+.gtips{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(320px,1fr))}
+@media (max-width:700px){.gtips{grid-template-columns:minmax(0,1fr)}}
+.gtip{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.gt-hd{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:10px;align-items:center;width:100%;padding:10px 12px;background:var(--bg-2);border:0;border-bottom:1px solid var(--line);color:var(--fg);font:inherit;text-align:left;cursor:pointer}
+.gt-hd b{font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.gt-time{font-family:var(--display);font-weight:700;font-size:15px;color:var(--fg-2)}.gt-go{color:var(--muted);font-size:18px}
+.gt-logos{display:flex}.gt-logos .logo,.gt-logos .mono{width:22px;height:22px}.gt-logos > *:last-child{margin-left:-6px}
+.gt-row{display:grid;grid-template-columns:62px minmax(0,1fr) auto 40px;gap:10px;align-items:center;padding:10px 12px;border-top:1px solid var(--line)}.gt-row:first-of-type{border-top:0}
+.gt-ch{display:grid;justify-items:center;line-height:1.05}.gt-ch b{font-family:var(--display);font-size:22px;color:var(--c)}.gt-ch small{font-size:10px;font-weight:700;color:var(--muted);text-align:center;white-space:nowrap}
+.gt-lab{font-size:14px;font-weight:600;line-height:1.3}.gt-lab small{display:block;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.gt-val{font-size:10.5px;font-weight:800;color:var(--win);background:rgba(34,216,143,.14);padding:1px 6px;border-radius:5px;letter-spacing:.04em;text-transform:uppercase}
+.gt-px{font-family:var(--display);font-weight:700;font-size:19px}
+.gt-add{width:40px;height:40px;border-radius:10px;background:var(--blue);color:#fff;font-size:20px;font-weight:700;border:0;cursor:pointer}.gt-add[aria-pressed=true]{background:var(--win);color:var(--win-ink)}
+.gt-why{margin:0;padding:0 12px 11px 84px;font-size:12.5px;color:var(--muted)}
+.chips.winrow{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;max-width:100%}.chips.winrow::-webkit-scrollbar{display:none}.chips.winrow .chip{flex:none}
+.h2-sub{font-family:var(--body);font-size:13px;font-weight:600;color:var(--muted);text-transform:none;letter-spacing:0;margin-left:6px}
 .bv-foot{display:flex;justify-content:center}.bv-foot .linkbtn{color:var(--loss)}
 .walbig{font-family:var(--display);font-size:24px!important;font-weight:700;line-height:1.1}
 .linkleg{width:100%;text-align:left;background:none;border-left:0;border-right:0;border-bottom:0;color:inherit;font:inherit;cursor:pointer;padding-left:0;padding-right:0;border-radius:0}.linkleg:hover .tl-top b{color:var(--blue-2)}
@@ -1297,7 +1312,7 @@ function promo() {
   const C = chalNow(), done = C.rung >= C.rungs;
   return `<a class="strip chal" href="#challenge"><span class="ic-dot">${TAB_ICONS.challenge}</span><span><b>£1 → £1K · ${SPN[S.sport]}</b><small>${done ? "Finished 🏆" : `Step ${C.rung + 1} of ${C.rungs} · bank ${money(C.bank)}${C.active ? " · bet running" : ""}`}</small></span><span aria-hidden="true">›</span></a>`;
 }
-const winChips = () => `<div class="chips">${Object.entries(WIN_NAME).map(([k, l]) => `<button class="chip" data-win="${k}" aria-pressed="${S.win === k}">${l}</button>`).join("")}</div>`;
+const winChips = () => `<div class="chips winrow">${Object.entries(WIN_NAME).map(([k, l]) => `<button class="chip" data-win="${k}" aria-pressed="${S.win === k}">${l}</button>`).join("")}</div>`;
 function pickCard(c) {
   const { sport, g, m } = c, id = legId(sport, g, m), p = m.p;
   const why = reasons(sport, g, m);
@@ -1307,7 +1322,38 @@ function pickCard(c) {
   <div class="pfoot"><div class="price"><span class="big">${odds(priceOf(m))}</span><small>${m.dec ? `Market price${m.edge > 0 ? ` · <span style="color:var(--win)">+${Math.round(m.edge * 100)}% edge</span>` : ""}` : "Fair price · check your bookie"}</small></div>
   <button class="add" data-leg="${sport}|${g.id}|${m.k}" aria-pressed="${inSlip(id)}">${inSlip(id) ? "✓ In slip" : "+ Add to slip"}</button></div></article>`;
 }
+// ---------- Tips: a pick for every game, in plain English ----------
+const tipColor = p => p >= .8 ? "var(--win)" : p >= .65 ? "var(--blue-2)" : p >= .5 ? "var(--tang)" : p >= .38 ? "var(--amber)" : "var(--loss)";
+const chanceWord = p => p >= .8 ? "Very likely" : p >= .65 ? "Likely" : p >= .5 ? "Good chance" : p >= .38 ? "Fair chance" : "Long shot";
+function gameTip(sp, g) {
+  const M = g.model.markets.filter(m => !SKIP.has(m.k) && m.p <= .93 && priceOf(m) >= 1.2); if (!M.length) return "";
+  const main = [...M].sort((a, b) => b.p - a.p)[0];
+  const alt = M.filter(m => m !== main && priceOf(m) >= 1.8 && priceOf(m) <= 3.6 && m.p >= .3).sort((a, b) => b.p * priceOf(b) - a.p * priceOf(a))[0];
+  const why = reasons(sp, g, main)[0];
+  const row = (m, tag) => { const on = inSlip(legId(sp, g, m));
+    return `<div class="gt-row"><span class="gt-ch" style="--c:${tipColor(m.p)}"><b>${pct(m.p)}</b><small>${chanceWord(m.p)}</small></span><span class="gt-lab"><small>${tag}</small>${esc(m.label)}${m.dec && m.edge > .03 ? ` <span class="gt-val">Value</span>` : ""}</span><span class="gt-px">${odds(priceOf(m))}</span><button class="gt-add" data-leg="${sp}|${g.id}|${m.k}" aria-pressed="${on}" aria-label="${on ? "In your slip" : "Add to slip"}">${on ? "✓" : "+"}</button></div>`; };
+  const L = sp === "nba" ? g.away : g.home, R = sp === "nba" ? g.home : g.away;
+  return `<article class="gtip"><button class="gt-hd" data-open="${sp}:${g.id}"><span class="gt-logos">${logo(sp, L)}${logo(sp, R)}</span><b>${esc(vs(sp, g))}</b><span class="gt-time">${hm(kick(g))}</span><span class="gt-go" aria-hidden="true">›</span></button>
+    ${row(main, "Most likely")}${alt ? row(alt, "Bigger price") : ""}${why ? `<p class="gt-why">${esc(why)}</p>` : ""}</article>`;
+}
+function everyGameView(sp) {
+  let w = S.win, list = upcoming(sp, w), note = "";
+  if (!list.length) { const fb = firstWin(sp); if (fb !== w && upcoming(sp, fb).length) { note = `<div class="note">No ${SPN[sp]} games left ${WIN_NAME[w].toLowerCase()}, so here's ${WIN_NAME[fb].toLowerCase()}.</div>`; w = fb; list = upcoming(sp, fb); } }
+  const live = games(sp).filter(isLive).length;
+  const liveStrip = live ? `<a class="strip" href="#live"><span class="ic-dot"><span class="dot red"></span></span><span><b>${live} game${live > 1 ? "s" : ""} in play now</b><small>Live picks and angles are on the Live tab</small></span><span aria-hidden="true">›</span></a>` : "";
+  if (!list.length) return `${liveStrip}<div class="empty">No ${SPN[sp]} games coming up in this window. Try another day above.</div>`;
+  const days = new Map(); for (const g of [...list].sort((a, b) => new Date(kick(a)) - new Date(kick(b)))) { const d = dayKey(kick(g)); if (!days.has(d)) days.set(d, []); days.get(d).push(g); }
+  return `${note}${liveStrip}${[...days].map(([d, gs]) => { const [dl, ds] = dayLabel(d);
+    const byLg = sp === "football" ? [...gs.reduce((m, g) => m.set(g.league, [...(m.get(g.league) || []), g]), new Map())] : [["", gs]];
+    return `<section class="section"><h2>${esc(dl)} <span class="h2-sub">${esc(ds || "")} · ${gs.length} game${gs.length > 1 ? "s" : ""}</span></h2>${byLg.map(([lg, G]) => `${lg ? `<h3 class="bv-h">${esc(leagueName(lg))}</h3>` : ""}<div class="gtips">${G.map(g => gameTip(sp, g)).join("")}</div>`).join("")}</section>`; }).join("")}`;
+}
 function viewBets() {
+  const mode = S.tipMode || store.get("tipMode", "all");
+  return `<div class="hd"><div><h1>Tips</h1><p class="sub">${mode === "all" ? "A pick for every game. The % is how likely our model thinks it is." : "The strongest picks across all games."}</p></div>${winChips()}</div>
+  <div class="seg3 two" role="group" aria-label="Which tips"><button data-tipmode="all" aria-pressed="${mode === "all"}">Every game</button><button data-tipmode="top" aria-pressed="${mode === "top"}">Top picks</button></div>
+  ${mode === "all" ? everyGameView(S.sport) : viewTopPicks()}`;
+}
+function viewTopPicks() {
   const sp = S.sport, T = tiers(sp, S.win), other = sp === "nba" ? "football" : "nba";
   const none = !T.bank.length && !T.strong.length && !T.evens.length && !T.value.length;
   if (none && S.win === "today") {
@@ -1317,14 +1363,13 @@ function viewBets() {
     const T2 = tiers(sp, fb);
     const sec2 = (cls, name, desc, list) => list.length ? `<section class="section"><div class="tierhd"><span class="tag ${cls}">${name}</span><span class="sub" style="margin:0">${desc}</span></div><div class="pgrid">${list.map(pickCard).join("")}</div></section>` : "";
     const has = t => t.bank.length + t.strong.length + t.evens.length + t.value.length;
-    return `<div class="hd"><div><h1>Best bets</h1><p class="sub">Our model's top pick in each game.</p></div>${winChips()}</div>
+    return `
     <div class="note"><b>All of today's ${sp === "nba" ? "NBA" : "football"} has kicked off${live ? ` (${live} in play now)` : ""}.</b> ${has(OT) ? `Tonight's pre-match bets are in the ${oName}, shown first below.` : ""} ${fb !== "today" ? `${sp === "nba" ? "NBA" : "Football"} picks for ${WIN_NAME[fb].toLowerCase()} follow.` : ""}</div>
     ${has(OT) ? `<div class="tiers"><h2>Tonight · ${oName === "NBA" ? "NBA" : "Football"}</h2>${sec2("bank", "Bankers", "74%+ model chance.", OT.bank)}${sec2("strong", "Strong", "60 to 74% chance at better prices.", OT.strong)}${sec2("evens", "Evens shots", "Priced around 1/1.", OT.evens)}${sec2("value", "Value", "Market price beats our fair price.", OT.value)}</div>` : ""}
     ${fb !== "today" && has(T2) ? `<div class="tiers"><h2>${WIN_NAME[fb]} · ${sp === "nba" ? "NBA" : "Football"}</h2>${sec2("bank", "Bankers", "74%+ model chance.", T2.bank)}${sec2("strong", "Strong", "60 to 74% chance at better prices.", T2.strong)}${sec2("evens", "Evens shots", "Priced around 1/1.", T2.evens)}</div>` : ""}`;
   }
   const sec = (cls, name, desc, list) => list.length ? `<section class="section"><div class="tierhd"><span class="tag ${cls}">${name}</span><span class="sub" style="margin:0">${desc}</span></div><div class="pgrid">${list.map(pickCard).join("")}</div></section>` : "";
-  return `<div class="hd"><div><h1>Best bets</h1><p class="sub">Our model's top pick in each game.</p></div>
-  ${winChips()}</div>
+  return `
   <div class="tiers">
   ${sec("bank", "Bankers", "74%+ model chance. Short prices, best for acca legs.", T.bank)}
   ${sec("strong", "Strong", "60 to 74% chance at better prices.", T.strong)}
@@ -2710,6 +2755,7 @@ document.addEventListener("click", e => {
     }
     S.importOpen = false; S.importText = ""; S.impOdds = ""; S.impOddsTyped = false; S.impStake = null; saveImpDraft(); if (location.hash !== "#mybets") location.hash = "mybets"; render(); toast("Tracking your bet live");
   }
+  else if (d.tipmode) { S.tipMode = d.tipmode; store.set("tipMode", d.tipmode); render(); }
   else if (d.chalodds2) { S.chalOdds = d.chalodds2; store.set("chalOdds", S.chalOdds); render(); }
   else if (d.accawin) { S.accaWin = d.accawin; render(); }
   else if (d.boxside) { const [gid, sd] = d.boxside.split("|"); S.boxSide[gid] = sd; render(); }
