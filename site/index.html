@@ -170,6 +170,7 @@ h3{font-size:15px;font-weight:700}
 .cmp i{display:block;height:100%;border-radius:5px;transition:width .3s}
 .cmp .h{background:var(--blue)}.cmp .a{background:var(--tang)}
 .btiles{display:grid;gap:8px}
+.shotbtn{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;align-items:center;width:100%;text-align:left;padding:12px 14px;border-radius:12px;border:1px dashed var(--blue-2);background:rgba(61,123,255,.08);color:var(--fg);font:inherit;cursor:pointer}.shotbtn > span:first-child{font-size:24px}.shotbtn b{display:block;font-size:14.5px}.shotbtn small{display:block;font-size:12.5px;color:var(--muted)}
 .acmode{margin-bottom:-6px}.acmode .dot{width:7px;height:7px;display:inline-block;vertical-align:1px}
 .ag-score{font-family:var(--display);font-weight:700;font-size:16px;color:var(--fg);padding:0 2px}.live-tag{display:inline-flex;align-items:center;gap:5px;color:var(--live);font-weight:700}.live-tag .dot{width:7px;height:7px}
 a.prof-bdg{text-decoration:none}
@@ -1004,7 +1005,7 @@ textarea{background:var(--bg-2);border:1px solid var(--line-2);border-radius:10p
   <span id="srcnote">Live scores and stats: ESPN feed, every 10s · Predictions refresh every 20 min · Reference prices: DraftKings feed converted to UK odds</span>
 </footer></div>
 <button class="fab" id="fab" hidden><span>Bet slip</span><span class="c" id="fabc">0</span><span id="fabo"></span></button>
-<div id="layer"></div><div id="implayer"></div><div id="cashlayer"></div><input type="file" id="avatarPick" accept="image/*" tabindex="-1" aria-hidden="true" style="position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;pointer-events:none">
+<div id="layer"></div><div id="implayer"></div><input type="file" id="shotPick" accept="image/*" tabindex="-1" aria-hidden="true" style="position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;pointer-events:none"><div id="cashlayer"></div><input type="file" id="avatarPick" accept="image/*" tabindex="-1" aria-hidden="true" style="position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;pointer-events:none">
 
 <script>
 (() => {
@@ -1993,6 +1994,65 @@ function findPlayer(idx, q) {
     || (qw.length > 1 && idx.find(p => p.n.startsWith(first + " ") && p.n.split(" ").some(w => w.length > 3 && last.length > 3 && (w.startsWith(last.slice(0, 4)) || last.startsWith(w.slice(0, 4))))))
     || idx.find(p => qw.length > 1 && p.n.endsWith(" " + last));
 }
+const normT = t => String(t || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9.\/+ ]/g, " ").replace(/\s+/g, " ").trim();
+const GENERIC = new Set(["united", "city", "real", "club", "athletic", "atletico", "sporting", "town", "rovers", "county", "olympique", "inter", "milan"]);
+function teamAliases(t) {
+  const out = new Set([normT(t.name), normT(t.full || t.name)].filter(x => x.length >= 3));
+  for (const n of [t.name, t.full]) for (const w of normT(n).split(" ")) if (w.length >= 5 && !GENERIC.has(w)) out.add(w);
+  return [...out].sort((a, b) => b.length - a.length);
+}
+const findAlias = (txt, al, from = 0) => { let best = null; for (const a of al) { const re = new RegExp(`(^|[^a-z])${a.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?=$|[^a-z])`, "g"); re.lastIndex = from; let m; while ((m = re.exec(txt))) { const pos = m.index + m[1].length; if (!best || pos < best.pos) best = { pos, end: pos + a.length, a }; break; } } return best; };
+// games whose two team names both appear in the text, in the order they appear
+function gamesInText(txt) {
+  const now = Date.now(), found = [];
+  for (const sp of ["football", "nba"]) for (const g of games(sp)) {
+    const t = +new Date(kick(g)); if (!(isLive(g) || (isPre(g) && t - now < 3 * 864e5) || (g.status.state === "post" && now - t < 864e5))) continue;
+    const h = findAlias(txt, teamAliases(g.home)), a = findAlias(txt, teamAliases(g.away)); if (!h || !a) continue;
+    found.push({ sp, g, start: Math.min(h.pos, a.pos), end: Math.max(h.end, a.end) });
+  }
+  found.sort((x, y) => x.start - y.start || (isLive(y.g) - isLive(x.g)));
+  return found.filter((f, i) => !found.slice(0, i).some(o => o.start === f.start || (f.start < o.end && f.end > o.start)));
+}
+// turn bookie wording into our market names, then pick the longest of our markets that matches
+function marketIn(seg, sp, g) {
+  let t = " " + normT(seg) + " ";
+  const H = teamAliases(g.home), A = teamAliases(g.away), hn = normT(g.home.name), an = normT(g.away.name), extra = [];
+  const cnt = al => Math.max(0, ...al.map(a => t.split(" " + a + " ").length - 1)), has = al => cnt(al) > 0;
+  // which team the wording is about: "<team> to win" first, else the team named more often (the game header names both once)
+  const pickTeam = re => { for (const [al, n] of [[H, hn], [A, an]]) if (al.some(a => new RegExp(` ${a} ${re}`).test(t) || new RegExp(`${re} ${a} `).test(t))) return n; const ch = cnt(H), ca = cnt(A); return ch > ca ? hn : ca > ch ? an : null; };
+  t = t.replace(/ (\d+) or more (corners|goals|cards|points) /g, (m, n, u) => ` over ${+n - .5} ${u} `).replace(/ bookings? /g, " cards ");
+  const ou = t.match(/ (home |away )?over\/under ([\d.]+) (corners|goals|cards|points) /);
+  if (ou) { const sel = (t.replace(ou[0], " ").match(/ (over|under) /) || [])[1] || "over"; const who = ou[1] ? (ou[1].trim() === "home" ? hn : an) + " " : "";
+    extra.push(`${who}${sel} ${ou[2]} ${ou[3]}`); }
+  for (const [al, n] of [[H, hn], [A, an]]) {
+    if (al.some(a => [` ${a} and draw `, ` ${a} or draw `, ` draw or ${a} `, ` draw and ${a} `].some(x => t.includes(x)))) extra.push(`${n} or draw`);
+
+    if (/ (to score|anytime) /.test(t) && !t.includes("both teams") && has(al)) extra.push(`${n} to score`);
+    if (al.some(a => new RegExp(` ${a} (over|under) ([\\d.]+) goals `).test(t))) { const m = t.match(new RegExp(` (?:${al.join("|")}) (over|under) ([\\d.]+) goals `)); if (m) extra.push(`${n} ${m[1]} ${m[2]} goals`); }
+  }
+  if (t.includes(" draw no bet ")) { const n = pickTeam("draw no bet"); if (n) extra.push(`${n} draw no bet`); }
+  if (/ (match result|full time result|match odds|match betting|moneyline|money line|to win|winner|1x2) /.test(t)) { const n = pickTeam("to win"); if (n) extra.push(`${n} to win`); }
+  if (t.includes(" home or draw ") || t.includes(" 1x ")) extra.push(`${hn} or draw`);
+  if (t.includes(" draw or away ") || t.includes(" x2 ")) extra.push(`${an} or draw`);
+  if (t.includes(" both teams to score ")) extra.push(/ both teams to score:? no | btts no /.test(t) || / no $/.test(t) ? "both teams to score no" : "both teams to score");
+  if (/ (match result|full time result|match odds|1x2) /.test(t) && / draw /.test(t) && !has(H) && !has(A)) extra.push("draw");
+  const ms = g.model.markets.filter(m => !SKIP.has(m.k)).map(m => ({ m, l: normT(m.label) }));
+  for (const src of [...extra.map(x => " " + normT(x) + " "), t]) { const hit = ms.filter(x => src.includes(" " + x.l + " ")).sort((a, b) => b.l.length - a.l.length)[0]; if (hit) return hit.m; }
+  return null;
+}
+const oddsIn = seg => { const m = String(seg).match(/(?:@|©|®| at )\s*(\d+\.\d{1,2}|\d+\s*\/\s*\d+|evs|evens)/i); return m ? parseOdds(m[1].replace(/\s+/g, "")) : null; };
+// read match bets out of any text: works for one line ("Como v Venezia: Over 7.5 corners @ 1.53") or a whole bet slip
+function matchLegsIn(text) {
+  const txt = String(text).toLowerCase(), G = gamesInText(txt.replace(/[̀-ͯ]/g, "")); if (!G.length) return { legs: [], odds: [] };
+  const seg = (i, before) => before ? txt.slice(i ? G[i - 1].end : 0, G[i].start) : txt.slice(G[i].end, i + 1 < G.length ? G[i + 1].start : txt.length);
+  const beforeLayout = !!marketIn(seg(0, true), G[0].sp, G[0].g);
+  const legs = [], odds = [];
+  G.forEach((f, i) => { let sg = seg(i, beforeLayout), m = marketIn(sg, f.sp, f.g);
+    if (!m) { sg = seg(i, !beforeLayout); m = marketIn(sg, f.sp, f.g); }
+    if (!m) { m = marketIn(txt.slice(f.start, f.end + 80), f.sp, f.g); sg = txt.slice(f.start, f.end + 80); }
+    if (m) { legs.push({ sport: f.sp, gid: f.g.id, k: m.k, label: m.label, match: vs(f.sp, f.g), team: "", kick: kick(f.g) }); odds.push(oddsIn(sg)); } });
+  return { legs, odds };
+}
 function parseBet(text, idx) {
   const legs = [], missing = [], om = text.match(/@\s*([0-9]+(?:\.[0-9]+)?(?:\s*\/\s*[0-9]+)?|evs|evens)/i); let oddsFound = null;
   const LEG = l => l.match(/^(.*?)\s+(?:to\s+|-\s+|:\s*)(.+)$/i) || l.match(/^(.*?)\s+((?:over\s+)?\d.*)$/i);
@@ -2000,7 +2060,12 @@ function parseBet(text, idx) {
   const groups = [];
   // bookie slips often put the player on one line and "To Record 4+ Rebounds" on the next: join them back up
   const lines = [];
-  for (const l of text.replace(/@.*$/gm, "").split(/\n|;/).map(x => x.trim()).filter(Boolean)) {
+  const mLegs = [], mOdds = [];
+  for (const l of text.split(/\n|;/).map(x => x.trim()).filter(Boolean)) {
+    const r = matchLegsIn(l); if (r.legs.length) { mLegs.push(...r.legs); mOdds.push(...r.odds.map((o, i) => o || (i === 0 ? oddsIn(l) : null))); continue; }
+  }
+  const propText = text.split(/\n|;/).filter(l => !matchLegsIn(l).legs.length).join("\n");
+  for (const l of propText.replace(/@.*$/gm, "").split(/\n|;/).map(x => x.trim()).filter(Boolean)) {
     if (/^(?:\d+\s*\/\s*\d+|\d+\.\d+|evs|evens)$/i.test(l)) { if (!oddsFound) oddsFound = parseOdds(l); continue; }   // a line that's just the odds
     if (lines.length && /^(?:to\b|over\b|-\s|\d+(?:\.\d+)?\s*\+)/i.test(l) && !LEG(lines[lines.length - 1])) lines[lines.length - 1] += " " + l; else lines.push(l);
   }
@@ -2026,7 +2091,10 @@ function parseBet(text, idx) {
       legs.push({ sport: p.sport, gid: p.gid, side: p.side, pid: p.pid, name: p.name, team: p.team, stat: st[1], label: st[2], target });
     }
   }
-  return { legs, missing, dec: om ? parseOdds(om[1]) : oddsFound };
+  legs.unshift(...mLegs);
+  const ats = (text.match(/@\s*([0-9]+(?:\.[0-9]+)?(?:\s*\/\s*[0-9]+)?|evs|evens)/gi) || []).map(x => parseOdds(x.replace(/^@\s*/, "").replace(/\s+/g, ""))).filter(Boolean);
+  const dec = ats.length >= 2 && ats.length === legs.length ? Math.round(ats.reduce((a, b) => a * b, 1) * 1000) / 1000 : om ? parseOdds(om[1]) : oddsFound;
+  return { legs, missing, dec };
 }
 function legValue(l) {
   const g = findGame(l.sport, l.gid); if (!g) return { v: null, g };
@@ -2079,7 +2147,9 @@ function legInfo0(l) {   // -> { html, st: "pre" | "live" | "hit" | "miss" | "vo
   if (!g) return { st: "pre", html: `<div class="tl-leg"><div class="tl-top"><b>${name}</b><span>${esc(l.match || "")}</span></div><div class="tl-num"><span>This game has dropped out of the feed</span><span></span></div></div>` };
   const H = g.home, A = g.away, Lt = l.sport === "nba" ? A : H, Rt = l.sport === "nba" ? H : A;
   if (isPre(g)) return { st: "pre", html: `<div class="tl-leg"><div class="tl-top"><b>${name}</b><span>${esc(vs(l.sport, g))}</span></div><div class="tl-num"><span>${tip} ${whenLabel(kick(g))}</span><span></span></div></div>` };
-  const m = liveMarkets(l.sport, g).find(x => x.k === l.k), mm = ((m && m.label) || l.label || "").match(/^(Over|Under) ([\d.]+) (points|goals|corners|cards)/i), stt = k => (g.stats || []).find(x => x.k === k);
+  const m = liveMarkets(l.sport, g).find(x => x.k === l.k);
+  if (!m && !g._luDone) loadDetail(l.sport + ":" + l.gid);   // finished before the app opened: fetch its final stats
+  const mm = ((m && m.label) || l.label || "").match(/^(Over|Under) ([\d.]+) (points|goals|corners|cards)/i), stt = k => (g.stats || []).find(x => x.k === k);
   let state = m ? m.state : "open";
   if (state !== "open" && g.status.state !== "post" && !(state === "won" && mm && /over/i.test(mm[1]))) state = "open";   // only call it early when it truly can't change (an Over already passed)
   const cls = state === "won" ? "hit" : state === "lost" ? "miss" : "";
@@ -2151,11 +2221,36 @@ function trackerHTML(bare, extra) {
 // keep a half-typed import if the phone closes or reloads the app (e.g. while checking the bookie app)
 function saveImpDraft() { store.set("impDraft", S.importOpen ? { text: S.importText || "", odds: S.impOdds || "", typed: !!S.impOddsTyped, stake: S.impStake, t: Date.now() } : null); }
 { const dr = store.get("impDraft", null); if (dr && Date.now() - dr.t < 12 * 3600e3) { S.importOpen = true; S.importText = dr.text; S.impOdds = dr.odds; S.impOddsTyped = dr.typed; S.impStake = dr.stake; } }
+// read a bet slip screenshot on the phone (no upload), then turn it into lines the bet reader understands
+let tessP = null;
+const loadTess = () => tessP || (tessP = new Promise((ok, no) => { const sc = document.createElement("script"); sc.src = "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"; sc.onload = () => ok(window.Tesseract); sc.onerror = () => { tessP = null; no(new Error("load")); }; document.head.appendChild(sc); }));
+async function shotToCanvas(file) {
+  const bmp = await createImageBitmap(file), sc = Math.min(2, 1400 / bmp.width), c = document.createElement("canvas"); c.width = Math.round(bmp.width * sc); c.height = Math.round(bmp.height * sc);
+  const x = c.getContext("2d"); x.drawImage(bmp, 0, 0, c.width, c.height);
+  const d = x.getImageData(0, 0, c.width, c.height), px = d.data; let sum = 0; for (let i = 0; i < px.length; i += 4) sum += px[i] * .3 + px[i + 1] * .59 + px[i + 2] * .11;
+  const dark = sum / (px.length / 4) < 110; for (let i = 0; i < px.length; i += 4) { let v = px[i] * .3 + px[i + 1] * .59 + px[i + 2] * .11; if (dark) v = 255 - v; px[i] = px[i + 1] = px[i + 2] = v; }
+  x.putImageData(d, 0, 0); return c;
+}
+async function readShot(file) {
+  const box = $("#impdyn"); const say = m => { if (box) { box.innerHTML = `<div class="loadbox" style="padding:10px">${m}</div>`; box.dataset.h = ""; } };
+  say("Reading your screenshot…");
+  try {
+    const [T, canvas] = await Promise.all([loadTess(), shotToCanvas(file)]);
+    const res = await T.recognize(canvas, "eng", { logger: m => { if (m.status === "recognizing text") say(`Reading your screenshot… ${Math.round(m.progress * 100)}%`); } });
+    const raw = res.data.text || "", { idx } = playerIndex();
+    const ml = matchLegsIn(raw), props = parseBet(raw.split("\n").filter(l => !matchLegsIn(l).legs.length).join("\n"), idx).legs.filter(l => l.pid && l.name.split(" ").length >= 2 && norm(raw).includes(norm(l.name)));
+    const lines = [...ml.legs.map((l, i) => { const g = findGame(l.sport, l.gid); return `${g.home.name} v ${g.away.name}: ${l.label}${ml.odds[i] ? " @ " + (+ml.odds[i]).toFixed(2) : ""}`; }), ...props.map(l => `${l.name} ${l.target}+ ${l.label}`)];
+    if (!lines.length) { S.impShotMsg = "Couldn't spot any of today's games in that screenshot. Try a clearer one, or type the bet below."; impRefresh(); return; }
+    S.importText = lines.join("\n"); const t = $("#imptext"); if (t) t.value = S.importText;
+    const st = raw.match(/stake[^0-9£]{0,12}£?\s*(\d+(?:\.\d{1,2})?)/i) || raw.match(/£\s*(\d+(?:\.\d{1,2})?)\s*(?:stake|bet)/i); if (st) { S.impStake = st[1]; const i = $("#impstake"); if (i) i.value = st[1]; }
+    S.impOddsTyped = false; S.impShotMsg = `Found ${lines.length} leg${lines.length > 1 ? "s" : ""}. Check them below, then tap Track.`; saveImpDraft(); impRefresh();
+  } catch (e) { S.impShotMsg = "Couldn't read that screenshot. Check your connection and try again, or type the bet below."; impRefresh(); }
+}
 function impParse() { const { idx, loading } = playerIndex(), txt = S.importText || ""; return { loading, r: txt.trim() ? parseBet(txt, idx) : { legs: [], missing: [], dec: null } }; }
 function impDyn() {
   const { loading, r } = impParse();
-  return `${loading ? `<div class="loadbox" style="padding:10px">Loading today's players…</div>` : ""}
-    ${r.legs.length || r.missing.length ? `<div class="imp-legs">${r.legs.map(l => { const g = findGame(l.sport, l.gid); return `<div class="imp-leg ok"><span>✓</span><div><b>${esc(l.name)}</b> · ${l.target}+ ${esc(l.label)}<small>${esc(l.team)} · ${g ? esc(vs(l.sport, g)) + " · " + whenLabel(kick(g)) : ""}</small></div></div>`; }).join("")}${r.missing.map(n => `<div class="imp-leg bad"><span>✗</span><div><b>${esc(n)}</b><small>Not found in today's or tomorrow's games. Check the spelling.</small></div></div>`).join("")}</div>` : ""}`;
+  return `${S.impShotMsg ? `<div class="note">${esc(S.impShotMsg)}</div>` : ""}${loading ? `<div class="loadbox" style="padding:10px">Loading today's players…</div>` : ""}
+    ${r.legs.length || r.missing.length ? `<div class="imp-legs">${r.legs.map(l => { const g = findGame(l.sport, l.gid), when = g ? (isLive(g) ? "Live · " + clockLabel(l.sport, g) : g.status.state === "post" ? "Finished" : whenLabel(kick(g))) : ""; return l.pid ? `<div class="imp-leg ok"><span>✓</span><div><b>${esc(l.name)}</b> · ${l.target}+ ${esc(l.label)}<small>${esc(l.team)} · ${g ? esc(vs(l.sport, g)) + " · " + when : ""}</small></div></div>` : `<div class="imp-leg ok"><span>✓</span><div><b>${esc(l.label)}</b><small>${g ? esc(vs(l.sport, g)) + " · " + when : ""}</small></div></div>`; }).join("")}${r.missing.map(n => `<div class="imp-leg bad"><span>✗</span><div><b>${esc(n)}</b><small>Not found in today's or tomorrow's games. Check the spelling.</small></div></div>`).join("")}</div>` : ""}`;
 }
 // update only the parts that change, so the text box (and the phone keyboard) is never rebuilt
 function impRefresh() {
@@ -2168,8 +2263,9 @@ function impRefresh() {
 function importSheet() {
   const { r } = impParse(), txt = S.importText || "";
   return `<div class="scrim top" data-importclose></div><div class="ijsheet imp" role="dialog" aria-modal="true" aria-label="Import a bet"><button class="close sm ij-x" data-importclose aria-label="Close">✕</button>
-    <div><h2>Import a bet</h2><p class="sub" style="margin:4px 0 0">Paste or type a player bet and we'll track it live.</p></div>
-    <div class="field"><label for="imptext">Your bet</label><textarea id="imptext" rows="3" placeholder="e.g. Damian Lillard & Tyrese Maxey to score 25+ points each @ 3.00">${esc(txt)}</textarea></div>
+    <div><h2>Import a bet</h2><p class="sub" style="margin:4px 0 0">Add a screenshot of your bet slip, or type it, and we'll track it live.</p></div>
+    <button type="button" class="shotbtn" data-shotpick><span>📷</span><span><b>Read a screenshot</b><small>Sky Bet, Paddy Power and most bet slips. It stays on your phone.</small></span></button>
+    <div class="field"><label for="imptext">Or type / paste your bet</label><textarea id="imptext" rows="3" placeholder="e.g. Damian Lillard & Tyrese Maxey to score 25+ points each @ 3.00">${esc(txt)}</textarea></div>
     <div class="imp-ex">Examples: <button class="linkbtn" data-impex="Nicolas Jackson 2+ shots on target @ 2.50">Jackson 2+ shots on target</button> · <button class="linkbtn" data-impex="Luka Doncic 8+ assists @ 1.90">Doncic 8+ assists</button> · <button class="linkbtn" data-impex="Haaland to score @ 1.80">Haaland to score</button></div>
     <div id="impdyn">${impDyn()}</div>
     <div class="addrow"><div class="field" style="flex:1 1 100px"><label for="impodds">Odds</label><input id="impodds" value="${esc(S.impOddsTyped && S.impOdds ? S.impOdds : r.dec ? odds(r.dec) : "")}" placeholder="3.00 or 2/1"></div><div class="field" style="flex:1 1 100px"><label for="impstake">Stake £</label><input id="impstake" type="number" inputmode="decimal" min="0" step="0.5" value="${esc(S.impStake != null ? S.impStake : S.stake)}"></div></div>
@@ -2842,7 +2938,7 @@ function betOutcome(legs) {   // "won" / "lost" once it's certain, otherwise nul
       lost = true; continue;
     }
     if (!l.k || g.status.state !== "post") { all = false; continue; }
-    const m = liveMarkets(l.sport, g).find(x => x.k === l.k); if (!m) { all = false; continue; }
+    const m = liveMarkets(l.sport, g).find(x => x.k === l.k); if (!m) { if (!g._luDone) loadDetail(l.sport + ":" + l.gid); all = false; continue; }
     if (m.state === "lost") lost = true; else if (m.state !== "won") all = false;
   }
   return lost ? "lost" : all ? "won" : null;
@@ -2977,12 +3073,13 @@ document.addEventListener("click", e => {
     S._accaN = Math.max(2, gs.length); for (const { g, m } of accaLiveLegs(sp, gs.map(g => g.id))) { if (m) { pushLiveLeg(sp, g, m); n++; } }
     save(); S.slipOpen = innerWidth <= 1100; render(); toast(n ? "In-play acca added to your slip. Check your bookie's live prices" : "Those games have finished");
   }
+  else if (d.shotpick !== undefined) { const f = $("#shotPick"); f.value = ""; f.click(); }
   else if (d.iosx !== undefined) { store.set("iosTipX", true); render(); }
   else if (d.impex) { S.importText = d.impex; const t = $("#imptext"); if (t) t.value = d.impex; S.impOddsTyped = false; impRefresh(); }
   else if (d.untrack) { S.tracked = S.tracked.filter(t => t.id !== d.untrack); store.set("tracked", S.tracked); render(); }
   else if (d.impgo !== undefined) {
     const { idx } = playerIndex(), r = parseBet(S.importText || "", idx); if (!r.legs.length) return;
-    const dec = parseOdds(($("#impodds") || {}).value) || r.dec, stake = +(($("#impstake") || {}).value) || 0, text = (S.importText || "").replace(/\s*@.*$/s, "").trim();
+    const dec = parseOdds(($("#impodds") || {}).value) || r.dec, stake = +(($("#impstake") || {}).value) || 0, text = r.legs.map(l => l.pid ? `${l.name} ${l.target}+ ${l.label}` : `${l.label} (${l.match})`).join(" + ").slice(0, 200);
     const t = { id: "t" + Date.now(), text, legs: r.legs, dec, stake, at: new Date().toISOString() };
     S.tracked = [t, ...(S.tracked || [])]; store.set("tracked", S.tracked);
     if (S.user && sb && ($("#impsave") || {}).checked && dec) {
@@ -3007,7 +3104,7 @@ function setLegOdds(id, raw) {
   l.dec = Math.round(d * 1000) / 1000; l.custom = Math.abs(l.dec - l.orig) > 0.0005; l.est = l.custom ? false : l.estOrig ?? l.est;
   save(); render(); toast(l.custom ? "Price updated to " + odds(l.dec) : "Back to the app's price");
 }
-document.addEventListener("change", e => { const t = e.target; if (t.dataset && t.dataset.accalivealt) { (S.accaLivePick = S.accaLivePick || {})[t.dataset.accalivealt] = t.value; render(); } if (t.dataset && t.dataset.legodds) setLegOdds(t.dataset.legodds, t.value); if (t.dataset && t.dataset.chalodds !== undefined && S.user) { const o = parseOdds(t.value); if (!o) { toast("Use odds like 5/2, EVS or 3.5"); $("#main")._h = null; render(); } else { const C = JSON.parse(JSON.stringify(chalNow())); if (C.active) { C.active.custom = true; C.active.dec = Math.round(o * 1000) / 1000; saveChal(C); } } } if (t.dataset && t.dataset.accaalt) { S.accaPick = S.accaPick || {}; S.accaPick[t.dataset.accaalt] = t.value; render(); } });
+document.addEventListener("change", e => { const t = e.target; if (t.id === "shotPick" && t.files && t.files[0]) { S.impShotMsg = ""; readShot(t.files[0]); } if (t.dataset && t.dataset.accalivealt) { (S.accaLivePick = S.accaLivePick || {})[t.dataset.accalivealt] = t.value; render(); } if (t.dataset && t.dataset.legodds) setLegOdds(t.dataset.legodds, t.value); if (t.dataset && t.dataset.chalodds !== undefined && S.user) { const o = parseOdds(t.value); if (!o) { toast("Use odds like 5/2, EVS or 3.5"); $("#main")._h = null; render(); } else { const C = JSON.parse(JSON.stringify(chalNow())); if (C.active) { C.active.custom = true; C.active.dec = Math.round(o * 1000) / 1000; saveChal(C); } } } if (t.dataset && t.dataset.accaalt) { S.accaPick = S.accaPick || {}; S.accaPick[t.dataset.accaalt] = t.value; render(); } });
 document.addEventListener("keydown", e => { const t = e.target; if (e.key === "Enter" && t.dataset && t.dataset.legodds) t.blur(); });
 document.addEventListener("focusin", e => { const t = e.target; if (t.dataset && t.dataset.legodds) setTimeout(() => t.select(), 0); });
 document.addEventListener("click", e => { const b = e.target.closest("[data-legreset]"); if (!b) return; const l = S.slip.find(x => x.id === b.dataset.legreset); if (l && l.orig != null) { l.dec = l.orig; l.custom = false; if (l.estOrig != null) l.est = l.estOrig; save(); render(); toast("Back to the app's price"); } });
@@ -3095,7 +3192,7 @@ async function loadDetail(key) {
   const [sp, id] = key.split(":"), g = findGame(sp, id); if (!g || g._luAt && Date.now() - g._luAt < 60e3) return;
   g._luAt = Date.now();
   try { const wasPost = g.status.state === "post"; if (sp === "nba") { if (!isPre(g)) applyNba(g, await getJ(`${SB}/basketball/nba/summary?event=${g.id}`)); } else { const s = await getJ(`${SB}/soccer/${g.league}/summary?event=${g.id}`); if (isPre(g)) parseLineups(g, s); else applyFb(g, s); } if (wasPost) g._postDetail = true; } catch {}
-  g._luDone = true; if (S.drawer === key) render();
+  g._luDone = true; render();
 }
 let ticking = false;
 async function liveTick() {
