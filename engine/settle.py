@@ -67,6 +67,13 @@ def final_state(sport, g):
 
 def leg_result(l):
     """'won' / 'lost' / None (not certain yet, or not something we can check)."""
+    if l.get("group"):   # "A, B & C 7+ shots between them": the players' numbers add up
+        tot = 0
+        for m in l["group"]:
+            r, v = leg_result({**l, **m, "group": None})
+            if r is None or v is None: return None, None
+            tot += v
+        return ("won" if tot >= l["target"] else "lost"), tot
     sp, g = l.get("sport"), GAMES.get((l.get("sport"), str(l.get("gid"))))
     if not g: return None, None
     st = final_state(sp, g)
