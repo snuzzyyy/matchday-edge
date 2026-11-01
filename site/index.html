@@ -87,8 +87,8 @@ a{color:var(--blue-2)}
 .tbadge.alt{background:var(--blue)}
 .tab-chal .tl-long,.tab-chal .tl-short{background:linear-gradient(90deg,var(--tang-2),#FF6F91);-webkit-background-clip:text;background-clip:text;color:transparent;font-weight:700}
 @media (max-width:640px){
-  .tabs{display:grid;grid-template-columns:repeat(9,auto);justify-content:space-between;gap:0;overflow:visible;padding-top:2px}
-  .tab{flex-direction:column;justify-content:center;align-items:center;padding:7px 0 9px;font-size:10.5px;font-weight:600;gap:4px;letter-spacing:0;color:var(--muted)}
+  .tabs{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:0;overflow:visible;padding-top:2px}
+  .tab{flex-direction:column;justify-content:center;align-items:center;padding:8px 0 10px;font-size:11.5px;font-weight:600;gap:4px;letter-spacing:0;color:var(--muted)}
   .tab .ti{display:block;position:relative;width:22px;height:22px}
   .tab .ti svg{width:22px;height:22px;display:block}
   .tab .badge.dk{display:none}
@@ -97,12 +97,21 @@ a{color:var(--blue-2)}
   .tab[aria-current=page]::after{left:22%;right:22%;height:3px}
   .tab-chal .tl-long,.tab-chal .tl-short{background:none;-webkit-background-clip:initial;background-clip:initial;color:inherit}
   .tab .badge{padding:0 4px;font-size:9.5px;line-height:14px}
-  .tab[aria-current=page]::after{left:-3px;right:-3px}
+  .tab[aria-current=page]::after{left:28%;right:28%}
   .tl-long{display:none}.tl-short{display:inline}
   .tab .badge{padding:0 5px;font-size:10px;line-height:15px}
 }
 .promo{display:flex;align-items:center;gap:14px;flex-wrap:wrap;justify-content:space-between;text-decoration:none;color:var(--fg);border-radius:14px;padding:14px 16px;border:1px solid var(--line);background:radial-gradient(80% 160% at 100% 0%,rgba(255,122,47,.3),transparent 60%),radial-gradient(70% 160% at 0% 100%,rgba(61,123,255,.25),transparent 60%),var(--surface)}
 .promo:hover{border-color:var(--tang)}
+.subnav{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:4px;padding:4px;background:var(--surface);border:1px solid var(--line);border-radius:14px;margin-bottom:-6px}
+.subnav a{display:flex;align-items:center;justify-content:center;gap:6px;padding:10px 6px;border-radius:10px;color:var(--muted);font-weight:700;font-size:14px;text-decoration:none;white-space:nowrap}
+.subnav a[aria-current=page]{background:var(--surface-3);color:var(--fg);box-shadow:inset 0 -2px 0 var(--tang)}
+.subnav .badge{padding:0 6px;font-size:10.5px;line-height:16px}
+.strips{display:grid;gap:10px}
+.strip{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 14px;text-decoration:none;color:var(--fg)}
+.strip b{display:block;font-size:14.5px}.strip small{display:block;font-size:12.5px;color:var(--muted)}.strip > span:last-child{color:var(--muted);font-size:20px}
+.strip .ic-dot{width:34px;height:34px}.strip.chal{background:radial-gradient(80% 180% at 100% 0%,rgba(255,122,47,.22),transparent 60%),var(--surface)}.strip.chal .ic-dot{color:var(--tang)}
+@media (max-width:640px){h1{font-size:28px}.sub{font-size:14px}}
 .promo .pt{font-family:var(--display);font-weight:800;font-style:italic;font-size:22px;text-transform:uppercase;line-height:1}
 .promo .pd{font-size:12.5px;color:var(--fg-2);margin-top:4px}
 .promo .go{font-weight:700;font-size:13px;padding:9px 14px;border-radius:8px;background:var(--tang);color:#1a0a00;white-space:nowrap}
@@ -112,7 +121,7 @@ a{color:var(--blue-2)}
 /* page */
 .page{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:24px;padding-block:22px 120px;align-items:start}
 @media (max-width:1100px){.page{grid-template-columns:minmax(0,1fr)}.rail{display:none}}
-main{min-width:0;display:flex;flex-direction:column;gap:26px}
+main{min-width:0;display:flex;flex-direction:column;gap:24px}
 .hd{display:flex;align-items:end;justify-content:space-between;gap:12px;flex-wrap:wrap}
 h1,h2,h3{text-wrap:balance;margin:0}
 h1{font-family:var(--display);font-weight:700;font-size:34px;line-height:1;text-transform:uppercase;letter-spacing:.01em}
@@ -445,6 +454,8 @@ h3{font-size:15px;font-weight:700}
 .l5 th.n{text-align:center}
 .res{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:5px;font-weight:700;font-size:11px;background:var(--draw);color:#fff}
 .res.W{background:var(--win);color:var(--win-ink)}.res.L{background:var(--loss)}.res.C{background:var(--blue)}.res.T{background:var(--amber);color:#2A1A00}
+.rb-note{margin:0;font-size:12.5px;color:var(--muted)}
+.rb-legs{display:grid;gap:8px}.rb-foot{display:flex;justify-content:space-between;align-items:center;gap:10px}
 .cash-row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:12px;font-size:13px;color:var(--fg-2)}
 .tw{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:4px 8px}
 .trend{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}
@@ -910,6 +921,10 @@ const TAB_ICONS = (() => { const svg = p => `<svg viewBox="0 0 24 24" fill="none
   news: svg('<path d="M5 4.5h11.5V19a1.5 1.5 0 001.5 1.5H6.5A1.5 1.5 0 015 19z"/><path d="M16.5 8.5H19a1 1 0 011 1V19a1.5 1.5 0 01-1.5 1.5M8 8.5h5.5M8 12h5.5M8 15.5h3.5"/>'),
   challenge: svg('<path d="M8 4h8v5a4 4 0 01-8 0z"/><path d="M8 6H5a2 2 0 002 4h1M16 6h3a2 2 0 01-2 4h-1M12 13v3.5M8.5 20h7M9.5 20l.5-3.5h4l.5 3.5"/>')
 }; })();
+const NAV = [["live", "Live", ["live"], "live"], ["games", "Games", ["fixtures", "tables", "news"], "fixtures"], ["betsg", "Bets", ["bets", "acca", "mybets"], "bets"], ["challenge", "£1K Challenge", ["challenge"], "challenge"], ["friends", "Friends", ["friends"], "friends"]];
+const SUBNAME = { fixtures: "Fixtures", tables: "Tables", news: "News", bets: "Tips", acca: "Accas", mybets: "My Bets" };
+const navOf = v => NAV.find(n => n[2].includes(v));
+S.lastSub = store.get("lastSub", {});
 const view = () => { const h = location.hash.slice(1); return h === "account" || VIEWS.some(v => v[0] === h) ? h : "live"; };
 
 /* ---------- odds ---------- */
@@ -1067,15 +1082,18 @@ function tiers(sport, win) {
 /* ---------- render: chrome ---------- */
 function renderChrome() {
   const v = view(), live = games(S.sport).filter(isLive).length;
-  $("#tabs").innerHTML = VIEWS.map(([id, label, short]) => { const n = id === "live" ? live : id === "acca" ? S.slip.length : id === "mybets" ? liveTracked() : 0;
-    return `<a class="tab" href="#${id}" ${v === id ? 'aria-current="page"' : ""}><span class="ti" aria-hidden="true">${TAB_ICONS[id] || ""}${n ? `<span class="tbadge ${id === "acca" ? "alt" : ""}">${n}</span>` : ""}</span><span class="tl-long">${label}</span><span class="tl-short">${short}</span>${n ? `<span class="badge dk ${id === "acca" ? "alt" : ""}">${n}</span>` : ""}</a>`; }).join("");
+  const cur = navOf(v), trk = liveTracked();
+  $("#tabs").innerHTML = NAV.map(([id, label, subs, icon]) => {
+    const n = id === "live" ? live : id === "betsg" ? (trk || S.slip.length) : 0, alt = id === "betsg" && !trk;
+    const href = subs.includes(S.lastSub[id]) ? S.lastSub[id] : subs[0], short = id === "challenge" ? "£1K" : label;
+    return `<a class="tab" href="#${href}" ${cur && cur[0] === id ? 'aria-current="page"' : ""}><span class="ti" aria-hidden="true">${TAB_ICONS[icon] || ""}${n ? `<span class="tbadge ${alt ? "alt" : ""}">${n}</span>` : ""}</span><span class="tl-long">${label}</span><span class="tl-short">${short}</span>${n ? `<span class="badge dk ${alt ? "alt" : ""}">${n}</span>` : ""}</a>`; }).join("");
   for (const b of document.querySelectorAll("[data-sport]")) b.setAttribute("aria-pressed", b.dataset.sport === S.sport);
   for (const b of document.querySelectorAll("[data-fmt]")) b.setAttribute("aria-pressed", b.dataset.fmt === S.fmt);
   const anyLive = S.data.football.some(isLive) || S.data.nba.some(isLive);
   $("#updated").innerHTML = S.liveFail >= 2 ? `<span class="dot" style="background:var(--amber);animation:none"></span><span>Reconnecting… last ${S.liveAt ? new Date(S.liveAt).toLocaleTimeString("en-GB", { timeZone: TZ }) : hm(S.data.updated)}</span>` : S.liveAt ? `<span class="dot ${anyLive ? "red" : ""}"></span><span>${anyLive ? "Live" : "Up to date"} · ${new Date(S.liveAt).toLocaleTimeString("en-GB", { timeZone: TZ })}</span>` : `<span class="dot"></span><span>Updated ${hm(S.data.updated)}</span>`;
   $("#updated").title = "Live scores refresh every 10 seconds. Predictions refresh every 20 minutes.";
   const ab = $("#acctBtn"); if (ab) { ab.classList.toggle("in", !!S.user); ab.innerHTML = S.user ? (S.profile && S.profile.avatar_url ? `<img src="${esc(S.profile.avatar_url)}" alt="">` : esc(initials())) : ab.dataset.icon || (ab.dataset.icon = ab.innerHTML); if (!S.user && ab.dataset.icon) ab.innerHTML = ab.dataset.icon; if (v === "account") ab.setAttribute("aria-current", "page"); else ab.removeAttribute("aria-current"); }
-  const fab = $("#fab"); fab.hidden = v === "account"; $("#fabc").textContent = S.slip.length;
+  const fab = $("#fab"); fab.hidden = v === "account" || !S.slip.length; $("#fabc").textContent = S.slip.length;
   $("#fabo").textContent = S.slip.length ? odds(slipCalc().dec) : "";
 }
 
@@ -1105,7 +1123,7 @@ function liveCard(sport, g) {
       pace = `<div class="ticker"><span>On course for about ${Math.round(pr)} points. The pre-match line was ${g.odds.total}.</span></div>`;
     }
   }
-  const clk = live ? `<span class="clock"><span class="dot red"></span>${esc(g.status.detail)}</span>` : `<span class="clock ft">${esc(g.status.detail)}</span>`;
+  const clk = live ? `<span class="clock"><span class="dot red"></span>${esc(clockLabel(sport, g))}</span>` : `<span class="clock ft">${esc(g.status.detail)}</span>`;
   const lg = sport === "nba" ? (g.venue || "NBA") : leagueName(g.league);
   return `<button class="lcard ${live ? "is-live" : ""}" data-open="${sport}:${g.id}"><div class="lhead"><span>${esc(lg)}</span>${clk}</div>
     <div class="lteams">${sport === "nba" ? row(a, as, hs) + row(h, hs, as) : row(h, hs, as) + row(a, as, hs)}</div>
@@ -1128,7 +1146,7 @@ function viewLive() {
   const now = Date.now();
   const recent = all.filter(g => g.status.state === "post" && now - new Date(kick(g)) < 864e5 * 1.2).sort((a, b) => new Date(kick(b)) - new Date(kick(a))).slice(0, 12);
   const next = all.filter(isPre).slice(0, 6);
-  return `${promo()}${(S.tracked || []).length ? `<a class="friendslink trk-link" href="#mybets"><span class="ic-dot"><span class="dot red"></span></span><span><b>Your tracked bets</b><small>${liveTracked() ? `${liveTracked()} in play now · ` : ""}follow them in My Bets</small></span><span aria-hidden="true">›</span></a>` : ""}<div class="hd"><div><h1>${sp === "nba" ? "NBA" : "Football"} live</h1><p class="sub">Scores and in-play stats update every 10 seconds. Tap any game for full stats, the timeline and every market.</p></div>${(S.tracked || []).length ? "" : `<button class="btn ghost sm" data-import>+ Import a bet to track</button>`}</div>
+  return `<div class="strips">${promo()}${(S.tracked || []).length ? `<a class="strip" href="#mybets"><span class="ic-dot"><span class="dot red"></span></span><span><b>Your tracked bets</b><small>${liveTracked() ? `${liveTracked()} in play now · ` : ""}follow them in My Bets</small></span><span aria-hidden="true">›</span></a>` : ""}</div><div class="hd"><div><h1>${sp === "nba" ? "NBA" : "Football"} live</h1><p class="sub">Updates every 10 seconds. Tap a game for stats and markets.</p></div>${(S.tracked || []).length ? "" : `<button class="btn ghost sm" data-import>+ Import a bet to track</button>`}</div>
   ${live.length ? `<section class="section"><div class="live-grid">${live.map(g => liveCard(sp, g)).join("")}</div></section>`
     : `<div class="empty art"><img src="img/empty-live.webp" alt="" loading="lazy"><b>Nothing in play right now</b><span>${next[0] ? `Next up: <b>${esc(vs(sp, next[0]))}</b> at ${hm(kick(next[0]))} (${dayLabel(dayKey(kick(next[0])))[0].toLowerCase()}).` : "Check back when games kick off."}</span></div>`}
   ${next.length && live.length ? `<section class="section"><h2>Starting soon</h2>${fixtureBlocks(sp, next, false)}</section>` : ""}
@@ -1223,8 +1241,8 @@ function viewFixtures() {
 
 /* ---------- best bets ---------- */
 function promo() {
-  const C = S.data.challenge || { bank: 1, rung: 0, rungs: 10 };
-  return `<a class="promo" href="#challenge"><div><div class="pt">£1 → £1K Challenge</div><div class="pd">Bank £${C.bank} · step ${C.rung + 1} of ${C.rungs} · ${C.rungs - C.rung} wins to £${(C.bank * 2 ** (C.rungs - C.rung)).toLocaleString("en-GB")}</div></div><span class="go">See next bet →</span></a>`;
+  const C = chalNow(), done = C.rung >= C.rungs;
+  return `<a class="strip chal" href="#challenge"><span class="ic-dot">${TAB_ICONS.challenge}</span><span><b>£1 → £1K challenge</b><small>${done ? "Finished 🏆" : `Step ${C.rung + 1} of ${C.rungs} · bank ${money(C.bank)}${C.active ? " · bet running" : ""}`}</small></span><span aria-hidden="true">›</span></a>`;
 }
 const winChips = () => `<div class="chips">${Object.entries(WIN_NAME).map(([k, l]) => `<button class="chip" data-win="${k}" aria-pressed="${S.win === k}">${l}</button>`).join("")}</div>`;
 function pickCard(c) {
@@ -1246,13 +1264,13 @@ function viewBets() {
     const T2 = tiers(sp, fb);
     const sec2 = (cls, name, desc, list) => list.length ? `<section class="section"><div class="tierhd"><span class="tag ${cls}">${name}</span><span class="sub" style="margin:0">${desc}</span></div><div class="pgrid">${list.map(pickCard).join("")}</div></section>` : "";
     const has = t => t.bank.length + t.strong.length + t.evens.length + t.value.length;
-    return `${promo()}<div class="hd"><div><h1>Best bets</h1><p class="sub">Every market is rated by a model built on season stats and recent form, then blended with the betting market. One pick per game.</p></div>${winChips()}</div>
+    return `<div class="hd"><div><h1>Best bets</h1><p class="sub">Our model's top pick in each game.</p></div>${winChips()}</div>
     <div class="note"><b>All of today's ${sp === "nba" ? "NBA" : "football"} has kicked off${live ? ` (${live} in play now)` : ""}.</b> ${has(OT) ? `Tonight's pre-match bets are in the ${oName}, shown first below.` : ""} ${fb !== "today" ? `${sp === "nba" ? "NBA" : "Football"} picks for ${WIN_NAME[fb].toLowerCase()} follow.` : ""}</div>
     ${has(OT) ? `<div class="tiers"><h2>Tonight · ${oName === "NBA" ? "NBA" : "Football"}</h2>${sec2("bank", "Bankers", "74%+ model chance.", OT.bank)}${sec2("strong", "Strong", "60 to 74% chance at better prices.", OT.strong)}${sec2("evens", "Evens shots", "Priced around 1/1.", OT.evens)}${sec2("value", "Value", "Market price beats our fair price.", OT.value)}</div>` : ""}
     ${fb !== "today" && has(T2) ? `<div class="tiers"><h2>${WIN_NAME[fb]} · ${sp === "nba" ? "NBA" : "Football"}</h2>${sec2("bank", "Bankers", "74%+ model chance.", T2.bank)}${sec2("strong", "Strong", "60 to 74% chance at better prices.", T2.strong)}${sec2("evens", "Evens shots", "Priced around 1/1.", T2.evens)}</div>` : ""}`;
   }
   const sec = (cls, name, desc, list) => list.length ? `<section class="section"><div class="tierhd"><span class="tag ${cls}">${name}</span><span class="sub" style="margin:0">${desc}</span></div><div class="pgrid">${list.map(pickCard).join("")}</div></section>` : "";
-  return `${promo()}<div class="hd"><div><h1>Best bets</h1><p class="sub">Every market is rated by a model built on season stats and recent form, then blended with the betting market. One pick per game, so you can stack them without doubling up.</p></div>
+  return `<div class="hd"><div><h1>Best bets</h1><p class="sub">Our model's top pick in each game.</p></div>
   ${winChips()}</div>
   <div class="tiers">
   ${sec("bank", "Bankers", "74%+ model chance. Short prices, best for acca legs.", T.bank)}
@@ -1323,7 +1341,7 @@ function viewAcca() {
         <span class="ag-main"><span class="ag-teams">${logo(sp, sp === "nba" ? g.away : g.home)}<b>${esc(sp === "nba" ? g.away.name : g.home.name)}</b><span class="ag-v">${sp === "nba" ? "@" : "v"}</span>${logo(sp, sp === "nba" ? g.home : g.away)}<b>${esc(sp === "nba" ? g.home.name : g.away.name)}</b></span>
         <span class="ag-meta">${hm(kick(g))}${sp === "football" ? " · " + esc(leagueName(g.league)) : ""}</span>
         ${m ? `<span class="ag-pick"><span>${esc(m.label)}</span><b style="color:${tierColor(m.p)}">${pct(m.p)}</b></span>` : ""}</span></button>`; }).join("")}</div></div>`).join("");
-  return `<div class="hd"><div><h1>Acca builder</h1><p class="sub">Tap the ${sp === "nba" ? "NBA" : "football"} games you want. We pick the bet in each game most likely to land and show your chance of the whole acca winning.</p></div></div>
+  return `<div class="hd"><div><h1>Acca builder</h1><p class="sub">Tap the games you want and we'll pick the safest bet in each.</p></div></div>
   <div class="acca-ctrl"><div class="seg3" role="group" aria-label="Safety level">${Object.entries(RISK).map(([k, r]) => `<button data-accarisk="${k}" aria-pressed="${risk === k}">${r.name}</button>`).join("")}</div>
     <p class="risk-desc">${RISK[risk].desc}</p>
     <div class="chips">${["today", "tomorrow", "48h", "week"].map(k => `<button class="chip" data-accawin="${k}" aria-pressed="${w === k}" ${upcoming(sp, k).length ? "" : "disabled style=\"opacity:.4\""}>${WIN_NAME[k]}</button>`).join("")}</div>
@@ -1424,18 +1442,19 @@ function viewChallenge() {
   const stepWord = `Use for step ${C.rung + 1}`;
   const single = c => `<article class="pick"><div class="ring" style="--p:${Math.round(c.m.p * 100)};--c:${tierColor(c.m.p)}"><span>${pct(c.m.p)}</span></div><div><div class="sel">${esc(c.m.label)}</div><div class="mt"><button class="more" data-open="${c.sport}:${c.g.id}">${esc(vs(c.sport, c.g))}</button><span>· ${whenLabel(kick(c.g))}</span></div></div><ul class="why">${reasons(c.sport, c.g, c.m).slice(0, 2).map(w => `<li>${esc(w)}</li>`).join("")}</ul><div class="pfoot"><div class="price"><span class="big">${odds(c.m.dec)}</span><small>£${C.bank} returns ${money(C.bank * c.m.dec)}</small></div>${useBtn(`data-chaluse="${c.sport}|${c.g.id}|${c.m.k}"`, stepWord)}</div></article>`;
   const dbl = d => `<article class="pick"><div class="ring" style="--p:${Math.round(d.p * 100)};--c:${tierColor(d.p)}"><span>${pct(d.p)}</span></div><div><div class="sel">Double</div><div class="mt">Two short-priced legs that make roughly evens together</div></div><ul class="why">${[d.a, d.b].map(c => `<li>${esc(c.m.label)} (${esc(vs(c.sport, c.g))}, ${whenLabel(kick(c.g))}) · ${odds(priceOf(c.m))}</li>`).join("")}</ul><div class="pfoot"><div class="price"><span class="big">${odds(d.d)}</span><small>£${C.bank} returns ${money(C.bank * d.d)} (est.)</small></div>${useBtn(`data-chaluse="${d.a.sport}|${d.a.g.id}|${d.a.m.k}|${d.b.g.id}|${d.b.m.k}"`, stepWord)}</div></article>`;
-  const A = C.active, auto = activeResult(A);
+  const A = C.active, auto = activeResult(A), linked = !!(A && (A.legs || []).some(l => l.k && findGame(l.sport, l.gid)));
   const running = A ? `<section class="runbet"><div class="rb-top"><span class="tag evens">Step ${C.rung + 1} bet</span><button class="linkbtn" data-chalclear>Change bet</button></div>
-      <div class="rb-main"><div><div class="sel" style="font-size:16px">${esc(A.label)}</div><div class="mt">${esc(A.match)} · ${A.legs.map(l => whenLabel(l.kick)).filter((x, i, a) => a.indexOf(x) === i).join(", ")}</div></div>
+      <div class="rb-main"><div><div class="sel" style="font-size:16px">${esc(A.label)}</div><div class="mt">${esc(A.match)} · ${A.legs.filter(l => l.kick).map(l => whenLabel(l.kick)).filter((x, i, a) => a.indexOf(x) === i).join(", ")}</div></div>
       <div class="rb-odds"><label for="rbodds" class="sr">Odds</label><input id="rbodds" class="oddin ${A.custom ? "mine" : ""}" data-chalodds value="${odds(A.dec)}" autocomplete="off"><small>${A.custom ? "your price" : "tap to change"}</small></div></div>
       <div class="rb-sum"><span>£${C.bank} stake</span><b>Returns ${money(C.bank * A.dec)}</b></div>
-      ${auto ? `<div class="msg ${auto === "W" ? "ok" : "err"}">${auto === "W" ? "Final score's in: this looks like a winner." : "Final score's in: this one looks lost."} Confirm below.</div>` : ""}
-      ${mine ? `<div class="addrow"><button class="btn win" data-chalres="W">It won</button><button class="btn lose" data-chalres="L">It lost</button><button class="btn ghost" data-cashopen="bet">Cash out</button></div>` : ""}</section>` : "";
+      ${linked ? `<div class="rb-legs">${A.legs.map(l => legInfo(l).html).join("")}</div>` : ""}
+      ${linked ? `<div class="rb-foot"><span class="rb-note">${auto ? (auto === "W" ? "Final score's in: settling as a win…" : "Final score's in: settling as lost…") : "Settles itself at full time."}</span>${mine ? `<button class="linkbtn" data-cashopen="bet">Cash out</button>` : ""}</div>`
+        : mine ? `<div class="addrow"><button class="btn win" data-chalres="W">It won</button><button class="btn lose" data-chalres="L">It lost</button><button class="btn ghost" data-cashopen="bet">Cash out</button></div>` : ""}</section>` : "";
   const done = C.rung >= C.rungs;
   const thisAttempt = C.history.length ? `<div class="hist">${C.history.map(histRow).join("")}</div>` : `<div class="empty">No bets in this attempt yet.</div>`;
   const past = C.past.length ? `<div class="pastlist">${C.past.map(p => `<details class="past"><summary><span class="pt-badge ${p.outcome}">${p.outcome === "completed" ? "🏆 Completed" : p.outcome === "cashed" ? "💰 Cashed out" : p.outcome === "lost" ? `Lost at step ${p.reached + 1}` : "Stopped"}</span><span class="pt-main"><b>Attempt ${p.n}</b><small>${esc(p.started)}${p.ended && p.ended !== p.started ? " – " + esc(p.ended) : ""}</small></span><span class="pt-peak"><small>${p.taken ? "Taken out" : "Best bank"}</small><b>${p.taken ? money(p.taken) : fmtBank(p.peak)}</b></span></summary>
       <div class="hist">${(p.history || []).map(histRow).join("")}</div></details>`).join("")}</div>` : `<div class="empty">Finished attempts show here: how far each one got and every bet in it.</div>`;
-  return `<div class="hd"><div><h1>£1 → £1K challenge</h1><p class="sub">Start with £1, roll the whole lot onto a bet at around evens, and double it ten times to reach £1,024. ${mine ? "Pick a bet for the current step, then mark it won or lost." : "Sign in to run your own ladder."}</p></div></div>
+  return `<div class="hd"><div><h1>£1 → £1K challenge</h1><p class="sub">Roll £1 onto a bet at around evens, ten times over. ${mine ? "" : "Sign in to run your own ladder."}</p></div></div>
   <img class="banner" src="img/challenge-banner.webp" alt="A glowing staircase of ten steps rising to a trophy">
   <section class="chal-hero">
     <div class="chal-top"><div><div class="eyebrow">Attempt ${C.attempts || 1} · ${done ? "complete" : `step ${C.rung + 1} of ${C.rungs}`}</div><div class="bankv">${fmtBank(C.bank)}<small>${done ? "🏆" : `→ ${money(rungs[C.rung + 1])} next`}</small></div></div>
@@ -1625,7 +1644,7 @@ function onCourt(g) {
 function drawerHTML(sport, g) {
   const h = g.home, a = g.away, live = isLive(g), pre = isPre(g);
   const L = sport === "nba" ? a : h, R = sport === "nba" ? h : a;
-  const st = pre ? `${whenLabel(kick(g))}` : live ? `<span class="clock" style="justify-content:center"><span class="dot red"></span>${esc(g.status.detail)}</span>` : esc(g.status.detail);
+  const st = pre ? `${whenLabel(kick(g))}` : live ? `<span class="clock" style="justify-content:center"><span class="dot red"></span>${esc(clockLabel(sport, g))}</span>` : esc(g.status.detail);
   const hero = `<div class="score-hero" style="--hc:${esc(L.color)};--ac:${esc(R.color)}"><div class="side">${logo(sport, L, "lg")}<b>${esc(L.full || L.name)}</b><small>${sport === "nba" ? esc(L.record) : L.pos ? ordinal(L.pos) + " · " + esc(L.form) : esc(L.form)}</small></div>
     <div>${pre ? `<div class="big" style="font-size:34px">${sport === "nba" ? "@" : "V"}</div>` : `<div class="big">${esc(L.score)}–${esc(R.score)}</div>`}<div class="st">${st}</div></div>
     <div class="side">${logo(sport, R, "lg")}<b>${esc(R.full || R.name)}</b><small>${sport === "nba" ? esc(R.record) : R.pos ? ordinal(R.pos) + " · " + esc(R.form) : esc(R.form)}</small></div></div>`;
@@ -1768,8 +1787,51 @@ function legValue(l) {
   return { v, g, on: onPitch(P), dnp: !P.starter && !P.subIn && g.status.state === "post" };
 }
 const liveTracked = () => (S.tracked || []).filter(t => t.legs.some(l => { const g = findGame(l.sport, l.gid); return g && isLive(g); })).length;
-function trackerHTML(bare) {
-  const all = S.tracked || [], sportOf = t => (t.legs[0] || {}).sport, T = bare ? all : all.filter(t => sportOf(t) === S.sport), other = all.length - T.length;
+// "Q3 · 6:32 left" instead of ESPN's "6:32 - 3rd" (and "5.9 - 1st" for the last minute)
+function clockLabel(sport, g) {
+  if (!g) return ""; if (isPre(g)) return whenLabel(kick(g)); if (g.status.state === "post") return "Final";
+  const d = String(g.status.detail || ""); if (sport !== "nba") return d;
+  const p = +g.status.period || 1, q = p > 4 ? (p === 5 ? "OT" : `${p - 4}OT`) : `Q${p}`;
+  if (/half/i.test(d)) return "Half-time"; if (/^end/i.test(d)) return `End of ${q}`;
+  let c = String(g.status.clock ?? ""); if (!c) return d; if (!c.includes(":")) c = `${Math.round((parseFloat(c) || 0) * 10) / 10}s`;
+  return `${q} · ${c} left`;
+}
+function legInfo(l) {   // -> { html, st: "pre" | "live" | "hit" | "miss" | "void" }
+  const g = findGame(l.sport, l.gid), tip = l.sport === "nba" ? "Tip-off" : "Kick-off";
+  if (l.pid) {
+    const r = legValue(l), done = r.v != null && r.v >= l.target, post = g && g.status.state === "post";
+    const pctv = r.v == null ? 0 : Math.min(1, r.v / l.target), state = !g ? "Game not found" : clockLabel(l.sport, g);
+    const st = done ? "hit" : r.dnp ? "void" : post ? "miss" : g && !isPre(g) ? "live" : "pre";
+    return { st, html: `<div class="tl-leg ${done ? "hit" : r.dnp ? "void" : post ? "miss" : ""}"><div class="tl-top"><b>${esc(l.name)}</b><span>${esc(l.team)} · ${esc(state)}${r.on && g && isLive(g) ? ` · <span class="court-inline">on ${l.sport === "nba" ? "court" : "pitch"}</span>` : ""}</span></div>
+      <div class="tl-bar"><i style="width:${pctv * 100}%"></i></div><div class="tl-num"><span>${r.v == null ? (g && isPre(g) ? `Needs ${l.target}+ ${esc(l.label)}` : r.dnp ? "Not in the squad tonight" : "Waiting for stats…") : `<b>${r.v}</b> / ${l.target} ${esc(l.label)}`}</span><span>${done ? "✓ Landed" : r.dnp ? "Void · not playing" : post ? "✗ Missed" : l.target - (r.v || 0) > 0 && r.v != null ? `${l.target - r.v} to go` : ""}</span></div></div>` };
+  }
+  const name = esc(String(l.label || "").replace(/ \(in-play\)$/, ""));
+  if (!g) return { st: "pre", html: `<div class="tl-leg"><div class="tl-top"><b>${name}</b><span>${esc(l.match || "")}</span></div><div class="tl-num"><span>This game has dropped out of the feed</span><span></span></div></div>` };
+  const H = g.home, A = g.away, Lt = l.sport === "nba" ? A : H, Rt = l.sport === "nba" ? H : A;
+  if (isPre(g)) return { st: "pre", html: `<div class="tl-leg"><div class="tl-top"><b>${name}</b><span>${esc(vs(l.sport, g))}</span></div><div class="tl-num"><span>${tip} ${whenLabel(kick(g))}</span><span></span></div></div>` };
+  const m = liveMarkets(l.sport, g).find(x => x.k === l.k), state = m ? m.state : "open", cls = state === "won" ? "hit" : state === "lost" ? "miss" : "";
+  const mm = ((m && m.label) || l.label || "").match(/^(Over|Under) ([\d.]+) (points|goals|corners|cards)/i), stt = k => (g.stats || []).find(x => x.k === k);
+  let cur = null;
+  if (mm) { const t = mm[3].toLowerCase(), c = stt("wonCorners"), y = stt("yellowCards"), rc = stt("redCards"); cur = t === "points" || t === "goals" ? (+H.score || 0) + (+A.score || 0) : t === "corners" ? (c ? c.h + c.a : null) : (y ? y.h + y.a + (rc ? rc.h + rc.a : 0) : null); }
+  const end = state === "won" ? "✓ Landed" : state === "lost" ? "✗ Lost" : "";
+  let bar, left, right;
+  if (mm && cur != null && /over/i.test(mm[1])) { const need = Math.floor(+mm[2]) + 1; bar = Math.min(1, cur / need); left = `<b>${cur}</b> / ${need} ${mm[3].toLowerCase()}`; right = end || `${need - cur} to go`; }
+  else if (mm && cur != null) { const max = Math.floor(+mm[2]); bar = Math.min(1, cur / (max + 1)); left = `<b>${cur}</b> so far · ${max} or fewer wins it`; right = end || `${Math.max(0, max - cur)} to spare`; }
+  else { const p = m ? m.p : null; bar = p == null ? 0 : p; left = p == null ? "Waiting for the score…" : `<b>${Math.round(p * 100)}%</b> chance now`; right = end; }
+  return { st: cls || "live", html: `<div class="tl-leg ${cls}"><div class="tl-top"><b>${name}</b><span>${esc(Lt.name)} ${esc(Lt.score)}–${esc(Rt.score)} ${esc(Rt.name)} · ${esc(clockLabel(l.sport, g))}</span></div><div class="tl-bar"><i style="width:${bar * 100}%"></i></div><div class="tl-num"><span>${left}</span><span>${right}</span></div></div>` };
+}
+// a live card for any bet with games attached: imported player bets, saved slips, accas
+function betCard(t) {
+  const info = t.legs.map(legInfo), n = t.legs.length, hit = info.filter(i => i.st === "hit").length, voids = info.filter(i => i.st === "void").length;
+  const lost = info.some(i => i.st === "miss"), started = info.some(i => i.st !== "pre");
+  const overall = lost ? `<span class="st lost">Lost</span>` : hit && hit + voids === n ? `<span class="st won">Won ✓</span>` : voids === n ? `<span class="st void">Void</span>` : started ? `<span class="st">${hit} of ${n} landed</span>` : `<span class="st">Not started</span>`;
+  const allProps = t.legs.every(l => l.pid), one = t.legs[0];
+  const title = n > 1 ? `${n}-leg ${allProps ? "player bet" : n === 2 ? "double" : n === 3 ? "treble" : "acca"}` : one.pid ? `${one.name} ${one.target}+ ${one.label}` : String(one.label || t.text || "").replace(/ \(in-play\)$/, "");
+  const x = t.saved ? `<button class="x" data-delbet="${t.saved}" aria-label="Delete bet">✕</button>` : `<button class="x" data-untrack="${t.id}" aria-label="Stop tracking">✕</button>`;
+  return `<article class="trk-card"><div class="trk-hd"><div><b>${esc(title)}</b><small>${t.dec ? odds(t.dec) + " · " : ""}${t.stake ? `£${(+t.stake).toFixed(2).replace(/\.00$/, "")} returns ${money(t.stake * (t.dec || 1))}` : ""}</small></div>${overall}${x}</div>${info.map(i => i.html).join("")}</article>`;
+}
+function trackerHTML(bare, extra) {
+  const all = [...(S.tracked || []), ...(extra || [])], sportOf = t => (t.legs[0] || {}).sport, T = bare ? all : all.filter(t => sportOf(t) === S.sport), other = all.length - T.length;
   const otherName = S.sport === "nba" ? "football" : "NBA";
   const otherNote = other ? `<button class="trk-other" data-sport="${S.sport === "nba" ? "football" : "nba"}"><span>${other} ${otherName} bet${other > 1 ? "s" : ""} being tracked</span><b>View ›</b></button>` : "";
   if (!T.length) return otherNote ? `<section class="section">${otherNote}</section>` : "";
@@ -1779,11 +1841,11 @@ function trackerHTML(bare) {
     const rows = t.legs.map(l => { const r = legValue(l), g = r.g, done = r.v != null && r.v >= l.target, post = g && g.status.state === "post";
       if (done) hit++; else if (r.dnp) voids++; else if (post) lost = true; if (g && !isPre(g)) started = true;
       const pctv = r.v == null ? 0 : Math.min(1, r.v / l.target);
-      const state = !g ? "Game not found" : isPre(g) ? whenLabel(kick(g)) : isLive(g) ? g.status.detail : "Final";
+      const state = !g ? "Game not found" : clockLabel(l.sport, g);
       return `<div class="tl-leg ${done ? "hit" : r.dnp ? "void" : post ? "miss" : ""}"><div class="tl-top"><b>${esc(l.name)}</b><span>${esc(l.team)} · ${esc(state)}${r.on && isLive(g) ? ` · <span class="court-inline">on ${l.sport === "nba" ? "court" : "pitch"}</span>` : ""}</span></div>
         <div class="tl-bar"><i style="width:${pctv * 100}%"></i></div><div class="tl-num"><span>${r.v == null ? (g && isPre(g) ? `Needs ${l.target}+ ${esc(l.label)}` : r.dnp ? "Not in the squad tonight" : "Waiting for stats…") : `<b>${r.v}</b> / ${l.target} ${esc(l.label)}`}</span><span>${done ? "✓ Landed" : r.dnp ? "Void · not playing" : post ? "✗ Missed" : l.target - (r.v || 0) > 0 && r.v != null ? `${l.target - r.v} to go` : ""}</span></div></div>`; }).join("");
     const overall = lost ? `<span class="st lost">Lost</span>` : hit + voids === t.legs.length && hit ? `<span class="st won">Won ✓${voids ? ` (${voids} void)` : ""}</span>` : voids === t.legs.length ? `<span class="st void">Void</span>` : lost ? `<span class="st lost">Lost</span>` : started ? `<span class="st">${hit} of ${t.legs.length} landed</span>` : `<span class="st">Not started</span>`;
-    return `<article class="trk-card"><div class="trk-hd"><div><b>${t.legs.length > 1 ? `${t.legs.length}-leg player bet` : esc(t.text)}</b><small>${t.dec ? odds(t.dec) + " · " : ""}${t.stake ? `£${t.stake} returns ${money(t.stake * (t.dec || 1))}` : ""}</small></div>${overall}<button class="x" data-untrack="${t.id}" aria-label="Stop tracking">✕</button></div>${rows}</article>`; }).join("")}</div></section>`;
+    return `<article class="trk-card"><div class="trk-hd"><div><b>${t.legs.length > 1 ? `${t.legs.length}-leg player bet` : esc(t.text)}</b><small>${t.dec ? odds(t.dec) + " · " : ""}${t.stake ? `£${t.stake} returns ${money(t.stake * (t.dec || 1))}` : ""}</small></div>${overall}${t.saved ? "" : `<button class="x" data-untrack="${t.id}" aria-label="Stop tracking">✕</button>`}</div>${rows}</article>`; }).join("")}</div></section>`;
 }
 // keep a half-typed import if the phone closes or reloads the app (e.g. while checking the bookie app)
 function saveImpDraft() { store.set("impDraft", S.importOpen ? { text: S.importText || "", odds: S.impOdds || "", typed: !!S.impOddsTyped, stake: S.impStake, t: Date.now() } : null); }
@@ -1843,7 +1905,7 @@ function viewTables() {
         return `<tr class="${isFav("nba", e.team) ? "fav" : ""} ${playingSoon("nba", e.team.id) ? "play" : ""}"><td class="pos" style="--zc:${zc}">${seed || ""}</td><td class="team l"><span>${espnLogo(e.team, "nba")}${esc(e.team.shortDisplayName || e.team.displayName)}</span></td><td>${(m.wins || {}).displayValue ?? ""}</td><td>${(m.losses || {}).displayValue ?? ""}</td><td>${(m.winPercent || {}).displayValue ?? ""}</td><td>${(m.gamesBehind || {}).displayValue ?? ""}</td><td>${(m["Last Ten Games"] || m.lasttengames || {}).displayValue ?? ""}</td><td>${(m.streak || {}).displayValue ?? ""}</td><td>${(m.Home || m.home || {}).displayValue ?? ""}</td><td>${(m.Road || m.road || {}).displayValue ?? ""}</td></tr>`; }).join("")}
       </tbody></table></div></section>`;
     }).join("") + `<div class="zones"><span><i style="background:var(--win)"></i>Playoff places (1–6)</span><span><i style="background:var(--amber)"></i>Play-in (7–10)</span><span><b style="color:var(--live);font-size:10px">PLAYING</b> has a game in the next 24 hours</span></div>`;
-    return `<div class="hd"><div><h1>NBA standings</h1><p class="sub">Updated from the live feed. Swipe the table sideways for home and away records.</p></div></div>${body}`;
+    return `<div class="hd"><div><h1>NBA standings</h1><p class="sub">Swipe sideways for home and away records.</p></div></div>${body}`;
   }
   const L = S.tblLeague || "eng.1", f = feed(`${API2}/soccer/${L}/standings`);
   const chips = `<div class="chips scroll">${S.data.leagues.map(l => `<button class="chip" data-tbl="${l.id}" aria-pressed="${L === l.id}">${esc(l.name)}</button>`).join("")}</div>`;
@@ -1860,7 +1922,7 @@ function viewTables() {
       </tbody></table></div>`;
     }).join("") + `<div class="zones">${[...notes].map(([d, c]) => `<span><i style="background:${c}"></i>${esc(d)}</span>`).join("")}<span><b style="color:var(--live);font-size:10px">PLAYING</b> has a game in the next 24 hours</span></div>`;
   }
-  return `<div class="hd"><div><h1>League tables</h1><p class="sub">Tap a league. Your favourite teams are highlighted.</p></div></div>${chips}<section class="section">${body}</section>`;
+  return `<div class="hd"><div><h1>League tables</h1><p class="sub">Your favourite teams are highlighted.</p></div></div>${chips}<section class="section">${body}</section>`;
 }
 const INJ_RE = /injur|hamstring|ruled out|sidelined|fitness|knee|ankle|groin|calf|muscle|surgery|fracture|concussion|out for|miss(es)? (the|next)|setback|doubt/i;
 const TRF_RE = /transfer|sign(s|ed|ing)?\b|loan|bid|deal|contract|move to|swoop|release clause|fee|talks|target|join(s|ed)?\b|extension|free agent/i;
@@ -1953,6 +2015,12 @@ function statBlock() {
   const decided = settled.filter(b => b.result !== "void").length;
   return `<div class="tiles"><div class="tile"><small>Bets logged</small><b>${S.bets.length}</b></div><div class="tile"><small>Win rate</small><b>${decided ? Math.round(won / decided * 100) + "%" : "–"}</b></div><div class="tile"><small>Profit / loss</small><b class="${profit > 0 ? "pos" : profit < 0 ? "neg" : ""}">${settled.length ? gbp(profit) : "–"}</b></div><div class="tile"><small>Return on stakes</small><b class="${profit > 0 ? "pos" : profit < 0 ? "neg" : ""}">${staked ? (profit / staked * 100 > 0 ? "+" : "") + Math.round(profit / staked * 100) + "%" : "–"}</b></div></div>`;
 }
+function betRow(b) {
+  const pl = b.result === "won" ? `<span style="color:var(--win)">+${gbp(+b.returns - +b.stake)}</span>` : b.result === "lost" ? `<span style="color:var(--loss)">${gbp(-b.stake)}</span>` : b.result === "void" ? "stake back" : `returns ${gbp(+b.stake * +b.odds_dec)}`;
+  return `<div class="betrow"><div><div class="bl">${esc(b.label)}</div><div class="bm">${esc(b.match || "")} · ${new Date(b.placed_at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</div></div>
+    <div class="br">${odds(+b.odds_dec)}<small>£${(+b.stake).toFixed(2)} · ${pl}</small></div>
+    <div class="acts"><span class="st ${b.result}">${b.result}</span>${b.result === "open" ? `<button class="btn sm win" data-settle="${b.id}|won">Won</button><button class="btn sm lose" data-settle="${b.id}|lost">Lost</button><button class="btn sm ghost" data-settle="${b.id}|void">Void</button>` : ""}<button class="x" style="margin-left:auto" data-delbet="${b.id}" aria-label="Delete bet">✕</button></div></div>`;
+}
 function betRows() {
   const list = S.bets.filter(b => S.betFilter === "all" || (S.betFilter === "open" ? b.result === "open" : b.result !== "open"));
   if (!list.length) return `<div class="empty art"><img src="img/empty-bets.webp" alt="" loading="lazy"><b>${S.betFilter === "open" ? "No open bets" : "Nothing here yet"}</b><span>${S.betFilter === "open" ? "Save a bet from your slip, or add one below." : "Settled bets will show here."}</span></div>`;
@@ -1996,7 +2064,7 @@ function viewAccount(mode = "account") {
   if (mode === "friends") {
     const ft = ["feed", "board", "friends"].includes(S.friendTab) ? S.friendTab : "feed";
     const tabsF = [["feed", "Feed"], ["board", "Leaderboard"], ["friends", `Your friends${nFr ? " · " + nFr : ""}`]];
-    return `<div class="hd"><div><h1>Friends</h1><p class="sub">See what your friends are betting on, react, tail their bets and race them up the leaderboard.</p></div>${S.socialReady ? `<button class="btn sm" data-invite>Invite friends</button>` : ""}</div>
+    return `<div class="hd"><div><h1>Friends</h1><p class="sub">Their bets, reactions and the leaderboard.</p></div>${S.socialReady ? `<button class="btn sm" data-invite>Invite friends</button>` : ""}</div>
     ${S.socialReady === false ? `<div class="warn">Photos and friends need a quick database update. Ask Claude for the steps.</div>` : ""}
     <div class="subtabs" role="tablist">${tabsF.map(([k, l]) => `<button role="tab" data-ftab="${k}" aria-selected="${ft === k}">${l}</button>`).join("")}</div>
     ${ft === "feed" ? feedView() : ft === "board" ? boardView() : friendsView()}`;
@@ -2096,12 +2164,22 @@ function friendsView() {
     ${fr.length ? `<div class="mates">${fr.map(f => `<div class="mate"><button class="mate-main" data-mate="${f.id}">${avatarHTML(f, 44)}<span><b>${esc(f.display_name)}${badgesHTML(f, 1)}</b><small>Tap to see their bets and £1K challenge</small></span></button><button class="x" data-unfriend="${f.id}" aria-label="Remove ${esc(f.display_name)}">✕</button></div>`).join("")}</div>` : `<div class="empty">No friends yet. Share your link or code to get started.</div>`}</section>`;
 }
 function viewMyBets() {
-  const T = (S.tracked || []).length;
-  const head = `<div class="hd"><div><h1>My Bets</h1><p class="sub">Bets you're tracking update live every 10 seconds. Saved bets keep your profit and loss.</p></div><button class="btn ghost sm" data-import>+ Import a bet</button></div>`;
-  const live = T ? `<section class="section"><h2>Tracking live</h2>${trackerHTML(true)}</section>` : "";
-  if (!sb || !S.user) return `${head}${live}${T ? "" : `<div class="empty art"><img src="img/empty-bets.webp" alt="" loading="lazy"><b>No bets yet</b><span>Import a player bet to follow it live, e.g. "Haaland to score @ 1.80".</span></div>`}
-    <a class="friendslink" href="#account"><span class="ic-dot">${ICON.chart}</span><span><b>Save your bets</b><small>Sign in free to save bets, mark them won or lost and see your profit.</small></span><span aria-hidden="true">›</span></a>`;
-  return `${head}${live}${myBetsView(true)}`;
+  const bets = S.user ? S.bets || [] : [], track = b => (b.legs || []).some(l => l.pid || l.k);
+  const savedCards = bets.filter(b => b.result === "open" && track(b)).map(b => ({ id: "s" + b.id, saved: b.id, text: b.label, legs: b.legs.filter(l => l.pid || l.k), dec: +b.odds_dec, stake: +b.stake }));
+  const local = (S.tracked || []).filter(t => !bets.some(b => b.label === t.text));
+  const cards = [...local, ...savedCards].sort((a, b) => Math.min(...a.legs.map(l => +new Date(kick(findGame(l.sport, l.gid) || { start: 0 })) || 0)) - Math.min(...b.legs.map(l => +new Date(kick(findGame(l.sport, l.gid) || { start: 0 })) || 0)));
+  for (const c of cards) for (const l of c.legs) { const g = findGame(l.sport, l.gid); if (l.pid && g && !isPre(g) && !(l.sport === "nba" ? g.box : g.lineups)) loadDetail(l.sport + ":" + l.gid); }
+  const hand = bets.filter(b => b.result === "open" && !track(b)), settled = bets.filter(b => b.result !== "open");
+  const head = `<div class="hd"><div><h1>My Bets</h1><p class="sub">Your bets update live and settle themselves at full time.</p></div><button class="btn ghost sm" data-import>+ Import a bet</button></div>`;
+  const live = cards.length ? `<section class="section"><h2>Live & upcoming</h2><div class="trk">${cards.map(betCard).join("")}</div></section>` : "";
+  if (!sb || !S.user) return `${head}${live}${cards.length ? "" : `<div class="empty art"><img src="img/empty-bets.webp" alt="" loading="lazy"><b>No bets yet</b><span>Import a bet to follow it live, e.g. "Haaland to score @ 1.80".</span></div>`}
+    <a class="strip" href="#account"><span class="ic-dot">${ICON.chart}</span><span><b>Save your bets</b><small>Sign in free to keep your bets and see your profit.</small></span><span aria-hidden="true">›</span></a>`;
+  return `${head}${live}
+    ${hand.length ? `<section class="section"><h2>To settle</h2><p class="sub" style="margin:-6px 0 0">Bets you typed in yourself aren't linked to a game, so mark these when they finish.</p><div style="display:grid;gap:8px">${hand.map(b => betRow(b)).join("")}</div></section>` : ""}
+    ${!cards.length && !hand.length ? `<div class="empty art"><img src="img/empty-bets.webp" alt="" loading="lazy"><b>No open bets</b><span>Import a bet, or save one from your bet slip.</span></div>` : ""}
+    ${bets.length ? statBlock() : ""}
+    ${settled.length ? `<section class="section"><h2>Settled</h2><div style="display:grid;gap:8px">${settled.slice(0, S.showAllSettled ? 500 : 8).map(b => betRow(b)).join("")}</div>${settled.length > 8 && !S.showAllSettled ? `<button class="linkbtn" data-allsettled>Show all ${settled.length}</button>` : ""}</section>` : ""}
+    <details class="ownbet"><summary>Add a bet by hand</summary><form class="addrow" id="addBet"><div class="field"><label for="ab-label">Bet</label><input id="ab-label" placeholder="e.g. Liverpool to win" required></div><div class="field" style="flex:0 1 110px"><label for="ab-odds">Odds</label><input id="ab-odds" placeholder="5/2 or 3.5" required></div><div class="field" style="flex:0 1 100px"><label for="ab-stake">Stake £</label><input id="ab-stake" type="number" inputmode="decimal" min="0" step="0.5" value="${S.stake}" required></div><div class="field" style="flex:0 0 auto;align-self:end"><button class="btn" type="submit">Add</button></div></form></details>`;
 }
 function myBetsView(inTab) {
   return `${statBlock()}<section class="section"><div class="hd"><h2>${inTab ? "Saved bets" : "My bets"}</h2>${inTab ? "" : `<button class="btn ghost sm" data-import>+ Import a player bet</button>`}<div class="chips">${[["open", "Open"], ["settled", "Settled"], ["all", "All"]].map(([k, l]) => `<button class="chip" data-betfilter="${k}" aria-pressed="${S.betFilter === k}">${l}</button>`).join("")}</div></div>
@@ -2225,11 +2303,8 @@ document.addEventListener("click", async e => {
   }
   else if (d.settle) {
     const [id, res] = d.settle.split("|"), b = S.bets.find(x => x.id === id); if (!b) return;
-    const returns = res === "won" ? Math.round(b.stake * b.odds_dec * 100) / 100 : res === "void" ? +b.stake : res === "lost" ? 0 : null;
-    const settled_at = res === "open" ? null : new Date().toISOString();
-    Object.assign(b, { result: res, returns, settled_at }); render();
-    let r = await sb.from("bets").update({ result: res, returns, settled_at }).eq("id", id); if (r.error) r = await sb.from("bets").update({ result: res, returns }).eq("id", id); if (r.error) toast("Couldn't save."); else loadSocial();
-    sb.rpc("leaderboard").then(x => { if (x.data) { S.board = x.data; render(); } });
+    if (res === "open") { const k = store.get("noAuto", []); if (!k.includes(id)) store.set("noAuto", [...k, id].slice(-200)); }   // reopened by hand: leave it alone
+    settleBet(b, res);
   }
   else if (d.delbet) { S.bets = S.bets.filter(x => x.id !== d.delbet); render(); await sb.from("bets").delete().eq("id", d.delbet); }
   else if (d.unfav) { const [sp, id] = d.unfav.split("|"); saveProfile({ fav_teams: (S.profile.fav_teams || []).filter(x => !(x.sport === sp && x.id === id)) }); }
@@ -2258,6 +2333,11 @@ document.addEventListener("change", e => { if (e.target.id === "avatarPick" && s
 /* ---------- iPhone: suggest adding to the home screen (Safari only, once) ---------- */
 const IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 const STANDALONE = navigator.standalone === true || matchMedia("(display-mode: standalone)").matches;
+function subnav(v) {
+  const g = navOf(v); if (!g || g[2].length < 2) return "";
+  const badge = id => id === "mybets" && liveTracked() ? `<span class="badge">${liveTracked()}</span>` : id === "acca" && S.slip.length ? `<span class="badge alt">${S.slip.length}</span>` : "";
+  return `<nav class="subnav" aria-label="${g[1]}">${g[2].map(id => `<a href="#${id}" ${id === v ? 'aria-current="page"' : ""}>${SUBNAME[id]}${badge(id)}</a>`).join("")}</nav>`;
+}
 function iosTip() {
   if (!IOS || STANDALONE || store.get("iosTipX", false)) return "";
   const inApp = /FBAN|FBAV|Instagram|WhatsApp|Snapchat|GSA\/|CriOS|FxiOS|EdgiOS/.test(navigator.userAgent);
@@ -2290,12 +2370,49 @@ function cashGo(mode) {
   }
   S.cashOpen = null; S.rungSel = null; saveChal(C);
 }
+/* ---------- automatic settling from final scores and player stats ---------- */
+async function settleBet(b, res, auto) {
+  const returns = res === "won" ? Math.round(b.stake * b.odds_dec * 100) / 100 : res === "void" ? +b.stake : res === "lost" ? 0 : null;
+  const settled_at = res === "open" ? null : new Date().toISOString();
+  Object.assign(b, { result: res, returns, settled_at }); render();
+  if (auto) toast(res === "won" ? `Winner! ${b.label.length > 40 ? b.label.slice(0, 40) + "…" : b.label} returned ${money(returns)}` : `Settled as lost: ${b.label.length > 44 ? b.label.slice(0, 44) + "…" : b.label}`);
+  let r = await sb.from("bets").update({ result: res, returns, settled_at }).eq("id", b.id); if (r.error) r = await sb.from("bets").update({ result: res, returns }).eq("id", b.id); if (r.error) toast("Couldn't save."); else loadSocial();
+  sb.rpc("leaderboard").then(x => { if (x.data) { S.board = x.data; render(); } });
+}
+function betOutcome(legs) {   // "won" / "lost" once it's certain, otherwise null
+  if (!legs || !legs.length) return null;
+  let all = true, lost = false;
+  for (const l of legs) {
+    const g = findGame(l.sport, l.gid); if (!g) { all = false; continue; }
+    if (l.pid) {
+      if (!isPre(g) && !(l.sport === "nba" ? g.box : g.lineups)) loadDetail(l.sport + ":" + l.gid);
+      const r = legValue(l);
+      if (r.v != null && r.v >= l.target) continue;                 // landed: stats only go up
+      if (g.status.state !== "post" || r.dnp) { all = false; continue; }   // still playing, or a void leg (leave those to you)
+      if (r.v == null) { all = false; continue; }
+      lost = true; continue;
+    }
+    if (!l.k || g.status.state !== "post") { all = false; continue; }
+    const m = liveMarkets(l.sport, g).find(x => x.k === l.k); if (!m) { all = false; continue; }
+    if (m.state === "lost") lost = true; else if (m.state !== "won") all = false;
+  }
+  return lost ? "lost" : all ? "won" : null;
+}
+let autoAt = 0;
+function autoSettle() {
+  if (!sb || !S.user || !S.data || Date.now() - autoAt < 15e3) return; autoAt = Date.now();
+  const C = S.chal; if (C && C.active) { const r = activeResult(C.active); if (r) chalSettle(r, C.active.label, C.active.match, C.active.dec); }
+  const skip = store.get("noAuto", []);
+  for (const b of S.bets || []) if (b.result === "open" && !skip.includes(b.id)) { const r = betOutcome(b.legs); if (r) settleBet(b, r, true); }
+}
 /* ---------- render ---------- */
 function render() {
   if (!S.data) return;
   renderChrome();
+  setTimeout(autoSettle, 0);
   const v = view();
-  $("#main").innerHTML = iosTip() + (v === "friends" ? viewAccount("friends") : v === "account" ? viewAccount() : v === "tables" ? viewTables() : v === "news" ? viewNews() : v === "fixtures" ? viewFixtures() : v === "bets" ? viewBets() : v === "mybets" ? viewMyBets() : v === "acca" ? viewAcca() : v === "challenge" ? viewChallenge() : viewLive());
+  { const g = navOf(v); if (g && g[2].length > 1 && S.lastSub[g[0]] !== v) { S.lastSub[g[0]] = v; store.set("lastSub", S.lastSub); } }
+  $("#main").innerHTML = iosTip() + subnav(v) + (v === "friends" ? viewAccount("friends") : v === "account" ? viewAccount() : v === "tables" ? viewTables() : v === "news" ? viewNews() : v === "fixtures" ? viewFixtures() : v === "bets" ? viewBets() : v === "mybets" ? viewMyBets() : v === "acca" ? viewAcca() : v === "challenge" ? viewChallenge() : viewLive());
   const norail = v === "account" || v === "friends"; document.querySelector(".page").classList.toggle("norail", norail);
   $("#rail").innerHTML = norail ? "" : slipHTML();
   const L = $("#layer"), prevDr = $(".drawer"), dkey = S.drawer || (S.slipOpen ? "slip" : ""), same = !!(prevDr && dkey && prevDr.dataset.key === dkey), keepTop = same ? prevDr.scrollTop : 0;
@@ -2361,6 +2478,7 @@ document.addEventListener("click", e => {
   else if (d.cashclose !== undefined) { S.cashOpen = null; render(); }
   else if (d.cashpart) { const i = $("#cashamt"); if (i) i.value = (Math.floor(chalNow().bank * +d.cashpart * 100) / 100).toFixed(2); }
   else if (d.cashgo) cashGo(d.cashgo);
+  else if (d.allsettled !== undefined) { S.showAllSettled = true; render(); }
   else if (d.iosx !== undefined) { store.set("iosTipX", true); render(); }
   else if (d.impex) { S.importText = d.impex; const t = $("#imptext"); if (t) t.value = d.impex; S.impOddsTyped = false; impRefresh(); }
   else if (d.untrack) { S.tracked = S.tracked.filter(t => t.id !== d.untrack); store.set("tracked", S.tracked); render(); }
