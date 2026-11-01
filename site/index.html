@@ -171,6 +171,7 @@ h3{font-size:15px;font-weight:700}
 .cmp .h{background:var(--blue)}.cmp .a{background:var(--tang)}
 .btiles{display:grid;gap:8px}
 .chaltag{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--tang);text-decoration:none;margin-bottom:2px}.trk-card.chalcard{border-color:rgba(255,122,47,.45)}
+.sgopt{font-size:13px;color:var(--fg-2);margin:2px 0 0}
 .ab-leg.extra{margin-left:18px;border-left:2px solid var(--blue)}.abl-x{display:block;font-size:14px;font-weight:600;margin-top:2px}
 select.addmore{width:100%;background:none;border:1px dashed var(--line-2);color:var(--blue-2);font:inherit;font-weight:700;font-size:13px;border-radius:10px;padding:9px 10px;margin:-2px 0 4px}
 .pchart{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 12px 10px 52px;touch-action:pan-y}
@@ -1489,12 +1490,30 @@ function pickForTarget(list, price, n) {
   const ok = list.filter(m => m.p >= .15 && price(m) >= 1.04); if (!ok.length) return list[0];
   return ok.reduce((best, m) => { const sc = Math.abs(Math.log(price(m)) - Math.log(t)) - .08 * m.p, bs = Math.abs(Math.log(price(best)) - Math.log(t)) - .08 * best.p; return sc < bs ? m : best; });
 }
+// up to 3 bets from one game that go together (one result, one goals, one corners, one cards bet)
+const SG_GROUP = k => /^(1|X|2|1X|X2|12|DNB1|DNB2|ML1|ML2)$/.test(k) ? "res" : /^(O|U)\d|^U35|^O35|^BTTS|^(HO|AO)/.test(k) ? "goals" : /^C/.test(k) ? "corners" : /^Y/.test(k) ? "cards" : /^(SP|FAVH)/.test(k) ? "hcap" : /^T/.test(k) ? "total" : "x" + k;
+const sgAuto = () => store.get("sgAuto", true);
+function withBundles(opts, price) {
+  const singles = opts.filter(m => m.p >= .15 && price(m) >= 1.04).slice(0, 14); if (!sgAuto()) return singles;
+  const byG = {}; for (const m of opts.filter(m => m.p >= .3 && price(m) >= 1.08)) (byG[SG_GROUP(m.k)] = byG[SG_GROUP(m.k)] || []).push(m);
+  const groups = Object.values(byG).map(L => L.sort((a, b) => b.p - a.p).slice(0, 7)), out = [];
+  const add = legs => { if (legs.some(m => /^(HO|AO)/.test(m.k)) && legs.some(m => /^(1|2|DNB1|DNB2|1X|X2)$/.test(m.k))) return;   // a team winning already means it scored: no fake value
+    const p = legs.reduce((a, m) => a * m.p, 1); if (p < .12) return; out.push({ k: "B:" + legs.map(m => m.k).join("+"), label: legs.map(m => m.label).join(" + "), p, legs, bundle: true }); };
+  for (let i = 0; i < groups.length; i++) for (let j = i + 1; j < groups.length; j++) {
+    for (const a of groups[i]) for (const b of groups[j]) { add([a, b]); for (let k = j + 1; k < groups.length; k++) for (const c of groups[k]) add([a, b, c]); } }
+  // keep the likeliest few at every price level, so short and long targets both have good options
+  const bins = new Map(); for (const b of out.sort((a, b) => b.p - a.p)) { const k = Math.round(Math.log(bundlePrice(price)(b)) * 5), L = bins.get(k) || []; if (L.length < 3) { L.push(b); bins.set(k, L); } }
+  return [...singles, ...[...bins.values()].flat()];
+}
+const bundlePrice = price => m => m.bundle ? m.legs.reduce((a, x) => a * price(x), 1) : price(m);
+// a picked market, or a picked bundle split back into its bets (the first one is the main leg)
+const expandPick = (g, m, extra) => m && m.bundle ? m.legs.map((x, i) => ({ g, m: x, extra: i > 0, auto: i > 0, ...extra })) : m ? [{ g, m, ...extra }] : [];
 function jointPick(items, price) {   // items: [{ id, opts, fixed }] -> Map id -> market
   const r = RISK[S.accaRisk || "safe"], tgt = Math.log(r.target), pick = new Map();
   const cost = () => { let lt = 0, lp = 0; for (const [, m] of pick) { lt += Math.log(price(m)); lp += Math.log(m.p); } const miss = lt < Math.log(r.lo) ? Math.log(r.lo) - lt : lt > Math.log(Math.min(r.hi, 1e6)) ? lt - Math.log(r.hi) : 0; return 4 * miss + .6 * Math.abs(lt - tgt) - .5 * lp; };
   for (const it of items) pick.set(it.id, it.fixed || pickForTarget(it.opts, price, items.length));
   for (let pass = 0; pass < 3; pass++) for (const it of items) { if (it.fixed) continue; let best = pick.get(it.id), bc = cost();
-    for (const m of it.opts.filter(m => m.p >= .15 && price(m) >= 1.04).slice(0, 14)) { pick.set(it.id, m); const c = cost(); if (c < bc) { bc = c; best = m; } } pick.set(it.id, best); }
+    for (const m of it.opts.filter(m => m.p >= .12 && price(m) >= 1.04).slice(0, 90)) { pick.set(it.id, m); const c = cost(); if (c < bc) { bc = c; best = m; } } pick.set(it.id, best); }
   return pick;
 }
 const bandNote = dec => { const r = RISK[S.accaRisk || "safe"]; if (dec >= r.lo && dec <= r.hi) return `<div class="msg ok">✓ Total ${dec.toFixed(2)}: in your ${r.name} range.</div>`;
@@ -1507,22 +1526,23 @@ function legOptions(sport, g) {
 // extra bets from the same game ("bet builder" style), stored per game
 function withExtras(legs, store, find, price, opts) {
   const out = [];
-  for (const x of legs) {
-    out.push(x);
-    const keep = (store[x.g.id] || []).filter(k => k !== x.m.k && !conflicts(k, x.m.k));
+  legs.forEach((x, i) => {
+    out.push(x); if (legs[i + 1] && legs[i + 1].g === x.g) return;   // after the last auto leg for this game
+    const have = legs.filter(y => y.g === x.g).map(y => y.m.k);
+    const keep = (store[x.g.id] || []).filter(k => !have.some(h => h === k || conflicts(h, k)));
     store[x.g.id] = keep;
     for (const k of keep) { const m = find(x.g, k); if (m) out.push({ g: x.g, m, extra: true, o: x.o }); }
-  }
+  });
   return out;
 }
-const extraRow = (x, price, rmAttr) => `<div class="ab-leg extra"><div class="abl-main"><div class="abl-match">＋ Same game</div><b class="abl-x">${esc(x.m.label)}</b></div><div class="abl-p"><b>${odds(price(x.m))}</b><small>${pct(x.m.p)}</small></div><button class="x" ${rmAttr}="${x.g.id}|${x.m.k}" aria-label="Remove ${esc(x.m.label)}">✕</button></div>`;
+const extraRow = (x, price, rmAttr) => `<div class="ab-leg extra"><div class="abl-main"><div class="abl-match">＋ Same game${x.auto ? " · picked for you" : ""}</div><b class="abl-x">${esc(x.m.label)}</b></div><div class="abl-p"><b>${odds(price(x.m))}</b><small>${pct(x.m.p)}</small></div><button class="x" ${rmAttr}="${x.g.id}|${x.m.k}" aria-label="Remove ${esc(x.m.label)}">✕</button></div>`;
 const addMoreSel = (g, chosen, opts, price, attr) => { const free = opts.filter(m => !chosen.some(k => k === m.k || conflicts(k, m.k)));
   return free.length ? `<label class="sr" for="${attr}-${g.id}">Add another bet from ${esc(vs(S.sport, g))}</label><select class="addmore" id="${attr}-${g.id}" ${attr}="${g.id}"><option value="">＋ Add another bet from this game</option>${free.map(m => `<option value="${m.k}">${esc(m.label)} · ${pct(m.p)} · ${odds(price(m))}</option>`).join("")}</select>` : ""; };
 const sameGameNote = all => all.some(x => x.extra) ? `<div class="note">Bets from the same game are linked, so your bookie's bet builder price will be different from this estimate.</div>` : "";
 function accaPreLegs(sp, ids) {
   const gs = ids.map(id => findGame(sp, id)).filter(Boolean);
-  const J = jointPick(gs.map(g => { const o = legOptions(sp, g).map(x => x.m), k = (S.accaPick || {})[g.id]; return { id: g.id, opts: o, fixed: k && o.find(m => m.k === k) }; }), priceOf);
-  return gs.map(g => ({ g, m: J.get(g.id) })).filter(x => x.m);
+  const J = jointPick(gs.map(g => { const o = legOptions(sp, g).map(x => x.m), k = (S.accaPick || {})[g.id]; return { id: g.id, opts: withBundles(o, priceOf), fixed: k && o.find(m => m.k === k) }; }), bundlePrice(priceOf));
+  return gs.flatMap(g => expandPick(g, J.get(g.id)));
 }
 function legFor(sport, g, n = S._accaN || 3) {
   const o = legOptions(sport, g), pick = (S.accaPick || {})[g.id];
@@ -1545,15 +1565,16 @@ function liveAccaLeg(sp, g) {
 }
 function accaLiveLegs(sp, ids) {
   const gs = ids.map(id => findGame(sp, id)).filter(g => g && isLive(g));
-  const its = gs.map(g => { const { o } = liveAccaLeg(sp, g), k = (S.accaLivePick || {})[g.id]; return { g, o, id: g.id, opts: o, fixed: k && o.find(m => m.k === k) }; });
-  const J = jointPick(its, m => livePrice(m.p)); return its.map(it => ({ g: it.g, m: J.get(it.id), o: it.o })).filter(x => x.m);
+  const lp = m => livePrice(m.p);
+  const its = gs.map(g => { const { o } = liveAccaLeg(sp, g), k = (S.accaLivePick || {})[g.id]; return { g, o, id: g.id, opts: withBundles(o, lp), fixed: k && o.find(m => m.k === k) }; });
+  const J = jointPick(its, bundlePrice(lp)); return its.flatMap(it => expandPick(it.g, J.get(it.id), { o: it.o }));
 }
 const accaModeSeg = () => `<div class="seg3 two acmode" role="group" aria-label="Pre-match or in-play"><button data-accamode="pre" aria-pressed="${S.accaMode !== "live"}">Pre-match</button><button data-accamode="live" aria-pressed="${S.accaMode === "live"}">${games(S.sport).some(isLive) ? '<span class="dot red"></span> ' : ""}In-play</button></div>`;
 function viewAccaLive() {
   const sp = S.sport, risk = S.accaRisk || "safe", live = games(sp).filter(isLive);
   S.accaLiveSel = S.accaLiveSel || {}; const sel = (S.accaLiveSel[sp] || []).filter(id => live.some(g => g.id === id)); S.accaLiveSel[sp] = sel;
   const head = `<div class="hd"><div><h1>In-play acca</h1><p class="sub">Tap games that are on now. We pick the safest live bet in each, from the score and time left.</p></div></div>${accaModeSeg()}
-    <div class="acca-ctrl"><div class="seg3" role="group" aria-label="Safety level">${Object.entries(RISK).map(([k, r]) => `<button data-accarisk="${k}" aria-pressed="${risk === k}">${r.name}</button>`).join("")}</div><p class="risk-desc">${RISK[risk].desc}</p></div>`;
+    <div class="acca-ctrl"><div class="seg3" role="group" aria-label="Safety level">${Object.entries(RISK).map(([k, r]) => `<button data-accarisk="${k}" aria-pressed="${risk === k}">${r.name}</button>`).join("")}</div><p class="risk-desc">${RISK[risk].desc}</p><label class="optrow sgopt"><input type="checkbox" id="sgOpt" ${sgAuto() ? "checked" : ""}> Add bets from the same game when that's the likelier way to hit the odds</label></div>`;
   if (!live.length) { const nx = games(sp).filter(isPre).sort((a, b) => new Date(kick(a)) - new Date(kick(b)))[0];
     return `${head}<div class="empty art"><img src="${art("empty-live.webp")}" alt="" loading="lazy"><b>Nothing in play right now</b><span>${nx ? `Next up: <b>${esc(vs(sp, nx))}</b> ${whenLabel(kick(nx))}. Come back when it kicks off.` : "Check back when games kick off."}</span></div>`; }
   S._accaN = Math.max(2, sel.length); const legs0 = accaLiveLegs(sp, sel), LX = (S.accaLiveX = S.accaLiveX || {}), legs = withExtras(legs0, LX, (g, k) => liveMarkets(sp, g).find(m => m.k === k && m.state === "open"), m => livePrice(m.p));
@@ -1601,7 +1622,7 @@ function viewAcca() {
   return `<div class="hd"><div><h1>Acca builder</h1><p class="sub">Tap the games you want and we'll pick the safest bet in each.</p></div></div>
   ${accaModeSeg()}
   <div class="acca-ctrl"><div class="seg3" role="group" aria-label="Safety level">${Object.entries(RISK).map(([k, r]) => `<button data-accarisk="${k}" aria-pressed="${risk === k}">${r.name}</button>`).join("")}</div>
-    <p class="risk-desc">${RISK[risk].desc}</p>
+    <p class="risk-desc">${RISK[risk].desc}</p><label class="optrow sgopt"><input type="checkbox" id="sgOpt" ${sgAuto() ? "checked" : ""}> Add bets from the same game when that's the likelier way to hit the odds</label>
     <div class="chips">${["today", "tomorrow", "48h", "week"].map(k => `<button class="chip" data-accawin="${k}" aria-pressed="${w === k}" ${upcoming(sp, k).length ? "" : "disabled style=\"opacity:.4\""}>${WIN_NAME[k]}</button>`).join("")}</div>
     <div class="auto"><button class="btn ghost sm" data-accaauto="3">Pick the best 3 for me</button><button class="btn ghost sm" data-accaauto="5">Pick the best 5</button></div></div>
   ${summary}
@@ -2916,7 +2937,8 @@ document.addEventListener("click", async e => {
     const { link, text } = inviteText();
     // the phone's own share menu where the browser has one (iPhone Safari, Chrome); otherwise our own sheet (the Android app)
     if (window.MDEApp && MDEApp.share) { MDEApp.share(text); return; }   // Android app 1.3+: the phone's own share menu
-    if (navigator.share) { try { await navigator.share({ title: "Matchday Edge", text }); } catch (err) { if (err && err.name !== "AbortError") { S.shareOpen = true; render(); } } return; }
+    const phone = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    if (navigator.share && phone) { try { await navigator.share({ title: "Matchday Edge", text }); } catch (err) { if (err && err.name !== "AbortError") { S.shareOpen = true; render(); } } return; }
     S.shareOpen = true; render();
   }
   else if (d.sharecopy !== undefined) { const { link } = inviteText(); S.shareOpen = false; render(); copyText(link, "Invite link copied. Paste it to your friends"); }
@@ -2968,7 +2990,7 @@ document.addEventListener("click", async e => {
   }
 });
 document.addEventListener("change", async e => { if (e.target.id === "alertOpt") { if (e.target.checked) { const ok = await askAlerts(); store.set("alerts", true); store.set("alertKnown", []); toast(ok ? "Bet alerts on" : "Bet alerts on inside the app"); alertTick(); sendAlert("Bet alerts are on", "You'll hear when your legs land", "test"); } else { store.set("alerts", false); toast("Bet alerts off"); } } });
-document.addEventListener("change", e => { if (e.target.id === "spookyOpt") { store.set("spooky", e.target.checked); applySpooky(); $("#main")._h = null; render(); } if ((e.target.id === "discOpt" || e.target.id === "pubOpt") && sb && S.user) { const k = e.target.id === "discOpt" ? "discoverable" : "bets_public"; saveProfile({ [k]: e.target.checked }); toast(k === "discoverable" ? (e.target.checked ? "People can find you" : "Hidden from search") : (e.target.checked ? "Your bets are public" : "Your bets are private again")); } if (e.target.id === "walletPub" && sb && S.user && S.wallet) { S.wallet.is_public = e.target.checked; sb.from("wallets").update({ is_public: e.target.checked }).eq("user_id", S.user.id); toast(e.target.checked ? "Friends can see your balance" : "Your balance is private"); render(); } if (e.target.id === "avatarPick" && sb && S.user) { S._picked = true; uploadAvatar(e.target.files[0]); e.target.value = ""; } if (e.target.id === "shareOpt" && sb && S.user) { saveProfile({ share_bets: e.target.checked }); toast(e.target.checked ? "Friends can see your bets" : "Your bets are now private"); } if (e.target.id === "lbOpt" && sb && S.user) { saveProfile({ show_on_leaderboard: e.target.checked }); sb.rpc("leaderboard").then(x => { if (x.data) { S.board = x.data; render(); } }); } });
+document.addEventListener("change", e => { if (e.target.id === "sgOpt") { store.set("sgAuto", e.target.checked); S.accaPick = {}; S.accaLivePick = {}; render(); } if (e.target.id === "spookyOpt") { store.set("spooky", e.target.checked); applySpooky(); $("#main")._h = null; render(); } if ((e.target.id === "discOpt" || e.target.id === "pubOpt") && sb && S.user) { const k = e.target.id === "discOpt" ? "discoverable" : "bets_public"; saveProfile({ [k]: e.target.checked }); toast(k === "discoverable" ? (e.target.checked ? "People can find you" : "Hidden from search") : (e.target.checked ? "Your bets are public" : "Your bets are private again")); } if (e.target.id === "walletPub" && sb && S.user && S.wallet) { S.wallet.is_public = e.target.checked; sb.from("wallets").update({ is_public: e.target.checked }).eq("user_id", S.user.id); toast(e.target.checked ? "Friends can see your balance" : "Your balance is private"); render(); } if (e.target.id === "avatarPick" && sb && S.user) { S._picked = true; uploadAvatar(e.target.files[0]); e.target.value = ""; } if (e.target.id === "shareOpt" && sb && S.user) { saveProfile({ share_bets: e.target.checked }); toast(e.target.checked ? "Friends can see your bets" : "Your bets are now private"); } if (e.target.id === "lbOpt" && sb && S.user) { saveProfile({ show_on_leaderboard: e.target.checked }); sb.rpc("leaderboard").then(x => { if (x.data) { S.board = x.data; render(); } }); } });
 
 /* ---------- iPhone: suggest adding to the home screen (Safari only, once) ---------- */
 const IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
@@ -3245,7 +3267,10 @@ document.addEventListener("click", e => {
   }
   else if (d.shotpick !== undefined) { const f = $("#shotPick"); f.value = ""; f.click(); }
   else if (d.statrange) { S.statRange = d.statrange; render(); }
-  else if (d.accaxrm || d.accalxrm) { const live = !!d.accalxrm, [gid, k] = (d.accaxrm || d.accalxrm).split("|"), st = live ? S.accaLiveX || {} : S.accaX || {}; st[gid] = (st[gid] || []).filter(x => x !== k); render(); }
+  else if (d.accaxrm || d.accalxrm) { const live = !!d.accalxrm, [gid, k] = (d.accaxrm || d.accalxrm).split("|"), st = live ? S.accaLiveX || {} : S.accaX || {};
+    if ((st[gid] || []).includes(k)) st[gid] = st[gid].filter(x => x !== k);
+    else { const main = document.querySelector(`[data-${live ? "accalivealt" : "accaalt"}="${gid}"]`); if (main) (live ? (S.accaLivePick = S.accaLivePick || {}) : (S.accaPick = S.accaPick || {}))[gid] = main.value; }
+    render(); }
   else if (d.iosx !== undefined) { store.set("iosTipX", true); render(); }
   else if (d.impex) { S.importText = d.impex; const t = $("#imptext"); if (t) t.value = d.impex; S.impOddsTyped = false; impRefresh(); }
   else if (d.untrack) { S.tracked = S.tracked.filter(t => t.id !== d.untrack); store.set("tracked", S.tracked); render(); }
