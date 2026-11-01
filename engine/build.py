@@ -187,9 +187,143 @@ def football():
         lf = {t["team"]["id"]: last5(t) for t in s.get("lastFiveGames", []) or []}
         h["last5"], a["last5"] = lf.get(h["id"], []), lf.get(a["id"], [])
         model(m, L, table, league_avg.get(L, 1.35))
+        try:
+            hrs = (dt.datetime.fromisoformat(e["date"].replace("Z", "+00:00")) - dt.datetime.now(dt.timezone.utc)).total_seconds() / 3600
+            if m["status"]["state"] == "pre" and hrs < 36:
+                ta = {t["id"]: (table[(L, t["id"])]["gf"] / table[(L, t["id"])]["gp"]) if table.get((L, t["id"])) and table[(L, t["id"])]["gp"] >= 3 else None for t in (h, a)}
+                m["model"]["markets"] += football_props(m, s, hist, league_avg.get(L, 1.35), ta)
+        except Exception as ex:
+            print("fb props failed", eid, ex, file=sys.stderr)
         matches.append(m)
     matches.sort(key=lambda m: m["kickoff"])
     return matches
+
+# ---------- football player bets (props) ----------
+# who plays: confirmed line-up (about an hour before kick-off) or recent starts in each team's last 5 games (summaries already fetched);
+# how often: the player's season game log on ESPN (league games he appeared in); Premier League: Fantasy PL xG + injury news
+import unicodedata
+def nname(t):
+    t = str(t or "").replace("ø", "o").replace("Ø", "O").replace("æ", "ae").replace("ß", "ss").replace("ł", "l").replace("đ", "d").replace("ı", "i")
+    t = unicodedata.normalize("NFD", t); t = "".join(c for c in t if unicodedata.category(c) != "Mn")
+    return " ".join("".join(c if c.isalpha() else " " for c in t.lower()).split())
+FB_PRIOR = {"F": {"G": .36, "SOG": .95, "SHOT": 2.3, "FA": 1.1, "YC": .12},
+            "M": {"G": .12, "SOG": .42, "SHOT": 1.25, "FA": 1.1, "YC": .2},
+            "D": {"G": .05, "SOG": .17, "SHOT": .6, "FA": .6, "YC": .17}}
+FB_STATS = [("G", "totalGoals", (1,), "goal"), ("SOG", "shotsOnTarget", (1, 2), "shots on target"),
+            ("SHOT", "totalShots", (1, 2, 3), "shots"), ("FA", "foulsSuffered", (1, 2, 3), "times fouled"), ("YC", "cards", (1,), "card")]
+_fpl = {}
+def fpl_index():
+    if "idx" in _fpl: return _fpl["idx"]
+    d = get("https://fantasy.premierleague.com/api/bootstrap-static/", "fpl_boot", 3 * 3600) or {}
+    idx = {}
+    for e in d.get("elements", []) or []:
+        for k in {nname(f"{e.get('first_name', '')} {e.get('second_name', '')}"), nname(e.get("web_name"))}:
+            if k: idx.setdefault(k, []).append(e)
+    _fpl["idx"] = idx
+    return idx
+def fpl_find(name):
+    idx = fpl_index(); n = nname(name)
+    L = idx.get(n) or (idx.get(n.split(" ")[-1]) if n else None) or []
+    return L[0] if len(L) == 1 else None
+def pos_group(abbr):
+    a = str(abbr or "").upper()
+    if a in ("G", "GK"): return "G"
+    if "B" in a or a.startswith("CD") or a in ("D", "SW"): return "D"
+    if "M" in a: return "M"
+    return "F" if a else "M"
+def fb_log(pid):
+    d = get(f"https://site.web.api.espn.com/apis/common/v3/sports/soccer/athletes/{pid}/gamelog", f"fb_gl_{pid}", 12 * 3600)
+    names = d.get("names") or []
+    if not names: return []
+    ix = {n: i for i, n in enumerate(names)}
+    key = {"G": "totalGoals", "SOG": "shotsOnTarget", "SHOT": "totalShots", "FA": "foulsSuffered", "YC": "yellowCards", "RC": "redCards"}
+    out, seen = [], set()
+    for stp in d.get("seasonTypes") or []:
+        for cat in stp.get("categories") or []:
+            if cat.get("type") not in (None, "event"): continue
+            for ev in cat.get("events") or []:
+                st = ev.get("stats") or []
+                if ev.get("eventId") in seen or len(st) < len(names): continue
+                seen.add(ev.get("eventId"))
+                row = {k: f(st[ix[v]]) for k, v in key.items() if v in ix}
+                row["YC"] = row.get("YC", 0) + row.pop("RC", 0)
+                out.append(row)
+    return out
+def football_props(m, s, hist, mu, team_avg):
+    sides = {"h": m["home"], "a": m["away"]}
+    tid_side = {m["home"]["id"]: "h", m["away"]["id"]: "a"}
+    confirmed = {}
+    for t in s.get("rosters") or []:
+        sd = tid_side.get((t.get("team") or {}).get("id"))
+        R = t.get("roster") or []
+        if sd and sum(1 for p in R if p.get("starter")) >= 11:
+            confirmed[sd] = {str((p.get("athlete") or {}).get("id")) for p in R if p.get("starter")}
+    recent = {"h": {}, "a": {}}
+    for tb in s.get("lastFiveGames", []) or []:
+        sd = tid_side.get((tb.get("team") or {}).get("id"))
+        if not sd: continue
+        for ev in (tb.get("events") or [])[:5]:
+            for t in (hist.get(ev["id"], {}).get("rosters") or []):
+                if (t.get("team") or {}).get("id") != sides[sd]["id"]: continue
+                for p in t.get("roster") or []:
+                    A = p.get("athlete") or {}; pid = str(A.get("id"))
+                    r = recent[sd].setdefault(pid, {"name": A.get("displayName"), "pos": "", "starts": 0})
+                    ab = (p.get("position") or {}).get("abbreviation", "")
+                    if ab and ab != "SUB": r["pos"] = ab
+                    if p.get("starter"): r["starts"] += 1
+    if confirmed:   # a confirmed starter who wasn't in the last five still counts
+        for t in s.get("rosters") or []:
+            sd = tid_side.get((t.get("team") or {}).get("id"))
+            if sd not in confirmed: continue
+            for p in t.get("roster") or []:
+                A = p.get("athlete") or {}; pid = str(A.get("id"))
+                if p.get("starter"):
+                    r = recent[sd].setdefault(pid, {"name": A.get("displayName"), "pos": "", "starts": 0})
+                    r["pos"] = (p.get("position") or {}).get("abbreviation", "") or r["pos"]
+    cands = []
+    for sd in ("h", "a"):
+        for pid, r in recent[sd].items():
+            if sd in confirmed:
+                if pid not in confirmed[sd]: continue
+            elif r["starts"] < 3: continue
+            grp = pos_group(r["pos"])
+            if grp == "G" or not r["name"]: continue
+            cands.append((sd, pid, r["name"], grp))
+    if not cands: return []
+    logs = pmap(lambda c: fb_log(c[1]), cands, 12)
+    xg = {"h": m["model"]["xgH"], "a": m["model"]["xgA"]}
+    epl = m["league"] == "eng.1"
+    players = []
+    for (sd, pid, name, grp), lg in zip(cands, logs):
+        pr, n, k = FB_PRIOR[grp], len(lg), 3
+        rate = {st: (sum(x.get(st, 0) for x in lg) + k * pr[st]) / (n + k) for st in pr}
+        if epl:
+            e = fpl_find(name)
+            if e:
+                if e.get("status") in ("i", "s", "u", "n") or (e.get("chance_of_playing_next_round") is not None and e["chance_of_playing_next_round"] < 75): continue
+                mins = f(e.get("minutes"))
+                if mins >= 270: rate["G"] = 0.5 * rate["G"] + 0.5 * f(e.get("expected_goals")) / mins * 90 * 0.88
+        ta = team_avg.get(sides[sd]["id"]) or mu
+        att = 0.5 + 0.5 * max(0.6, min(1.6, xg[sd] / max(ta, 0.4)))   # an easier or tougher game than usual for this team
+        for st in ("G", "SOG", "SHOT"): rate[st] *= att
+        players.append((rate["G"] * 3 + rate["SOG"] + 0.3 * rate["FA"], sd, pid, name, rate))
+    players.sort(key=lambda x: -x[0])
+    keep, cnt = [], {"h": 0, "a": 0}
+    for pl in players:
+        if cnt[pl[1]] < 5: keep.append(pl); cnt[pl[1]] += 1
+    mk = []
+    for _, sd, pid, name, rate in keep:
+        for st, stat, lines, word in FB_STATS:
+            opts = []
+            for t in lines:
+                pp = p_over(t - 1, rate[st])
+                if 0.12 <= pp <= 0.92: opts.append((0 if 0.5 <= pp <= 0.8 else min(abs(pp - 0.5), abs(pp - 0.8)), t, pp))
+            for _, t, pp in sorted(opts)[:2]:
+                pp = round(pp, 4)
+                lab = f"{name} to score" if st == "G" else f"{name} to be carded" if st == "YC" else f"{name} {t}+ {word}"
+                mk.append({"k": f"P:{pid}:{stat}:{t}", "label": lab, "p": pp, "fair": round(1 / pp, 3),
+                           "prop": {"pid": pid, "name": name, "side": sd, "team": sides[sd]["name"], "stat": stat, "target": t, "label": word}})
+    return mk
 
 def model(m, L, table, mu):
     h, a = m["home"], m["away"]

@@ -1079,12 +1079,13 @@ const priceOf = m => m.dec || (m.prop ? livePrice(m.p) : m.fair);
 const isProp = m => /^P:/.test((m && m.k) || m || "");
 const propLeg = m => m && m.prop ? { pid: m.prop.pid, name: m.prop.name, side: m.prop.side, team: m.prop.team, stat: m.prop.stat, target: m.prop.target, label: m.prop.label } : {};
 const shortName = n => { const w = String(n || "").split(" "); return w.length > 1 ? w[0][0] + ". " + w.slice(1).join(" ") : n; };
-const legText = l => l.pid ? `${l.name} ${l.target}+ ${l.label}` : l.label;
+const propText = (l, nm) => (nm = nm || l.name, l.stat === "totalGoals" && +l.target === 1 && !l.half ? `${nm} to score` : l.stat === "cards" && +l.target === 1 && !l.half ? `${nm} to be carded` : `${nm} ${l.target}+ ${l.label}`);
+const legText = l => l.pid ? (l.group ? `${l.name} ${l.target}+ ${l.label}` : propText(l)) : l.label;
 function optsHTML(list, sel, price, now) {
   const o = (m, txt) => `<option value="${m.k}" ${m.k === sel ? "selected" : ""}>${esc(txt)} · ${pct(m.p)}${now || ""} · ${odds(price(m))}</option>`;
   const main = list.filter(m => !isProp(m)), props = list.filter(isProp); if (!props.length) return main.map(m => o(m, m.label)).join("");
   const byP = new Map(); for (const m of [...props].sort((a, b) => a.prop.name.localeCompare(b.prop.name) || a.prop.stat.localeCompare(b.prop.stat) || a.prop.target - b.prop.target)) { const k = m.prop.name + " · " + m.prop.team; byP.set(k, [...(byP.get(k) || []), m]); }
-  return `${main.length ? `<optgroup label="Match bets">${main.map(m => o(m, m.label)).join("")}</optgroup>` : ""}${[...byP].map(([k, L]) => `<optgroup label="${esc(k)}">${L.map(m => o(m, `${shortName(m.prop.name)} ${m.prop.target}+ ${m.prop.label}`)).join("")}</optgroup>`).join("")}`;
+  return `${main.length ? `<optgroup label="Match bets">${main.map(m => o(m, m.label)).join("")}</optgroup>` : ""}${[...byP].map(([k, L]) => `<optgroup label="${esc(k)}">${L.map(m => o(m, propText(m.prop, shortName(m.prop.name)))).join("")}</optgroup>`).join("")}`;
 }
 const tierColor = p => p >= .75 ? "var(--win)" : p >= .62 ? "var(--blue-2)" : p >= .5 ? "var(--tang)" : "var(--loss)";
 
@@ -1512,7 +1513,7 @@ function withBundles(opts, price) {
   /* match-bet groups always; player bets only from the 8 player/stat groups with the likeliest bet, so it stays quick */
   const G = Object.entries(byG).map(([k, L]) => [k, L.sort((a, b) => b.p - a.p).slice(0, k.startsWith("p:") ? 3 : 6)]);
   const groups = [...G.filter(([k]) => !k.startsWith("p:")), ...G.filter(([k]) => k.startsWith("p:")).sort((a, b) => b[1][0].p - a[1][0].p).slice(0, 8)].map(x => x[1]);
-  const fake = legs => legs.some(m => /^(HO|AO)/.test(m.k)) && legs.some(m => /^(1|2|DNB1|DNB2|1X|X2)$/.test(m.k));   /* a team winning already means it scored: no fake value */
+  const fake = legs => (legs.some(m => /^(HO|AO)/.test(m.k)) && legs.some(m => /^(1|2|DNB1|DNB2|1X|X2)$/.test(m.k))) || legs.some(m => m.prop && m.prop.stat === "totalGoals" && legs.some(x => x.k === (m.prop.side === "h" ? "HO05" : "AO05")));   /* a team winning already means it scored: no fake value */
   const binKeep = (list, n) => { const bins = new Map(); for (const b of [...list].sort((a, b) => b.p - a.p)) { const k = Math.round(b.lt * 5), L = bins.get(k) || []; if (L.length < n) { L.push(b); bins.set(k, L); } } return [...bins.values()].flat(); };
   let beam = [{ legs: [], gi: -1, p: 1, lt: 0 }]; const all = [];
   for (let size = 1; size <= 4; size++) {
@@ -1569,7 +1570,8 @@ const addMoreSel = (g, chosen, opts, price, attr) => {
   const free = opts.filter(m => !chosen.some(k => k === m.k || conflicts(k, m.k)));
   // the one we'd add: likeliest bet from a different kind (result / goals / corners / cards), not one that just repeats another
   const groups = new Set(chosen.map(SG_GROUP)), isRes = k => /^(1|2|DNB1|DNB2|1X|X2)$/.test(k);
-  const best = free.filter(m => !groups.has(SG_GROUP(m.k)) && price(m) >= 1.08 && !(/^(HO|AO)/.test(m.k) && chosen.some(isRes)) && !(isRes(m.k) && chosen.some(k => /^(HO|AO)/.test(k))) && m.p >= .3).sort((a, b) => b.p - a.p)[0];
+  const scorerOf = k => { const m = opts.find(x => x.k === k); return m && m.prop && m.prop.stat === "totalGoals" ? m.prop.side : null; }, teamGoal = { HO05: "h", AO05: "a" };
+  const best = free.filter(m => !groups.has(SG_GROUP(m.k)) && !(teamGoal[m.k] && chosen.some(k => scorerOf(k) === teamGoal[m.k])) && !(m.prop && m.prop.stat === "totalGoals" && chosen.includes(m.prop.side === "h" ? "HO05" : "AO05")) && price(m) >= 1.08 && !(/^(HO|AO)/.test(m.k) && chosen.some(isRes)) && !(isRes(m.k) && chosen.some(k => /^(HO|AO)/.test(k))) && m.p >= .3).sort((a, b) => b.p - a.p)[0];
   if (!free.length) return "";
   return `<div class="addmore-row">${best ? `<button class="addbest" ${attr}-best="${g.id}|${best.k}">＋ Add the likeliest extra bet: <b>${esc(best.label)}</b> · ${pct(best.p)} · ${odds(price(best))}</button>` : ""}
     <details class="addpick" data-ap="${attr}-${g.id}" ${(S.addOpen || {})[attr + "-" + g.id] ? "open" : ""}><summary>or choose one yourself</summary><label class="sr" for="${attr}-${g.id}">Add another bet from ${esc(vs(S.sport, g))}</label><select class="addmore" id="${attr}-${g.id}" ${attr}="${g.id}"><option value="">Pick a bet from this game…</option>${optsHTML(free, null, price)}</select></details></div>`; };
@@ -2405,7 +2407,7 @@ function legInfo0(l) {   // -> { html, st: "pre" | "live" | "hit" | "miss" | "vo
 const surnames = l => { const N = (l.group || []).map(m => m.name.split(" ").slice(1).join(" ") || m.name); return N.length > 1 ? N.slice(0, -1).join(", ") + " & " + N[N.length - 1] : l.name; };
 const betTitle = (legs, text) => { const L = (legs || []).filter(l => l.pid || l.k), n = L.length, one = L[0]; if (!n) return text || "Bet";
   if (n > 1 && L.every(l => l.pid && !l.group && l.pid === one.pid)) return `${one.name} · ${n} bets`;
-  return n > 1 ? `${n}-leg ${L.every(l => l.pid) ? "player bet" : n === 2 ? "double" : n === 3 ? "treble" : "acca"}` : one.group ? `${surnames(one)} ${one.target}+ ${one.label}` : one.pid ? `${one.name} ${one.target}+ ${one.label}` : String(one.label || text || "").replace(/ \(in-play\)$/, ""); };
+  return n > 1 ? `${n}-leg ${L.every(l => l.pid) ? "player bet" : n === 2 ? "double" : n === 3 ? "treble" : "acca"}` : one.group ? `${surnames(one)} ${one.target}+ ${one.label}` : one.pid ? propText(one) : String(one.label || text || "").replace(/ \(in-play\)$/, ""); };
 function gamesLine(b) {
   const keys = [...new Set((b.legs || []).filter(l => l.gid).map(l => l.sport + ":" + l.gid))], gs = keys.map(k => { const [sp, id] = k.split(":"), g = findGame(sp, id); return g ? vs(sp, g) : null; }).filter(Boolean);
   return gs.length ? gs[0] + (gs.length > 1 ? ` + ${gs.length - 1} more` : "") : b.match || "";
@@ -3299,7 +3301,7 @@ function alertTick() {
     const isNew = !known.has(it.id), add = (k, title, body) => { const key = it.id + ":" + k; if (seen.has(key)) return; seen.add(key); if (!isNew) fresh.push([title, body, key]); };
     const L = it.legs.filter(l => (l.pid || l.k) && l.gid && findGame(l.sport, l.gid)), info = L.map(l => ({ l, i: legInfo0(l) })), hit = info.filter(x => x.i.st === "hit").length;
     for (const { l, i } of info) {
-      const lk = l.pid ? `p${l.pid}${l.stat}${l.target}` : `k${l.gid}${l.k}`, nm = l.pid ? `${l.name} ${l.target}+ ${l.label}` : l.label;
+      const lk = l.pid ? `p${l.pid}${l.stat}${l.target}` : `k${l.gid}${l.k}`, nm = legText(l);
       if (i.st === "hit") add(lk + ":hit", `✓ ${nm}`, L.length > 1 ? `${hit} of ${L.length} landed · ${it.title}` : "Landed");
       if (l.pid && i.st === "live") { const r = legValue(l), need = r.v == null ? null : l.target - r.v; if (need != null && need > 0 && need <= (l.stat === "PTS" || l.stat === "PRA" ? 2 : 1)) add(lk + ":close", `🔥 ${l.name} needs ${need} more ${need === 1 ? l.label.replace(/s$/, "") : l.label}`, `${l.target}+ ${l.label} · ${it.title}`); }
       if (i.st === "miss") add(lk + ":miss", `✗ ${nm} missed`, it.title);
@@ -3457,7 +3459,7 @@ document.addEventListener("click", e => {
   else if (d.untrack) { S.tracked = S.tracked.filter(t => t.id !== d.untrack); store.set("tracked", S.tracked); render(); }
   else if (d.impgo !== undefined) {
     const { idx } = playerIndex(), r = parseBet(S.importText || "", idx); if (!r.legs.length) return;
-    const dec = parseOdds(($("#impodds") || {}).value) || r.dec, stake = +(($("#impstake") || {}).value) || 0, text = r.legs.map(l => l.pid ? `${l.name} ${l.target}+ ${l.label}` : `${l.label} (${l.match})`).join(" + ").slice(0, 200);
+    const dec = parseOdds(($("#impodds") || {}).value) || r.dec, stake = +(($("#impstake") || {}).value) || 0, text = r.legs.map(l => l.pid ? legText(l) : `${l.label} (${l.match})`).join(" + ").slice(0, 200);
     const t = { id: "t" + Date.now(), text, legs: r.legs, dec, stake, at: new Date().toISOString() };
     S.tracked = [t, ...(S.tracked || [])]; store.set("tracked", S.tracked);
     if (S.user && sb && ($("#impsave") || {}).checked && dec) {
