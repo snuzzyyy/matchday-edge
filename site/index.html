@@ -500,7 +500,7 @@ a.prof-bdg{text-decoration:none}
 .stake label{font-size:13px;color:var(--fg-2);flex:1}
 .stake .in{display:flex;align-items:center;background:var(--surface-2);border:1px solid var(--line-2);border-radius:8px;padding:0 10px;width:110px}
 .stake input{width:100%;background:none;border:0;color:var(--fg);font-family:var(--display);font-size:18px;font-weight:700;padding:7px 0;outline:none}
-.meter{height:8px;border-radius:8px;background:var(--surface-3);overflow:hidden}
+.meter{height:8px;border-radius:8px;background:var(--surface-3);overflow:hidden}.bc-chance{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:12.5px;color:var(--fg-2);margin-bottom:-4px}.bc-chance small{color:var(--muted);font-size:11px}.bc-chance b{font-family:var(--display);font-size:20px}.bc-meter{height:10px}
 .meter i{display:block;height:100%;border-radius:8px;background:linear-gradient(90deg,var(--live),var(--amber),var(--win))}
 .books{display:flex;flex-wrap:wrap;gap:6px}
 .books a{font-size:11.5px;font-weight:700;padding:6px 9px;border-radius:6px;text-decoration:none;color:var(--fg);background:var(--surface-3)}
@@ -2493,13 +2493,47 @@ function betViewSheet(id) {
     <div class="bv-who">${avatarHTML(who, 38)}<div><b>${mine ? "Your bet" : esc(who.display_name)}${mine ? "" : badgesHTML(who, 1)}</b><small>Placed ${ago2(b.placed_at)} ago${b.match && !L.length ? " · " + esc(b.match) : ""}</small></div></div>
     ${card}${mine ? `<div class="bv-foot"><button class="linkbtn" data-delbet="${b.id}">Delete this bet</button></div>` : ""}${mine ? "" : `<div class="fi-acts">${reactBar(b)}${canTail(b) ? `<button class="btn sm tail" data-tail="${b.id}">Copy bet</button>` : ""}</div>`}</div>`;
 }
+/* ---------- the chance a bet lands, now: each leg from the score, the pace so far, the pre-match expectation and the time left ---------- */
+function gameFrac(sp, g) {
+  if (isPre(g)) return 0; if (g.status.state === "post") return 1;
+  if (sp === "nba") { const q = g.status.period || 1; if (q > 4) return .98; return Math.min(.98, Math.max(0, ((q - 1) * 12 + (12 - clockMins(g.status.clock))) / 48)); }
+  return Math.min(.99, Math.max(0, (97 - fbLeft(g)) / 97));
+}
+const atLeast = (need, lam, stat) => need <= 0 ? 1 : /^(PTS|PRA)$/.test(stat || "") ? 1 - phi((need - .5 - lam) / Math.sqrt(Math.max(1, 2.2 * lam))) : pAtLeast(need, lam);   /* points come in 2s and 3s: wider than a plain count */
+function lamFor(p, t, stat) { if (!(p > 0 && p < 1)) return null; let lo = 0, hi = 150; for (let i = 0; i < 40; i++) { const mid = (lo + hi) / 2; if (atLeast(t, mid, stat) < p) lo = mid; else hi = mid; } return (lo + hi) / 2; }
+function paceChance(cur, need, f, lam0, stat) {
+  if (need <= 0) return 1; if (f >= 1) return 0;
+  const lc = f > .05 ? cur / f : null, full = lam0 != null && lc != null ? (1 - f) * lam0 + f * lc : lam0 != null ? lam0 : lc;
+  return full == null ? null : atLeast(need, Math.max(.01, full * (1 - f)), stat);
+}
+function legChance(l) {
+  const st = legInfo0(l).st; if (st === "hit" || st === "void") return 1; if (st === "miss") return 0;
+  const g = findGame(l.sport, l.gid); if (!g) return null;
+  if (l.pid) {
+    if (l.half) return null;
+    const m = !l.group && mkt(g, `P:${l.pid}:${l.stat}:${l.target}`), lam0 = m ? lamFor(m.p, l.target, l.stat) : null;
+    if (isPre(g)) return m ? m.p : null;
+    const cur = legValue(l).v || 0; return paceChance(cur, l.target - cur, gameFrac(l.sport, g), lam0, l.stat);
+  }
+  if (/^T:/.test(l.k || "")) {
+    const [, stat, who, n0] = l.k.split(":"), n = +n0, v = teamStatVals(g, stat) || [0, 0], f = gameFrac(l.sport, g), M = g.model || {};
+    const prior = stat === "cards" && M.cards ? [M.cards / 2, M.cards / 2] : stat === "corners" && M.corners ? [M.corners / 2, M.corners / 2] : stat === "goals" ? [M.xgH, M.xgA] : [null, null];
+    const pt = i => paceChance(v[i], n - v[i], f, prior[i]); const a = who === "away" ? null : pt(0), b = who === "home" ? null : pt(1);
+    return who === "each" ? (a == null || b == null ? null : a * b) : who === "home" ? a : b;
+  }
+  if (isPre(g)) { const m = mkt(g, l.k); return m ? m.p : l.p ?? null; }
+  const m = liveMarkets(l.sport, g).find(x => x.k === l.k); return m ? (m.state === "won" ? 1 : m.state === "lost" ? 0 : m.p) : null;
+}
+function betChance(legs) { let p = 1, unknown = 0; for (const l of legs) { const c = legChance(l); if (c == null) unknown++; else p *= c; } return { p, unknown }; }
 function betCard(t) {
   const info = t.legs.map((l, i) => legInfo(i && l.pid && !l.group && t.legs[i - 1].pid === l.pid ? { ...l, _sub: true } : l)), n = t.legs.length, hit = info.filter(i => i.st === "hit").length, voids = info.filter(i => i.st === "void").length;
   const lost = info.some(i => i.st === "miss"), started = info.some(i => i.st !== "pre");
   const overall = t.result === "won" ? `<span class="st won">Won ✓</span>` : t.result === "lost" ? `<span class="st lost">Lost</span>` : t.result === "void" ? `<span class="st void">Void</span>` : lost ? `<span class="st lost">Lost</span>` : hit && hit + voids === n ? `<span class="st won">Won ✓</span>` : voids === n ? `<span class="st void">Void</span>` : started ? `<span class="st">${hit} of ${n} landed</span>` : `<span class="st">Not started</span>`;
   const title = betTitle(t.legs, t.text);
   const x = t.noX ? "" : t.saved ? `<button class="x" data-delbet="${t.saved}" aria-label="Delete bet">✕</button>` : `<button class="x" data-untrack="${t.id}" aria-label="Stop tracking">✕</button>`;
-  return `<article class="trk-card ${t.chal ? "chalcard" : ""}"><div class="trk-hd"><div>${t.tag ? `<a class="chaltag" href="#challenge">🏆 ${esc(t.tag)} ›</a>` : ""}<b>${esc(title)}</b><small>${t.dec ? odds(t.dec) + " · " : ""}${t.stake ? `£${(+t.stake).toFixed(2).replace(/\.00$/, "")} returns ${money(t.stake * (t.dec || 1))}` : ""}</small></div>${overall}${x}</div>${info.map(i => i.html).join("")}</article>`;
+  const BC = !t.result || t.result === "open" ? betChance(t.legs) : null, showC = BC && !lost && !(hit && hit + voids === n) && BC.unknown < n;
+  const chanceRow = showC ? `<div class="bc-chance"><span>${started ? "Chance it lands now" : "Chance it lands"}${BC.unknown ? ` <small>(${BC.unknown} leg${BC.unknown > 1 ? "s" : ""} not counted)</small>` : ""}</span><b style="color:${tierColor(BC.p)}">${pct(BC.p)}</b></div><div class="meter bc-meter"><i style="width:${Math.max(2, BC.p * 100)}%"></i></div>` : "";
+  return `<article class="trk-card ${t.chal ? "chalcard" : ""}"><div class="trk-hd"><div>${t.tag ? `<a class="chaltag" href="#challenge">🏆 ${esc(t.tag)} ›</a>` : ""}<b>${esc(title)}</b><small>${t.dec ? odds(t.dec) + " · " : ""}${t.stake ? `£${(+t.stake).toFixed(2).replace(/\.00$/, "")} returns ${money(t.stake * (t.dec || 1))}` : ""}</small></div>${overall}${x}</div>${chanceRow}${info.map(i => i.html).join("")}</article>`;
 }
 function trackerHTML(bare, extra) {
   const all = [...(S.tracked || []), ...(extra || [])], sportOf = t => (t.legs[0] || {}).sport, T = bare ? all : all.filter(t => sportOf(t) === S.sport), other = all.length - T.length;
