@@ -150,13 +150,17 @@ def settle_bets():
         done = http("PATCH", f"bets?id=eq.{b['id']}&result=eq.open", {"result": res, "returns": ret, "settled_at": now(), "legs": legs}, "return=representation")
         if not done: continue   # the app got there first
         n += 1
-        if res == "won":
-            w = http("GET", f"wallets?user_id=eq.{b['user_id']}&select=amount")
-            if w: http("PATCH", f"wallets?user_id=eq.{b['user_id']}", {"amount": round(float(w[0]["amount"]) + ret, 2), "updated_at": now()})
+        if res == "won": credit_wallet(b["user_id"], ret)
     return n
 
 
-def settle_ladder(C):
+def credit_wallet(uid, amount):
+    if amount <= 0: return
+    w = http("GET", f"wallets?user_id=eq.{uid}&select=amount")
+    if w: http("PATCH", f"wallets?user_id=eq.{uid}", {"amount": round(float(w[0]["amount"]) + amount, 2), "updated_at": now()})
+
+
+def settle_ladder(C, uid):
     A = C.get("active")
     if not A: return False
     res, _ = outcome(A.get("legs"))
@@ -167,6 +171,7 @@ def settle_ladder(C):
     C["history"] = [entry] + (C.get("history") or []); C["active"] = None
     if res == "won":
         C["bank"] = entry["ret"]; C["rung"] = C.get("rung", 0) + 1
+        credit_wallet(uid, entry["ret"])   # £1K winnings land in the bookie balance too
     else:
         rets = [h.get("ret", 0) for h in C["history"] if h.get("result") in ("W", "C")]
         today = f"{d.day} {d:%b %Y}"
@@ -181,7 +186,7 @@ def settle_challenges():
     for row in http("GET", "challenges?select=user_id,data") or []:
         D, changed = row.get("data") or {}, False
         for C in ([D.get("football"), D.get("nba")] if D.get("v") == 2 else [D]):
-            if C and settle_ladder(C): changed = True
+            if C and settle_ladder(C, row["user_id"]): changed = True
         if changed:
             http("PATCH", f"challenges?user_id=eq.{row['user_id']}", {"data": D, "updated_at": now()}); n += 1
     return n

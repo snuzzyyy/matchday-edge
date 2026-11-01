@@ -170,6 +170,7 @@ h3{font-size:15px;font-weight:700}
 .cmp i{display:block;height:100%;border-radius:5px;transition:width .3s}
 .cmp .h{background:var(--blue)}.cmp .a{background:var(--tang)}
 .btiles{display:grid;gap:8px}
+.chaltag{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--tang);text-decoration:none;margin-bottom:2px}.trk-card.chalcard{border-color:rgba(255,122,47,.45)}
 .ab-leg.extra{margin-left:18px;border-left:2px solid var(--blue)}.abl-x{display:block;font-size:14px;font-weight:600;margin-top:2px}
 select.addmore{width:100%;background:none;border:1px dashed var(--line-2);color:var(--blue-2);font:inherit;font-weight:700;font-size:13px;border-radius:10px;padding:9px 10px;margin:-2px 0 4px}
 .pchart{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 12px 10px 52px;touch-action:pan-y}
@@ -1764,12 +1765,14 @@ function chalLogForm(C) {
   return `<form class="chal-log" id="chalLog"><b>Log step ${C.rung + 1}: ${fmtBank(C.bank)} → about ${fmtBank(C.bank * 2)}</b><div class="addrow"><div class="field"><label for="cl-bet">Your bet</label><input id="cl-bet" placeholder="e.g. Grizzlies to win" required></div><div class="field" style="flex:0 1 120px"><label for="cl-odds">Odds</label><input id="cl-odds" placeholder="EVS or 2.0" required></div></div>
   <div class="addrow"><button class="btn win" type="submit" data-res="W">It won</button><button class="btn lose" type="submit" data-res="L">It lost</button></div></form>`;
 }
+const chalOpen = () => S.user ? ["football", "nba"].map(sp => (S.chalAll || {})[sp]).filter(C => C && C.active).reduce((a, C) => a + (+C.bank || 0), 0) : 0;
 function chalSettle(res, bet, match, dec, sport = S.sport) {
   const C = JSON.parse(JSON.stringify(chalNow(sport))), stake = C.bank;
   const entry = { at: new Date().toISOString(), date: new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short" }), bet, match: match || "", odds: S.fmt === "dec" ? dec.toFixed(2) : frac(dec), stake, result: res, ret: res === "W" ? Math.round(stake * dec * 100) / 100 : 0 };
   C.history.unshift(entry); C.active = null; S.rungSel = null;
   if (res === "W") { C.bank = entry.ret; C.rung += 1; toast(C.rung >= C.rungs ? "You've done it! £" + C.start + " → £" + C.bank : "Nice one. Bank now £" + C.bank); }
   else { archiveAttempt(C, "lost"); toast("Unlucky. Saved to Previous challenges. Back to £" + C.start + " for attempt " + C.attempts); }
+  if (res === "W") walletAdjust(entry.ret);   // winnings land in your bookie balance
   saveChal(C, sport);
 }
 function archiveAttempt(C, outcome) {
@@ -2243,7 +2246,7 @@ function betCard(t) {
   const allProps = t.legs.every(l => l.pid), one = t.legs[0];
   const title = n > 1 ? `${n}-leg ${allProps ? "player bet" : n === 2 ? "double" : n === 3 ? "treble" : "acca"}` : one.pid ? `${one.name} ${one.target}+ ${one.label}` : String(one.label || t.text || "").replace(/ \(in-play\)$/, "");
   const x = t.noX ? "" : t.saved ? `<button class="x" data-delbet="${t.saved}" aria-label="Delete bet">✕</button>` : `<button class="x" data-untrack="${t.id}" aria-label="Stop tracking">✕</button>`;
-  return `<article class="trk-card"><div class="trk-hd"><div><b>${esc(title)}</b><small>${t.dec ? odds(t.dec) + " · " : ""}${t.stake ? `£${(+t.stake).toFixed(2).replace(/\.00$/, "")} returns ${money(t.stake * (t.dec || 1))}` : ""}</small></div>${overall}${x}</div>${info.map(i => i.html).join("")}</article>`;
+  return `<article class="trk-card ${t.chal ? "chalcard" : ""}"><div class="trk-hd"><div>${t.tag ? `<a class="chaltag" href="#challenge">🏆 ${esc(t.tag)} ›</a>` : ""}<b>${esc(title)}</b><small>${t.dec ? odds(t.dec) + " · " : ""}${t.stake ? `£${(+t.stake).toFixed(2).replace(/\.00$/, "")} returns ${money(t.stake * (t.dec || 1))}` : ""}</small></div>${overall}${x}</div>${info.map(i => i.html).join("")}</article>`;
 }
 function trackerHTML(bare, extra) {
   const all = [...(S.tracked || []), ...(extra || [])], sportOf = t => (t.legs[0] || {}).sport, T = bare ? all : all.filter(t => sportOf(t) === S.sport), other = all.length - T.length;
@@ -2715,7 +2718,9 @@ function viewMyBets() {
   const bets = S.user ? S.bets || [] : [], track = b => (b.legs || []).some(l => l.pid || l.k);
   const savedCards = bets.filter(b => b.result === "open" && track(b)).map(b => ({ id: "s" + b.id, saved: b.id, text: b.label, legs: b.legs.filter(l => l.pid || l.k), dec: +b.odds_dec, stake: +b.stake }));
   const local = (S.tracked || []).filter(t => !bets.some(b => b.label === t.text));
-  const cards = [...local, ...savedCards].sort((a, b) => Math.min(...a.legs.map(l => +new Date(kick(findGame(l.sport, l.gid) || { start: 0 })) || 0)) - Math.min(...b.legs.map(l => +new Date(kick(findGame(l.sport, l.gid) || { start: 0 })) || 0)));
+  const chalCards = S.user ? ["football", "nba"].map(sp => [sp, (S.chalAll || {})[sp]]).filter(([, C]) => C && C.active && (C.active.legs || []).some(l => l.k || l.pid))
+    .map(([sp, C]) => ({ id: "c" + sp, chal: sp, noX: true, tag: `£1K ${SPN[sp]} · step ${C.rung + 1}`, text: C.active.label, legs: C.active.legs, dec: +C.active.dec, stake: +C.bank })) : [];
+  const cards = [...chalCards, ...local, ...savedCards].sort((a, b) => Math.min(...a.legs.map(l => +new Date(kick(findGame(l.sport, l.gid) || { start: 0 })) || 0)) - Math.min(...b.legs.map(l => +new Date(kick(findGame(l.sport, l.gid) || { start: 0 })) || 0)));
   for (const c of cards) for (const l of c.legs) { const g = findGame(l.sport, l.gid); if (l.pid && g && !isPre(g) && !(l.sport === "nba" ? g.box : g.lineups)) loadDetail(l.sport + ":" + l.gid); }
   const hand = bets.filter(b => b.result === "open" && !track(b)), settled = bets.filter(b => b.result !== "open");
   const head = `<div class="hd"><div><h1>My Bets</h1><p class="sub">Your bets update live and settle themselves at full time.</p></div><button class="btn ghost sm" data-import>+ Import a bet</button></div>`;
@@ -2926,9 +2931,9 @@ document.addEventListener("click", async e => {
     if (!legs.length) return;
     const C = JSON.parse(JSON.stringify(chalNow(sp)));
     C.active = { legs, label: legs.map(l => l.label).join(" + "), match: legs.map(l => l.match).join(", "), dec: Math.round(legs.reduce((a, l) => a * l.dec, 1) * 1000) / 1000, p: legs.reduce((a, l) => a * l.p, 1) };
-    S.rungSel = C.rung; saveChal(C, sp); toast("Added to step " + (C.rung + 1)); scrollTo({ top: 0, behavior: "smooth" });
+    S.rungSel = C.rung; saveChal(C, sp); walletAdjust(-C.bank); toast("Added to step " + (C.rung + 1)); scrollTo({ top: 0, behavior: "smooth" });
   }
-  else if (d.chalclear !== undefined) { const C = JSON.parse(JSON.stringify(chalNow())); C.active = null; saveChal(C); }
+  else if (d.chalclear !== undefined) { const C = JSON.parse(JSON.stringify(chalNow())); if (C.active) walletAdjust(+C.bank); C.active = null; saveChal(C); }
   else if (d.chalres) { const C = chalNow(); if (C.active) chalSettle(d.chalres, C.active.label, C.active.match, C.active.dec); }
   else if (d.savebet !== undefined) {
     if (!S.user) { S.slipOpen = false; location.hash = "account"; return; }
@@ -2970,7 +2975,7 @@ function cashGo(mode) {
   if (mode === "bet" && C.active) {
     const stake = C.bank, adv = amt > stake;
     C.history.unshift({ at, date, bet: C.active.label, match: C.active.match || "", odds: "cash out", stake, result: "C", ret: amt, adv });
-    C.active = null; C.bank = amt; if (adv) C.rung += 1;
+    C.active = null; C.bank = amt; if (adv) C.rung += 1; walletAdjust(amt);
     toast(adv ? `Cashed out for ${money(amt)}. On to step ${C.rung + 1}` : `Cashed out for ${money(amt)}. Still on step ${C.rung + 1}`);
   } else {
     if (amt > C.bank + 1e-9) { toast(`You only have ${money(C.bank)}`); return; }
@@ -2995,14 +3000,14 @@ async function walletSet(amount) {
 }
 function walletSection(sw) {
   if (S.walletReady === false) return `<section class="section"><h2>Balance</h2><div class="setcard"><div class="setrow favwrap"><small>Balance tracking needs a quick database update. Ask Claude for the steps.</small></div></div></section>`;
-  const W = S.wallet, open = (S.bets || []).filter(b => b.result === "open").reduce((a, b) => a + +b.stake, 0);
+  const W = S.wallet, open = (S.bets || []).filter(b => b.result === "open").reduce((a, b) => a + +b.stake, 0) + chalOpen();
   const form = `<form class="setrow namerow" id="walletForm"><label for="walamt"><small>${W ? "Correct your balance (£)" : "Your betting balance (£)"}</small></label><input id="walamt" type="number" inputmode="decimal" step="0.01" min="0" placeholder="e.g. 50.00" value="${W ? (+W.amount).toFixed(2) : ""}"><button class="btn ghost sm" type="submit">${W ? "Save" : "Set"}</button></form>`;
   return `<section class="section"><h2>Balance</h2><div class="setcard">
     ${W && !S.walletEdit ? `<div class="setrow"><span class="ic-dot">💷</span><span><b class="walbig">${money(+W.amount)}</b><small>${open ? money(open) + " in open bets · " : ""}updates as your bets settle</small></span><button class="btn ghost sm" data-walletedit>Edit</button></div>` : form}
     ${W ? sw("walletPub", !!W.is_public, "Show my balance to friends", "Off unless you switch it on") : `<div class="setrow favwrap"><small>Enter what's in your bookie account. Saving a bet takes the stake off, and a win adds the returns.</small></div>`}</div></section>`;
 }
 const walletStrip = () => !S.user || S.walletReady === false ? "" : S.wallet
-  ? `<a class="strip" href="#account"><span class="ic-dot">💷</span><span><b>Balance ${money(+S.wallet.amount)}</b><small>${(() => { const o = (S.bets || []).filter(b => b.result === "open").reduce((a, b) => a + +b.stake, 0); return o ? money(o) + " in open bets · " : ""; })()}${S.wallet.is_public ? "friends can see it" : "private"}</small></span><span aria-hidden="true">›</span></a>`
+  ? `<a class="strip" href="#account"><span class="ic-dot">💷</span><span><b>Balance ${money(+S.wallet.amount)}</b><small>${(() => { const o = (S.bets || []).filter(b => b.result === "open").reduce((a, b) => a + +b.stake, 0) + chalOpen(); return o ? money(o) + " in open bets · " : ""; })()}${S.wallet.is_public ? "friends can see it" : "private"}</small></span><span aria-hidden="true">›</span></a>`
   : `<a class="strip" href="#account"><span class="ic-dot">💷</span><span><b>Track your balance</b><small>It updates itself as your bets settle</small></span><span aria-hidden="true">›</span></a>`;
 async function settleBet(b, res, auto) {
   const before = credit(b), prev = b.result;
@@ -3086,7 +3091,7 @@ setInterval(alertTick, 15e3);
 let autoAt = 0;
 function autoSettle() {
   if (!sb || !S.user || !S.data || Date.now() - autoAt < 15e3) return; autoAt = Date.now();
-  for (const sp of ["football", "nba"]) { const C = (S.chalAll || {})[sp]; if (C && C.active) { const r = activeResult(C.active); if (r) chalSettle(r, C.active.label, C.active.match, C.active.dec, sp); } }
+  for (const sp of ["football", "nba"]) { const C = (S.chalAll || {})[sp]; if (C && C.active && activeResult(C.active)) sb.from("challenges").select("data").eq("user_id", S.user.id).maybeSingle().then(x => { const F = splitChal(x.data ? x.data.data : null)[sp]; if (!F || !F.active || F.active.label !== C.active.label) { S.chalAll = splitChal(x.data ? x.data.data : null); render(); return; } const r = activeResult(F.active); if (r) chalSettle(r, F.active.label, F.active.match, F.active.dec, sp); }); }
   const skip = store.get("noAuto", []);
   for (const b of S.bets || []) if (b.result === "open" && !skip.includes(b.id)) { const r = betOutcome(b.legs); if (r) settleBet(b, r, true); }
   // fill in final numbers for settled bets (from the box score fetched after full time), so the breakdown lasts
