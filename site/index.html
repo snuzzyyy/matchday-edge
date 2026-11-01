@@ -182,6 +182,17 @@ h3{font-size:15px;font-weight:700}
 .bv-h{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:2px 0 -4px}
 .tdot{position:absolute;top:-1px;right:-3px;width:9px;height:9px;border-radius:50%;background:var(--live);box-shadow:0 0 0 2px var(--bg-2);animation:pulse 2s infinite}
 .subnav .dot{width:7px;height:7px}
+.setcard{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.setrow{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 14px;color:var(--fg);text-decoration:none;border-top:1px solid var(--line)}
+.setrow:first-child{border-top:0}.setrow b{display:block;font-size:14.5px}.setrow small{display:block;font-size:12.5px;color:var(--muted)}
+.setcard.links .setrow:hover{background:var(--surface-2,rgba(255,255,255,.03))}.setrow .rchev{color:var(--muted);font-size:20px}
+.setrow.sw{grid-template-columns:minmax(0,1fr) auto;cursor:pointer}.setrow.sw input{position:absolute;opacity:0;pointer-events:none}
+.sw-ui{width:46px;height:28px;border-radius:999px;background:var(--surface-3);border:1px solid var(--line-2);position:relative;transition:background .15s}
+.sw-ui::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .15s}
+.setrow.sw input:checked + .sw-ui{background:var(--blue);border-color:var(--blue)}.setrow.sw input:checked + .sw-ui::after{transform:translateX(18px)}
+.setrow.sw input:focus-visible + .sw-ui{outline:2px solid var(--blue-2);outline-offset:2px}
+.namerow{grid-template-columns:minmax(0,1fr) auto;gap:6px 10px}.namerow label{grid-column:1 / -1}.namerow input{background:var(--bg-2);border:1px solid var(--line-2);border-radius:10px;padding:10px 12px;color:var(--fg);font:inherit;outline:none;width:100%;min-width:0}
+.namerow input:focus{border-color:var(--blue)}.rowbtns{display:flex;gap:6px}.favwrap{grid-template-columns:minmax(0,1fr)}
 .statrow .cmp span{height:7px}
 .v.lo{color:var(--muted)}
 .stamp{font-family:var(--body);font-size:12px;font-weight:600;color:var(--muted);text-transform:none;letter-spacing:0;margin-left:8px}
@@ -2169,8 +2180,8 @@ function viewAccount(mode = "account") {
     <div class="who"><b>${esc(P.display_name || "")}</b><div class="prof-bdg">${badgesHTML(P)}${planChip(P)}</div><small>Member since ${new Date(P.created_at || S.user.created_at).toLocaleDateString("en-GB", { month: "short", year: "numeric" })}</small></div></div>
     ${S.socialReady && P.friend_code ? `<div class="prof-code"><div><small>Friend code</small><b class="fcode">${esc(P.friend_code)}</b></div><div class="prof-acts"><button class="fc-btn" data-copycode aria-label="Copy friend code">⧉ Copy</button><button class="fc-btn" data-invite aria-label="Share invite link">↗ Share</button></div></div>` : ""}</section>
   ${m}
-  <a class="friendslink" href="#friends">${avatarStack()}<span><b>Friends</b><small>${nFr ? `${nFr} friend${nFr > 1 ? "s" : ""} · feed, leaderboard and invites` : "Invite your friends and compare bets"}</small></span><span aria-hidden="true">›</span></a>
-  <a class="friendslink" href="#mybets"><span class="ic-dot">${ICON.chart}</span><span><b>My Bets</b><small>${S.bets.length ? `${S.bets.length} saved · ` : ""}tracked bets, results and profit</small></span><span aria-hidden="true">›</span></a>
+  <div class="setcard links"><a class="setrow" href="#friends">${avatarStack()}<span><b>Friends</b><small>${nFr ? `${nFr} friend${nFr > 1 ? "s" : ""}` : "Invite your friends"}</small></span><span class="rchev" aria-hidden="true">›</span></a>
+  <a class="setrow" href="#mybets"><span class="ic-dot">${ICON.chart}</span><span><b>My Bets</b><small>${S.bets.length ? `${S.bets.length} saved` : "Your bets and profit"}</small></span><span class="rchev" aria-hidden="true">›</span></a></div>
   ${profileView()}
   <div class="signout-row"><button class="btn ghost sm" data-signout>Sign out</button></div>`;
 }
@@ -2286,12 +2297,15 @@ function myBetsView(inTab) {
 }
 function profileView() {
   const P = S.profile || {}, favs = P.fav_teams || [];
-  return `<section class="section"><h2>Your details</h2><form class="addrow" id="nameForm"><div class="field"><label for="dn">Display name</label><input id="dn" maxlength="24" value="${esc(P.display_name || "")}"></div><div class="field" style="flex:0 0 auto;align-self:end"><button class="btn ghost" type="submit">Save</button></div></form>
-    <div class="addrow"><button type="button" class="btn ghost sm" data-pickphoto>📷 ${P.avatar_url ? "Change" : "Add"} profile photo</button>${P.avatar_url ? `<button class="btn ghost sm" data-noavatar>Remove photo</button>` : ""}</div>
-    <label class="optrow"><input type="checkbox" id="shareOpt" ${P.share_bets !== false ? "checked" : ""}> Let my friends see my bets (they can react and tail them)</label>
-    <label class="optrow"><input type="checkbox" id="lbOpt" ${P.show_on_leaderboard !== false ? "checked" : ""}> Show me on my friends' leaderboard</label></section>
-  <section class="section"><h2>Favourite teams</h2><div class="favs">${favs.length ? favs.map(f => `<span class="fav">${logo(f.sport, { id: f.id, name: f.name, abbr: f.name.slice(0, 3), color: "#334155" })}${esc(f.name)}<button class="x" data-unfav="${f.sport}|${f.id}" aria-label="Remove">✕</button></span>`).join("") : `<span style="color:var(--muted)">No favourites yet. Add your teams to star them in fixtures.</span>`}</div>
-  <form class="addrow" id="addFav"><div class="field"><label for="favpick">Add a team</label><input id="favpick" list="teamlist" placeholder="Start typing a team name"><datalist id="teamlist">${allTeams().map(t => `<option value="${esc(t.name)}${t.sport === "nba" ? " (NBA)" : ""}"></option>`).join("")}</datalist></div><div class="field" style="flex:0 0 auto;align-self:end"><button class="btn ghost" type="submit">Add team</button></div></form></section>
+  const sw = (id, on, title, sub) => `<label class="setrow sw"><span><b>${title}</b><small>${sub}</small></span><input type="checkbox" id="${id}" ${on ? "checked" : ""}><span class="sw-ui" aria-hidden="true"></span></label>`;
+  return `<section class="section"><h2>Your details</h2><div class="setcard">
+    <form class="setrow namerow" id="nameForm"><label for="dn"><small>Display name</small></label><input id="dn" maxlength="24" value="${esc(P.display_name || "")}" autocomplete="nickname"><button class="btn ghost sm" type="submit">Save</button></form>
+    <div class="setrow"><span>${avatarHTML(P, 40)}</span><span><b>Profile photo</b><small>Or tap your picture at the top</small></span><span class="rowbtns"><button type="button" class="btn ghost sm" data-pickphoto>${P.avatar_url ? "Change" : "Add"}</button>${P.avatar_url ? `<button class="btn ghost sm" data-noavatar>Remove</button>` : ""}</span></div></div></section>
+  <section class="section"><h2>Privacy</h2><div class="setcard">
+    ${sw("shareOpt", P.share_bets !== false, "Friends can see my bets", "They can react to them and tail them")}
+    ${sw("lbOpt", P.show_on_leaderboard !== false, "Show me on the leaderboard", "Your friends' profit leaderboard")}</div></section>
+  <section class="section"><h2>Favourite teams</h2><div class="setcard"><div class="setrow favwrap"><div class="favs">${favs.length ? favs.map(f => `<span class="fav">${logo(f.sport, { id: f.id, name: f.name, abbr: f.name.slice(0, 3), color: "#334155" })}${esc(f.name)}<button class="x" data-unfav="${f.sport}|${f.id}" aria-label="Remove">✕</button></span>`).join("") : `<small>None yet. Your teams get starred in fixtures and highlighted in tables.</small>`}</div></div>
+  <form class="setrow namerow" id="addFav"><label for="favpick"><small>Add a team</small></label><input id="favpick" list="teamlist" placeholder="Start typing a team"><datalist id="teamlist">${allTeams().map(t => `<option value="${esc(t.name)}${t.sport === "nba" ? " (NBA)" : ""}"></option>`).join("")}</datalist><button class="btn ghost sm" type="submit">Add</button></form></div></section>
   ${proCard()}`;
 }
 function mateSheet(uid) {
