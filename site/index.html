@@ -241,6 +241,7 @@ a.prof-bdg{text-decoration:none}
 .chips.winrow{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;max-width:100%}.chips.winrow::-webkit-scrollbar{display:none}.chips.winrow .chip{flex:none}
 .h2-sub{font-family:var(--body);font-size:13px;font-weight:600;color:var(--muted);text-transform:none;letter-spacing:0;margin-left:6px}
 .bv-foot{display:flex;justify-content:center}.bv-foot .linkbtn{color:var(--loss)}
+.strip small .pos,.setrow small .pos{color:var(--win);font-weight:700}
 .walbig{font-family:var(--display);font-size:24px!important;font-weight:700;line-height:1.1}
 .linkleg{width:100%;text-align:left;background:none;border-left:0;border-right:0;border-bottom:0;color:inherit;font:inherit;cursor:pointer;padding-left:0;padding-right:0;border-radius:0}.linkleg:hover .tl-top b{color:var(--blue-2)}
 .mchips{display:flex;flex-wrap:wrap;gap:8px}.mchip{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:var(--fg-2);background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:5px 10px}.mchip img{width:16px;height:16px}
@@ -1765,6 +1766,9 @@ function chalLogForm(C) {
   return `<form class="chal-log" id="chalLog"><b>Log step ${C.rung + 1}: ${fmtBank(C.bank)} → about ${fmtBank(C.bank * 2)}</b><div class="addrow"><div class="field"><label for="cl-bet">Your bet</label><input id="cl-bet" placeholder="e.g. Grizzlies to win" required></div><div class="field" style="flex:0 1 120px"><label for="cl-odds">Odds</label><input id="cl-odds" placeholder="EVS or 2.0" required></div></div>
   <div class="addrow"><button class="btn win" type="submit" data-res="W">It won</button><button class="btn lose" type="submit" data-res="L">It lost</button></div></form>`;
 }
+// what your open bets would pay back if every one lands (saved bets + running £1K steps)
+const openReturns = () => (S.bets || []).filter(b => b.result === "open").reduce((a, b) => a + +b.stake * +b.odds_dec, 0)
+  + (S.user ? ["football", "nba"].map(sp => (S.chalAll || {})[sp]).filter(C => C && C.active).reduce((a, C) => a + +C.bank * +C.active.dec, 0) : 0);
 const chalOpen = () => S.user ? ["football", "nba"].map(sp => (S.chalAll || {})[sp]).filter(C => C && C.active).reduce((a, C) => a + (+C.bank || 0), 0) : 0;
 function chalSettle(res, bet, match, dec, sport = S.sport) {
   const C = JSON.parse(JSON.stringify(chalNow(sport))), stake = C.bank;
@@ -3003,11 +3007,11 @@ function walletSection(sw) {
   const W = S.wallet, open = (S.bets || []).filter(b => b.result === "open").reduce((a, b) => a + +b.stake, 0) + chalOpen();
   const form = `<form class="setrow namerow" id="walletForm"><label for="walamt"><small>${W ? "Correct your balance (£)" : "Your betting balance (£)"}</small></label><input id="walamt" type="number" inputmode="decimal" step="0.01" min="0" placeholder="e.g. 50.00" value="${W ? (+W.amount).toFixed(2) : ""}"><button class="btn ghost sm" type="submit">${W ? "Save" : "Set"}</button></form>`;
   return `<section class="section"><h2>Balance</h2><div class="setcard">
-    ${W && !S.walletEdit ? `<div class="setrow"><span class="ic-dot">💷</span><span><b class="walbig">${money(+W.amount)}</b><small>${open ? money(open) + " in open bets · " : ""}updates as your bets settle</small></span><button class="btn ghost sm" data-walletedit>Edit</button></div>` : form}
+    ${W && !S.walletEdit ? `<div class="setrow"><span class="ic-dot">💷</span><span><b class="walbig">${money(+W.amount)}</b><small>${open ? `${money(open)} in open bets · <b class="pos">${money(+W.amount + openReturns())}</b> if they all land` : "Updates as your bets settle"}</small></span><button class="btn ghost sm" data-walletedit>Edit</button></div>` : form}
     ${W ? sw("walletPub", !!W.is_public, "Show my balance to friends", "Off unless you switch it on") : `<div class="setrow favwrap"><small>Enter what's in your bookie account. Saving a bet takes the stake off, and a win adds the returns.</small></div>`}</div></section>`;
 }
 const walletStrip = () => !S.user || S.walletReady === false ? "" : S.wallet
-  ? `<a class="strip" href="#account"><span class="ic-dot">💷</span><span><b>Balance ${money(+S.wallet.amount)}</b><small>${(() => { const o = (S.bets || []).filter(b => b.result === "open").reduce((a, b) => a + +b.stake, 0) + chalOpen(); return o ? money(o) + " in open bets · " : ""; })()}${S.wallet.is_public ? "friends can see it" : "private"}</small></span><span aria-hidden="true">›</span></a>`
+  ? `<a class="strip" href="#account"><span class="ic-dot">💷</span><span><b>Balance ${money(+S.wallet.amount)}</b><small>${(() => { const o = (S.bets || []).filter(b => b.result === "open").reduce((a, b) => a + +b.stake, 0) + chalOpen(); return o ? `${money(o)} in open bets · <b class="pos">${money(+S.wallet.amount + openReturns())}</b> if they all land` : S.wallet.is_public ? "friends can see it" : "private"; })()}</small></span><span aria-hidden="true">›</span></a>`
   : `<a class="strip" href="#account"><span class="ic-dot">💷</span><span><b>Track your balance</b><small>It updates itself as your bets settle</small></span><span aria-hidden="true">›</span></a>`;
 async function settleBet(b, res, auto) {
   const before = credit(b), prev = b.result;
