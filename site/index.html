@@ -3579,12 +3579,22 @@ function parseLineups(g, s) {
   }
   if (Object.keys(out).length) g.lineups = out;
 }
+/* cards the way bookies count them, from the match events: ESPN's team totals turn a second yellow into "0 yellow, 1 red" */
+function eventCards(s, hid, aid) {
+  const c = { [hid]: { y: 0, r: 0 }, [aid]: { y: 0, r: 0 } }, booked = new Set();
+  for (const k of s.keyEvents || []) { const ty = (k.type || {}).text || "", tid = (k.team || {}).id, who = (((k.participants || [])[0] || {}).athlete || {}).displayName || ""; if (!c[tid]) continue;
+    if (/Yellow Card/i.test(ty)) { c[tid].y++; booked.add(tid + who); }
+    else if (/Red Card/i.test(ty)) { c[tid].r++; if (booked.has(tid + who) || /second yellow/i.test(k.text || "")) c[tid].y++; } }
+  return c;
+}
 function applyFb(g, s) {
   parseLineups(g, s);
   if (s.commentary) { const seen = new Set(); g.plays = s.commentary.filter(c => c.play && !(c.play.id && seen.has(c.play.id)) && (seen.add(c.play.id), true)).map(c => { const p = c.play; return { t: (p.type || {}).text || "", per: (p.period || {}).number || 1, who: (p.participants || []).map(q => norm(((q.athlete || {}).displayName) || "")), head: /\bheader\b/i.test(String(c.text || "").split(/Assisted by/i)[0]) };   /* the shot itself, not "assisted ... with a headed pass" */ });
     g._playsHalfDone = halfDone(g); }
   const b = boxMap(s), hb = b[g.home.id] || {}, ab = b[g.away.id] || {};
   if (Object.keys(hb).length) g.stats = FKEYS.filter(([k]) => k in hb || k in ab).map(([k, label]) => ({ k, label, h: num(hb[k]), a: num(ab[k]) }));
+  if (g.stats && (s.keyEvents || []).length) { const ec = eventCards(s, g.home.id, g.away.id);
+    for (const [k, f] of [["yellowCards", "y"], ["redCards", "r"]]) { const x = g.stats.find(z => z.k === k); if (x) { x.h = Math.max(x.h, ec[g.home.id][f]); x.a = Math.max(x.a, ec[g.away.id][f]); } } }
   g.events = (s.keyEvents || []).filter(k => { const t = (k.type || {}).text || ""; return /Goal|Card|Penalty|Substitution/.test(t) && !/Delay/.test(t); }).map(k => {
     const tid = (k.team || {}).id; return { min: (k.clock || {}).displayValue || "", type: k.type.text, side: tid === g.home.id ? "h" : tid === g.away.id ? "a" : "", who: ((k.participants || [])[0] || {}).athlete?.displayName || k.shortText || "" };
   });

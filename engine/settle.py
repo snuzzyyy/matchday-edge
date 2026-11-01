@@ -62,6 +62,19 @@ def final_state(sport, g):
     team = {}
     for t in (s.get("boxscore") or {}).get("teams", []):
         team[t["team"]["id"]] = {x.get("name"): num(x.get("displayValue")) for x in t.get("statistics", [])}
+    if sport == "football":   # count cards from the events like bookies do: ESPN's totals turn a second yellow into "0 yellow, 1 red"
+        ev, booked = {}, set()
+        for k in s.get("keyEvents", []) or []:
+            ty, tid = (k.get("type") or {}).get("text", ""), (k.get("team") or {}).get("id")
+            who = (((k.get("participants") or [{}])[0]).get("athlete") or {}).get("displayName", "")
+            c = ev.setdefault(tid, {"y": 0, "r": 0})
+            if "Yellow Card" in ty: c["y"] += 1; booked.add((tid, who))
+            elif "Red Card" in ty:
+                c["r"] += 1
+                if (tid, who) in booked or "second yellow" in (k.get("text") or "").lower(): c["y"] += 1
+        for tid, c in ev.items():
+            if tid in team:
+                team[tid]["yellowCards"] = max(team[tid].get("yellowCards", 0), c["y"]); team[tid]["redCards"] = max(team[tid].get("redCards", 0), c["r"])
     return s, hs, as_, team
 
 
