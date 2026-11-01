@@ -9,6 +9,13 @@ Last updated: 1 Nov 2026, end of the second build session.
 
 ## 0. FIRST JOB: NBA player bets in the acca builder (and swapping legs, more than 3 legs)
 
+> **DONE (1 Nov 2026, third session).** What shipped, so you don't redo it:
+> - Engine: `player_log` / `player_props` in `engine/build.py` (top 4 players per team by minutes, 22+ min, Out skipped, up to 3 lines per stat). ~100 `P:` markets per game; data.json ≈ 1.1 MB.
+> - Client: `isProp`, `propLeg`, `legText`, `optsHTML` (dropdowns grouped "Match bets" + one group per player), `pinGame` (swap/remove/change-main keeps the game's other legs and stops re-optimising). Player bets are priced bookie-style with `livePrice` (no market price exists). Bundles use a beam search, up to 4 legs.
+> - Player bets are kept out of Tips, Top picks, presets, the game page's "Best bets" and import matching (`marketIn`). Game page shows a table per player under "Player bets".
+> - Also fixed: in-play "or choose one yourself" collapsed on every 10 s redraw (`S.addOpen`); acca → slip now uses exactly the legs on screen (`S._accaLegs` / `S._accaLiveLegs`); phone-tracked bet copies are matched to saved bets by legs (`localTracked`, `legSig`) and clear themselves after the game (`pruneTracked`).
+> - Not done (v2): live player-bet chances in the in-play acca.
+
 The owner asked for this last and is waiting on it. Their words: *"include player points etc and be able to add more than 3 and be able to swap some out"*. Their screenshot was an NBA same-game acca (Celtics @ Magic) where the only same-game options were the total, the handicap and the winner, so the builder ran out of bets to add. Do this first, in this order.
 
 ### 0.1 Where the numbers come from (already checked)
