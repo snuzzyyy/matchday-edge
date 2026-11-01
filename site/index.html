@@ -277,7 +277,7 @@ a.prof-bdg{text-decoration:none}
 .v.lo{color:var(--muted)}
 .stamp{font-family:var(--body);font-size:12px;font-weight:600;color:var(--muted);text-transform:none;letter-spacing:0;margin-left:8px}
 .ticker{font-size:12px;color:var(--fg-2);display:flex;gap:8px;align-items:center;min-width:0}
-.ticker span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ticker span{white-space:normal;line-height:1.4}
 .pace{display:flex;gap:6px;flex-wrap:wrap}
 .pill{font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;background:var(--surface-3);color:var(--fg-2);white-space:nowrap}
 .pill.hot{background:rgba(255,122,47,.16);color:var(--tang-2)}
@@ -550,7 +550,7 @@ a.prof-bdg{text-decoration:none}
 .mk .pb span{font-family:var(--display);font-weight:600;width:32px;text-align:right}
 .mk .fo{font-family:var(--display);font-weight:600;color:var(--fg-2);text-align:right}
 .mk .fo small{display:block;font-family:var(--body);font-size:10px;color:var(--win)}
-.mk .odd{height:36px;width:100%}.mk:not(.hd){min-height:54px}.mk > span:last-child{display:flex;justify-content:center}.mst.quiet{background:none;color:var(--muted);font-weight:700;text-transform:none;letter-spacing:0;font-size:12px}
+.mk .odd{height:36px;width:100%}.mk .odd .k1{display:none}@media (max-width:420px){.fx .prices .odd:has(.lb){flex-direction:column;gap:0}.fx .prices .odd .lb{font-size:9.5px;padding:0 2px}}.mk:not(.hd){min-height:54px}.mk > span:last-child{display:flex;justify-content:center}.mst.quiet{background:none;color:var(--muted);font-weight:700;text-transform:none;letter-spacing:0;font-size:12px}
 .mst{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;padding:4px 8px;border-radius:6px;white-space:nowrap}
 .mst.won{background:rgba(34,216,143,.15);color:var(--win)}.mst.lost{background:var(--surface-3);color:var(--muted)}.mst.open{background:rgba(61,123,255,.14);color:var(--blue-2)}
 .mk.lost > span:first-child{color:var(--muted);text-decoration:line-through;text-decoration-color:var(--dim)}
@@ -1479,7 +1479,7 @@ function buildPreset(kind, win) {
   if (kind === "corners") return bestPerMatch(pool.filter(c => /^(C|Y)/.test(c.m.k) && c.m.p >= .66), 4, c => c.m.p);
   return [];
 }
-const PRESETS = [["safe", "Safe four", "Four bankers from different games."], ["goals", "Goals galore", "Over 1.5s, both teams to score and teams to score."], ["five", "Weekend punch", "Six legs at bigger prices for a real payout."], ["corners", "Corners & cards", "Stat markets backed by recent averages."]];
+const PRESETS = [["safe", "Safe four", "Up to four bankers from different games."], ["goals", "Goals galore", "Over 1.5s, both teams to score and teams to score."], ["five", "Bigger punch", "Up to six legs at bigger prices for a real payout."], ["corners", "Corners & cards", "Stat markets backed by recent averages."]];
 function asLegs(list) { return list.map(({ sport, g, m }) => ({ id: legId(sport, g, m), sport, gid: g.id, k: m.k, label: m.label, match: vs(sport, g), p: m.p, dec: priceOf(m), orig: priceOf(m), est: !m.dec, estOrig: !m.dec, kick: kick(g), ...propLeg(m) })); }
 const accaWin = () => S.accaWin && upcoming(S.sport, S.accaWin).length ? S.accaWin : firstWin(S.sport);
 function presetsHTML() {
@@ -1664,7 +1664,7 @@ function viewAcca() {
     <div class="auto"><button class="btn ghost sm" data-accaauto="3">Pick the best 3 for me</button><button class="btn ghost sm" data-accaauto="5">Pick the best 5</button></div></div>
   ${summary}
   ${list.length ? rows : `<div class="empty">No ${sp === "nba" ? "NBA" : "football"} games left in this window.</div>`}
-  <h2 style="margin-top:8px">Or try a ready-made acca</h2>${presetsHTML()}`;
+  ${presetsHTML()}`;
 }
 const fmtRow = () => `<div class="fmt-row"><span>Odds format</span><div class="fmt fmt-big" role="group" aria-label="Odds format"><button data-fmt="frac" aria-pressed="${S.fmt === "frac"}"><b>Fractional</b><small>e.g. 5/2</small></button><button data-fmt="dec" aria-pressed="${S.fmt === "dec"}"><b>Decimal</b><small>e.g. 3.50</small></button></div></div>`;
 function slipHTML(mode = "rail") {
@@ -2583,7 +2583,7 @@ function viewTables() {
       ${rows.map(e => { const m = statMap(e), seed = +(m.playoffSeed || {}).value || 0, zc = seed && seed <= 6 ? "var(--win)" : seed && seed <= 10 ? "var(--amber)" : "transparent";
         return `<tr class="${isFav("nba", e.team) ? "favrow" : ""} ${teamGameTag("nba", e.team.id).live ? "livenow" : ""}"><td class="pos" style="--zc:${zc}">${seed || ""}</td><td class="team l"><span>${espnLogo(e.team, "nba")}<span class="tn"><span class="tnm">${esc(e.team.shortDisplayName || e.team.displayName)}</span>${teamGameTag("nba", e.team.id).html}</span></span></td><td>${(m.wins || {}).displayValue ?? ""}</td><td>${(m.losses || {}).displayValue ?? ""}</td><td>${(m.winPercent || {}).displayValue ?? ""}</td><td>${(m.gamesBehind || {}).displayValue ?? ""}</td><td class="nx">${(m["Last Ten Games"] || m.lasttengames || {}).displayValue ?? ""}</td><td>${(m.streak || {}).displayValue ?? ""}</td><td class="nx">${(m.Home || m.home || {}).displayValue ?? ""}</td><td class="nx">${(m.Road || m.road || {}).displayValue ?? ""}</td></tr>`; }).join("")}
       </tbody></table></div></section>`;
-    }).join("") + `<div class="zones"><span><i style="background:var(--win)"></i>Playoff places (1–6)</span><span><i style="background:var(--amber)"></i>Play-in (7–10)</span><span><b style="color:var(--live);font-size:10px">PLAYING</b> has a game in the next 24 hours</span></div>`;
+    }).join("") + `<div class="zones"><span><i style="background:var(--win)"></i>Playoff places (1–6)</span><span><i style="background:var(--amber)"></i>Play-in (7–10)</span><span><b style="color:var(--live);font-size:10px">LIVE</b> or a kick-off time under a team: playing today</span></div>`;
     return `<div class="hd"><div><h1>NBA standings</h1><p class="sub">Your favourite teams are highlighted.</p></div></div>${body}`;
   }
   const L = S.tblLeague || "eng.1", f = feed(`${API2}/soccer/${L}/standings`);
@@ -2595,11 +2595,11 @@ function viewTables() {
     body = groups.map(gp => {
       const rows = [...gp.standings.entries].sort((a, b) => (+statMap(a).rank?.value || 99) - (+statMap(b).rank?.value || 99));
       return `${groups.length > 1 ? `<h2>${esc(gp.name)}</h2>` : ""}<div class="tw" style="padding:0"><table class="tbl"><thead><tr><th>#</th><th class="l">Team</th><th>P</th><th>W</th><th>D</th><th>L</th><th class="nx">GF</th><th class="nx">GA</th><th>GD</th><th>Pts</th></tr></thead><tbody>
-      ${rows.map(e => { const m = statMap(e), n = e.note, zc = n && n.color ? "#" + String(n.color).replace("#", "") : "transparent"; if (n && n.description) notes.set(n.description, zc);
+      ${rows.map(e => { const m = statMap(e), n = e.note, zc = n && n.color ? "#" + String(n.color).replace(/#/g, "") : "transparent"; if (n && n.description) notes.set(n.description, zc);
         const v = k => (m[k] || {}).displayValue ?? "";
         return `<tr class="${isFav("football", e.team) ? "favrow" : ""} ${teamGameTag("football", e.team.id).live ? "livenow" : ""}"><td class="pos" style="--zc:${zc}">${v("rank")}</td><td class="team l"><span>${espnLogo(e.team, "football")}<span class="tn"><span class="tnm">${esc(e.team.shortDisplayName || e.team.displayName)}</span>${teamGameTag("football", e.team.id).html}</span></span></td><td>${v("gamesPlayed")}</td><td>${v("wins")}</td><td>${v("ties")}</td><td>${v("losses")}</td><td class="nx">${v("pointsFor")}</td><td class="nx">${v("pointsAgainst")}</td><td>${v("pointDifferential")}</td><td class="pts">${v("points")}</td></tr>`; }).join("")}
       </tbody></table></div>`;
-    }).join("") + `<div class="zones">${[...notes].map(([d, c]) => `<span><i style="background:${c}"></i>${esc(d)}</span>`).join("")}<span><b style="color:var(--live);font-size:10px">PLAYING</b> has a game in the next 24 hours</span></div>`;
+    }).join("") + `<div class="zones">${[...notes].map(([d, c]) => `<span><i style="background:${c}"></i>${esc(d)}</span>`).join("")}<span><b style="color:var(--live);font-size:10px">LIVE</b> or a kick-off time under a team: playing today</span></div>`;
   }
   return `<div class="hd"><div><h1>League tables</h1><p class="sub">Your favourite teams are highlighted.</p></div></div>${chips}<section class="section">${body}</section>`;
 }
@@ -2769,12 +2769,12 @@ function viewPerks() {
   if (!S.user) return `<div class="hd"><div><h1>Plans</h1><p class="sub">Sign in to see your plan.</p></div></div><a class="btn" href="#account">Sign in</a>`;
   const P = S.profile || {}, pro = P.plan === "pro", b = P.badges || [];
   const EVERY = [["📡", "Live scores and stats", "Every game, updating every 10 seconds"], ["🎯", "Tips for every game", "Our model's pick, the chance and a fair price"], ["🧩", "Acca builder", "The safest leg in every game you pick"],
-    ["📈", "Bets that track themselves", "Live progress, settled automatically, full breakdowns"], ["🏆", "£1 → £1K challenges", "A football ladder and an NBA ladder"], ["👥", "Friends, following and Top players", "Feeds, leaderboards and copying bets"], ["💷", "Balance tracking", "Updates as your bets settle"]];
+    ["📈", "Bets that track themselves", "Live progress, settled automatically, full breakdowns"], ["🏆", "£1 → £1K challenges", "A football ladder and an NBA ladder"], ["👥", "Friends, following and Top players", "Feeds, leaderboards and copying bets"], ["💷", "Balance tracking", "Updates as your bets settle"], ["🔔", "Bet alerts", "A ping when a leg lands, a player is one away, or a bet settles"], ["🏀", "Player bets", "Points, rebounds, shots, fouls and more, tracked live"], ["📸", "Screenshot import", "Snap your bookie slip and it tracks itself"]];
   const PRO_NOW = [["★", "Gold PRO badge", "Next to your name in feeds, profiles and leaderboards"], ["🚫", "No Pro adverts", "The upgrade cards are hidden for you"], ["⚡", "First to try new features", "Pro members get new tools before everyone else"]];
-  const PRO_SOON = [["💱", "Real UK bookmaker prices", "Sky Bet, Paddy Power, William Hill and Betfair side by side"], ["🔔", "Bet alerts", "A ping when your bet is close or an in-play angle opens"], ["🧠", "Deeper models", "Player shots, cards and points props, half-time markets"], ["📚", "Unlimited saved accas", "Build, save and share accas with friends"]];
+  const PRO_SOON = [["💱", "Real UK bookmaker prices", "Sky Bet, Paddy Power, William Hill and Betfair side by side"], ["🧠", "Deeper models", "Half-time markets and smarter in-play player chances"], ["📚", "Unlimited saved accas", "Build, save and share accas with friends"]];
   const row = ([i, t, d], st) => `<div class="pk-row ${st ? "pk-" + st : ""}"><span class="pk-ic">${i}</span><span><b>${t}</b><small>${d}</small></span><span class="pk-st">${st === "have" ? "✓" : st === "soon" ? "Soon" : ""}</span></div>`;
   const roles = [b.includes("owner") && ["OWNER", "owner", "You run Matchday Edge. Full access to everything."], b.includes("dev") && ["DEV", "dev", "You help build the app and see new features first."], pro && ["PRO", "pro", "Pro member. Pro perks are switched on for you."]].filter(Boolean);
-  const cmp = [["Live scores, tips, accas", "✓", "✓"], ["Self-settling bets and balance", "✓", "✓"], ["Friends, following, Top players", "✓", "✓"], ["£1K challenges", "✓", "✓"], ["PRO badge", "–", "✓"], ["No Pro adverts", "–", "✓"], ["Early access to new features", "–", "✓"], ["Real UK bookmaker prices", "–", "Soon"], ["Bet alerts", "–", "Soon"], ["Deeper models", "–", "Soon"]];
+  const cmp = [["Live scores, tips, accas", "✓", "✓"], ["Self-settling bets and balance", "✓", "✓"], ["Friends, following, Top players", "✓", "✓"], ["£1K challenges", "✓", "✓"], ["PRO badge", "–", "✓"], ["No Pro adverts", "–", "✓"], ["Early access to new features", "–", "✓"], ["Bet alerts and player bets", "✓", "✓"], ["Real UK bookmaker prices", "–", "Soon"], ["Deeper models", "–", "Soon"]];
   return `<section class="pk-hero ${pro ? "pro" : ""}"><div><small>Your plan</small><h1>${pro ? "★ Pro" : "Free"}</h1><p>${pro ? "Thanks for being Pro. Here's everything you get, plus what's on the way." : "You've got all the core features. Pro adds extras on top."}</p></div>
     ${roles.length ? `<div class="pk-roles">${roles.map(([t, c, d]) => `<div class="pk-role"><span class="bdg ${c}">${t}</span><small>${d}</small></div>`).join("")}</div>` : ""}</section>
   ${pro ? `<section class="section"><h2>Your Pro perks</h2><div class="setcard">${PRO_NOW.map(x => row(x, "have")).join("")}</div></section>
@@ -2787,7 +2787,7 @@ function viewPerks() {
 }
 function proCard() {
   if (S.user && S.profile && S.profile.plan === "pro") return "";   // already Pro: no advert
-  const feats = [["Real UK bookmaker prices", "Live Sky Bet, Paddy Power, William Hill and Betfair odds side by side, with the best price highlighted."], ["Bet alerts", "A ping when one of your teams has a banker, or an in-play corners or cards angle opens up."], ["Deeper models", "Player shots, cards and points props, plus first-half and second-half markets."], ["Unlimited saved accas", "Build, save and share accas with your friends."]];
+  const feats = [["Real UK bookmaker prices", "Live Sky Bet, Paddy Power, William Hill and Betfair odds side by side, with the best price highlighted."], ["Deeper models", "Half-time markets and smarter in-play player chances."], ["Unlimited saved accas", "Build, save and share accas with your friends."]];
   const cta = !S.user ? `<a class="btn pro-btn" href="#account">Create a free account to join the waitlist</a>` : S.waitlisted ? `<span class="msg ok">${ICON.check.replace("<svg", '<svg style="width:16px;height:16px;vertical-align:-3px"')} You're on the waitlist. You'll hear first when Pro opens.</span>` : `<button class="btn pro-btn" data-waitlist>Join the waitlist</button><span style="color:var(--muted);font-size:13px">Free to join. No card needed.</span>`;
   return `<section class="pro"><img class="pro-art" src="${art("pro-banner.webp")}" alt="Matchday Edge Pro"><div class="pro-top"><div><div class="pro-badge">Matchday Edge <span>PRO</span></div><p class="sub" style="margin-top:8px">More data, sharper picks and alerts, for players who bet every week.</p></div><span class="soon">Coming soon</span></div>
   <div class="pro-feats">${feats.map(([t, d]) => `<div class="pf">${ICON.check}<div><b>${t}</b><span>${d}</span></div></div>`).join("")}</div><div class="pro-cta">${cta}</div></section>`;
@@ -2822,7 +2822,7 @@ function viewAccount(mode = "account") {
   }
 
   return `<section class="prof"><div class="prof-top"><button type="button" class="avwrap" data-pickphoto aria-label="Change profile photo">${avatarHTML(P, 72)}<span class="avcam" aria-hidden="true">📷</span></button>
-    <div class="who"><b>${esc(P.display_name || "")}</b><a class="prof-bdg" href="#perks" aria-label="Your plan and perks">${badgesHTML(P)}${planChip(P)}</a><small>Member since ${new Date(P.created_at || S.user.created_at).toLocaleDateString("en-GB", { month: "short", year: "numeric" })}</small></div></div>
+    <div class="who"><b>${esc(P.display_name || "")}</b><a class="prof-bdg" href="#perks" aria-label="Your plan and perks">${badgesHTML(P)}${planChip(P)}</a>${(() => { const d = new Date(P.created_at || S.user.created_at || ""); return isNaN(d) ? "" : `<small>Member since ${d.toLocaleDateString("en-GB", { month: "short", year: "numeric" })}</small>`; })()}</div></div>
     ${S.socialReady && P.friend_code ? `<div class="prof-code"><div><small>Friend code</small><b class="fcode">${esc(P.friend_code)}</b></div><div class="prof-acts"><button class="fc-btn" data-copycode aria-label="Copy friend code">⧉ Copy</button><button class="fc-btn" data-invite aria-label="Share invite link">↗ Share</button></div></div>` : ""}</section>
   ${m}
   ${profileShowcase(S.user.id)}
