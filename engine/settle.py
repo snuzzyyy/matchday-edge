@@ -173,11 +173,13 @@ def leg_result(l):
 
 
 def outcome(legs):
+    M = [l for l in legs or [] if l.get("manual")]   # legs the owner marks themselves
+    if any(l.get("fst") == "miss" for l in M): return "lost", legs
     L = [l for l in legs or [] if (l.get("pid") or l.get("k")) and l.get("gid")]
     if not L: return None, legs
     rs = [leg_result(l) for l in L]
     if any(r == "lost" for r, _ in rs): res = "lost"
-    elif all(r == "won" for r, _ in rs): res = "won"
+    elif all(r == "won" for r, _ in rs) and all(l.get("fst") == "hit" for l in M): res = "won"
     else: return None, legs
     out, i = [], 0
     for l in legs:

@@ -171,7 +171,7 @@ h3{font-size:15px;font-weight:700}
 .cmp .h{background:var(--blue)}.cmp .a{background:var(--tang)}
 .btiles{display:grid;gap:8px}
 .ch-sp{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--tang);background:rgba(255,122,47,.12);border-radius:6px;padding:2px 6px;margin-right:6px}.ch-slots{display:flex;align-items:center;gap:6px;margin:4px 0 2px}.ch-slots span{width:22px;height:8px;border-radius:4px;background:var(--surface-3)}.ch-slots span.on{background:var(--tang)}.ch-slots small{color:var(--fg-2);font-size:12.5px;margin-left:4px}.chalsum.one{grid-template-columns:1fr}
-.chaltag{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--tang);text-decoration:none;margin-bottom:2px}.trk-card.chalcard{border-color:rgba(255,122,47,.45)}
+.chaltag{display:inline-block;font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--tang);text-decoration:none;margin-bottom:2px}.trk-card.chalcard{border-color:rgba(255,122,47,.45)}
 .sgopt{font-size:13px;color:var(--fg-2);margin:2px 0 0}
 .ab-leg.extra{margin-left:18px;border-left:2px solid var(--blue)}@media (max-width:420px){.ab-leg.extra{margin-left:8px;padding:9px 10px;gap:8px}.abl-main select{font-size:13px;padding:8px 6px}}.mg-ph{margin:18px 0 2px;font-size:16px}.abl-x{display:block;font-size:14px;font-weight:600;margin-top:2px}
 .addmore-row{display:grid;gap:6px;margin:-2px 0 4px}.addbest{width:100%;text-align:left;background:rgba(61,123,255,.1);border:1px dashed var(--blue-2);color:var(--fg-2);font:inherit;font-size:13px;border-radius:10px;padding:9px 12px;cursor:pointer}.addbest b{color:var(--fg)}
@@ -500,7 +500,7 @@ a.prof-bdg{text-decoration:none}
 .stake label{font-size:13px;color:var(--fg-2);flex:1}
 .stake .in{display:flex;align-items:center;background:var(--surface-2);border:1px solid var(--line-2);border-radius:8px;padding:0 10px;width:110px}
 .stake input{width:100%;background:none;border:0;color:var(--fg);font-family:var(--display);font-size:18px;font-weight:700;padding:7px 0;outline:none}
-.meter{height:8px;border-radius:8px;background:var(--surface-3);overflow:hidden}.bc-chance{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:12.5px;color:var(--fg-2);margin-bottom:-4px}.bc-chance small{color:var(--muted);font-size:11px}.bc-chance b{font-family:var(--display);font-size:20px}.bc-meter{height:10px}.tl-pc{font-weight:700;white-space:nowrap}
+.meter{height:8px;border-radius:8px;background:var(--surface-3);overflow:hidden}.bc-chance{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:12.5px;color:var(--fg-2);margin-bottom:-4px}.bc-chance small{color:var(--muted);font-size:11px}.bc-chance b{font-family:var(--display);font-size:20px}.bc-meter{height:10px}.tl-pc{font-weight:700;white-space:nowrap}.mleg{display:flex;gap:8px;margin-top:8px}.bc-money{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;background:var(--bg-2);border:1px solid var(--line);border-radius:10px;padding:8px 12px}.bc-money span{display:grid;gap:1px}.bc-money small{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em}.bc-money b{font-family:var(--display);font-size:19px;color:var(--fg)}.bc-money b.pos{color:var(--win)}.bc-money span:last-child{text-align:right}.imp-leg.man > span:first-child{color:var(--amber)}
 .meter i{display:block;height:100%;border-radius:8px;background:linear-gradient(90deg,var(--live),var(--amber),var(--win))}
 .books{display:flex;flex-wrap:wrap;gap:6px}
 .books a{font-size:11.5px;font-weight:700;padding:6px 9px;border-radius:6px;text-decoration:none;color:var(--fg);background:var(--surface-3)}
@@ -2165,7 +2165,7 @@ const deLetter = t => String(t || "").replace(/[øØ]/g, "o").replace(/[æÆ]/g,
 const norm = t => deLetter(t).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z ]/g, " ").replace(/\s+/g, " ").trim();
 S.tracked = store.get("tracked", []);
 function playerIndex() {
-  const now = Date.now(), soon = g => isLive(g) || (isPre(g) && +new Date(kick(g)) - now < 1.5 * 864e5) || (g.status.state === "post" && now - +new Date(kick(g)) < 864e5);
+  const now = Date.now(), soon = g => isLive(g) || (isPre(g) && +new Date(kick(g)) - now < (S.impWide ? 5 : 1.5) * 864e5) || (g.status.state === "post" && now - +new Date(kick(g)) < 864e5);
   const idx = [], pending = [];
   for (const sp of ["nba", "football"]) for (const g of games(sp).filter(soon)) for (const [t, side] of [[g.home, "h"], [g.away, "a"]]) {
     const url = sp === "nba" ? `${SB}/basketball/nba/teams/${t.id}/roster` : `${SB}/soccer/${g.league}/teams/${t.id}/roster`, f = feed(url, 6 * 3600e3);
@@ -2261,7 +2261,7 @@ function oneTeamGame(txt) {
   const now = Date.now(), hits = [];
   for (const sp of ["football", "nba"]) for (const g of games(sp)) {
     const t = +new Date(kick(g)); if (!(isLive(g) || (isPre(g) && t - now < 3 * 864e5))) continue;
-    for (const T of [g.home, g.away]) { const f = findAlias(txt, teamAliases(T)); if (f && f.pos <= 1) hits.push({ sp, g, start: f.pos, end: f.end, live: isLive(g), t }); }
+    for (const T of [g.home, g.away]) { const f = findAlias(txt, teamAliases(T)); if (f && txt.slice(0, f.pos).trim().split(/\s+/).filter(Boolean).length <= 1) hits.push({ sp, g, start: f.pos, end: f.end, live: isLive(g), t }); }
   }
   hits.sort((x, y) => y.live - x.live || x.t - y.t); return hits.length ? [hits[0]] : [];
 }
@@ -2281,7 +2281,7 @@ function matchLegsIn(text, single) {
   return { legs, odds };
 }
 function parseBet(text, idx) {
-  const legs = [], missing = [], om = text.match(/@\s*([0-9]+(?:\.[0-9]+)?(?:\s*\/\s*[0-9]+)?|evs|evens)/i); let oddsFound = null;
+  const legs = [], missing = [], unread = [], om = text.match(/@\s*([0-9]+(?:\.[0-9]+)?(?:\s*\/\s*[0-9]+)?|evs|evens)/i); let oddsFound = null;
   const LEG = l => l.match(/^(.*?)\s+(?:to\s+|-\s+|:\s*)(.+)$/i) || l.match(/^(.*?)\s+((?:over\s+)?\d.*)$/i);
   // "A 20+ points & B 6+ assists" is two legs; "A & B to score 25+ each" shares one stat
   const groups = [];
@@ -2300,6 +2300,7 @@ function parseBet(text, idx) {
     if (lines.length && /^(?:to\b|over\b|-\s|\d+(?:\.\d+)?\s*\+)/i.test(l) && !LEG(lines[lines.length - 1])) lines[lines.length - 1] += " " + l; else lines.push(l);
   }
   for (let line of lines) {
+    if (!LEG(line) && !/\d+\s*\+/.test(line)) { if (/[a-z]{3}/i.test(line)) unread.push(line.replace(/\s*@.*$/, "").trim()); continue; }   /* not something we can read: you'll mark it yourself */
     const targets = (line.match(/\d+(?:\.\d+)?\s*\+|over\s*\d/gi) || []).length;
     const ownLegs = line.split(/\s*(?:&|,|\band\b|\s\+\s)\s*/i).filter(x => LEG(x)).length;   // "A 1+ shots & B to be fouled" = two separate bets
     if (targets < 2 && ownLegs < 2) { const m = LEG(line); if (m) groups.push({ names: m[1].split(/\s*(?:&|,|\band\b|\+)\s*/i), rest: m[2] }); continue; }
@@ -2314,7 +2315,7 @@ function parseBet(text, idx) {
   }
   for (const { names: nms, rest: rest0 } of groups) {
     const names = nms.map(x => x.replace(/\b(?:all|both|each|to)\b/gi, " ").replace(/\s+/g, " ").trim()).filter(Boolean);   // "A, B & C all to score"
-    const rest = rest0.replace(/\(\s*\d+\s*so far\s*\)/gi, " ");   /* Sky adds "(5 so far)" in My Bets */
+    const rest = rest0.replace(/\(\s*\d+\s*so far\s*\)/gi, " ").replace(/\b(\d+)\s*(?:or more|or over|plus)\b/gi, "$1+").replace(/\bat least (\d+)/gi, "$1+");   /* Sky adds "(5 so far)" in My Bets */
     const tgt = (rest.match(/(\d+(?:\.\d+)?)\s*\+/) || [])[1], ov = (rest.match(/over\s*(\d+(?:\.\d+)?)/i) || [])[1];
     if (names.length > 1 && /\bbetween\b|\bcombined\b|\bin total\b/i.test(rest)) {   /* one target shared by the players: their numbers add up */
       const ps = names.map(nm => [nm, findPlayer(idx, nm)]), miss = ps.filter(x => !x[1]).map(x => x[0]); if (miss.length) { missing.push(...miss); continue; }
@@ -2326,7 +2327,7 @@ function parseBet(text, idx) {
       continue;
     }
     for (const nm of names) {
-      const p = findPlayer(idx, nm); if (!p) { missing.push(nm); continue; }
+      const p = findPlayer(idx, nm); if (!p) { missing.push(names.length > 1 ? nm : `${nm} ${/^\d/.test(rest.trim()) ? "" : "to "}${rest.trim()}`.replace(/\s+/g, " ")); continue; }
       const st = (PROPS[p.sport].find(([re]) => re.test(rest)) || PROPS[p.sport][p.sport === "nba" ? 6 : 5]);
       const target = tgt ? Math.ceil(+tgt) : ov ? Math.floor(+ov) + 1 : 1;
       const half = p.sport === "football" && /\b(1st|first) half\b/i.test(rest) ? 1 : p.sport === "football" && /\b(2nd|second) half\b/i.test(rest) ? 2 : 0;
@@ -2336,7 +2337,7 @@ function parseBet(text, idx) {
   legs.unshift(...mLegs);
   const ats = (text.match(/@\s*([0-9]+(?:\.[0-9]+)?(?:\s*\/\s*[0-9]+)?|evs|evens)/gi) || []).map(x => parseOdds(x.replace(/^@\s*/, "").replace(/\s+/g, ""))).filter(Boolean);
   const dec = ats.length >= 2 && ats.length === legs.length ? Math.round(ats.reduce((a, b) => a * b, 1) * 1000) / 1000 : om ? parseOdds(om[1]) : oddsFound;
-  return { legs, missing, dec };
+  return { legs, missing, unread, dec };
 }
 const halfDone = g => g.status.state === "post" || (+g.status.period || 1) >= 2 || /HT|Half/i.test(String(g.status.detail || ""));
 function halfStat(g, l) {   // a player's count in one half, from the play-by-play
@@ -2403,7 +2404,9 @@ function legInfo(l) {
   if (g) { r.html = r.html.replace(/^<div class="tl-leg([^"]*)"/, `<button type="button" class="tl-leg linkleg$1" data-open="${l.sport}:${l.gid}" aria-label="Open the game"`); const k = r.html.lastIndexOf("</div>"); r.html = r.html.slice(0, k) + "</button>" + r.html.slice(k + 6); }
   return r;
 }
-function legInfo0(l) {   // -> { html, st: "pre" | "live" | "hit" | "miss" | "void" }
+function legInfo0(l) {   // -> { html, st: "pre" | "live" | "hit" | "miss" | "void" | "manual" }
+  if (l.manual) { const hit = l.fst === "hit", miss = l.fst === "miss";
+    return { st: l.fst || "manual", html: `<div class="tl-leg ${hit ? "hit" : miss ? "miss" : ""}"><div class="tl-top"><b>${esc(l.label)}</b><span>You mark this one</span></div><div class="tl-num"><span>${hit ? "" : miss ? "" : "We couldn't match it to a game"}</span><span>${hit ? "✓ Landed" : miss ? "✗ Lost" : ""}</span></div></div>` }; }
   if (l.fst && !findGame(l.sport, l.gid)) {   // the game has left the feed: show the numbers saved when it settled
     const hit = l.fst === "hit", miss = l.fst === "miss", name = l.pid ? l.name : String(l.label || "").replace(/ \(in-play\)$/, "");
     const w = l.pid && l.final != null ? Math.min(1, l.final / l.target) : hit ? 1 : miss ? .5 : 0;
@@ -2463,7 +2466,7 @@ function legInfo0(l) {   // -> { html, st: "pre" | "live" | "hit" | "miss" | "vo
 }
 // a live card for any bet with games attached: imported player bets, saved slips, accas
 const surnames = l => { const N = (l.group || []).map(m => m.name.split(" ").slice(1).join(" ") || m.name); return N.length > 1 ? N.slice(0, -1).join(", ") + " & " + N[N.length - 1] : l.name; };
-const betTitle = (legs, text) => { const L = (legs || []).filter(l => l.pid || l.k), n = L.length, one = L[0]; if (!n) return text || "Bet";
+const betTitle = (legs, text) => { const L = (legs || []).filter(l => l.pid || l.k || l.manual), n = L.length, one = L[0]; if (!n) return text || "Bet"; if (n === 1 && one.manual) return one.label;
   if (n > 1 && L.every(l => l.pid && !l.group && l.pid === one.pid)) return `${one.name} · ${n} bets`;
   return n > 1 ? `${n}-leg ${L.every(l => l.pid) ? "player bet" : n === 2 ? "double" : n === 3 ? "treble" : "acca"}` : one.group ? `${surnames(one)} ${one.target}+ ${one.label}` : one.pid ? propText(one) : String(one.label || text || "").replace(/ \(in-play\)$/, ""); };
 function gamesLine(b) {
@@ -2507,6 +2510,7 @@ function paceChance(cur, need, f, lam0, stat) {
   return full == null ? null : atLeast(need, Math.max(.01, full * (1 - f)), stat);
 }
 function legChance(l) {
+  if (l.manual) return l.fst === "hit" ? 1 : l.fst === "miss" ? 0 : null;
   const st = legInfo0(l).st; if (st === "hit" || st === "void") return 1; if (st === "miss") return 0;
   const g = findGame(l.sport, l.gid); if (!g) return null;
   if (l.pid) {
@@ -2540,14 +2544,16 @@ function withPc(i, l) {
 }
 function betChance(legs) { let p = 1, unknown = 0; for (const l of legs) { const c = legChance(l); if (c == null) unknown++; else p *= c; } return { p, unknown }; }
 function betCard(t) {
-  const info = t.legs.map((l, i) => legInfo(i && l.pid && !l.group && t.legs[i - 1].pid === l.pid ? { ...l, _sub: true } : l)), n = t.legs.length, hit = info.filter(i => i.st === "hit").length, voids = info.filter(i => i.st === "void").length;
+  const info = t.legs.map((l, i) => { const r = legInfo(i && l.pid && !l.group && t.legs[i - 1].pid === l.pid ? { ...l, _sub: true } : l);
+    if (l.manual && !l.fst && t.saved) r.html = r.html.replace(/<\/div>$/, `<div class="mleg"><button class="btn sm win" data-mleg="${t.saved}|${i}|hit">Landed</button><button class="btn sm lose" data-mleg="${t.saved}|${i}|miss">Lost</button></div></div>`);
+    return r; }), n = t.legs.length, hit = info.filter(i => i.st === "hit").length, voids = info.filter(i => i.st === "void").length;
   const lost = info.some(i => i.st === "miss"), started = info.some(i => i.st !== "pre");
   const overall = t.result === "won" ? `<span class="st won">Won ✓</span>` : t.result === "lost" ? `<span class="st lost">Lost</span>` : t.result === "void" ? `<span class="st void">Void</span>` : lost ? `<span class="st lost">Lost</span>` : hit && hit + voids === n ? `<span class="st won">Won ✓</span>` : voids === n ? `<span class="st void">Void</span>` : started ? `<span class="st">${hit} of ${n} landed</span>` : `<span class="st">Not started</span>`;
   const title = betTitle(t.legs, t.text);
   const x = t.noX ? "" : t.saved ? `<button class="x" data-delbet="${t.saved}" aria-label="Delete bet">✕</button>` : `<button class="x" data-untrack="${t.id}" aria-label="Stop tracking">✕</button>`;
   const BC = !t.result || t.result === "open" ? betChance(t.legs) : null, showC = BC && !lost && !(hit && hit + voids === n) && BC.unknown < n;
   const chanceRow = showC ? `<div class="bc-chance"><span>${started ? "Chance it lands now" : "Chance it lands"}${BC.unknown ? ` <small>(${BC.unknown} leg${BC.unknown > 1 ? "s" : ""} not counted)</small>` : ""}</span><b style="color:${tierColor(BC.p)}">${pct(BC.p)}</b></div><div class="meter bc-meter"><i style="width:${Math.max(2, BC.p * 100)}%"></i></div>` : "";
-  return `<article class="trk-card ${t.chal ? "chalcard" : ""}"><div class="trk-hd"><div>${t.tag ? `<a class="chaltag" href="#challenge">🏆 ${esc(t.tag)} ›</a>` : ""}<b>${esc(title)}</b><small>${t.dec ? odds(t.dec) + " · " : ""}${t.stake ? `£${(+t.stake).toFixed(2).replace(/\.00$/, "")} returns ${money(t.stake * (t.dec || 1))}` : ""}</small></div>${overall}${x}</div>${chanceRow}${info.map((i, k) => showC ? withPc(i, t.legs[k]) : i.html).join("")}</article>`;
+  return `<article class="trk-card ${t.chal ? "chalcard" : ""}"><div class="trk-hd"><div>${t.tag ? `<a class="chaltag" href="#challenge" ${t.chal ? `data-chalsel="${t.chal}"` : ""}>🏆 ${esc(t.tag)} ›</a>` : ""}<b>${esc(title)}</b></div>${overall}${x}</div>${t.stake || t.dec ? `<div class="bc-money"><span><small>Stake</small><b>${t.stake ? money(+t.stake) : "–"}</b></span><span><small>Odds</small><b>${t.dec ? odds(t.dec) : "–"}</b></span><span><small>${t.result === "won" ? "Returned" : "Returns"}</small><b class="pos">${t.stake ? money(t.stake * (t.dec || 1)) : "–"}</b></span></div>` : ""}${chanceRow}${info.map((i, k) => showC ? withPc(i, t.legs[k]) : i.html).join("")}</article>`;
 }
 function trackerHTML(bare, extra) {
   const all = [...(S.tracked || []), ...(extra || [])], sportOf = t => (t.legs[0] || {}).sport, T = bare ? all : all.filter(t => sportOf(t) === S.sport), other = all.length - T.length;
@@ -2609,21 +2615,29 @@ async function readShot(file) {
     S.impOddsTyped = false; if (odv) { S.impOdds = odm[1]; S.impOddsTyped = true; const o = $("#impodds"); if (o) o.value = odm[1]; } S.impShotMsg = `Found ${lines.length} leg${lines.length > 1 ? "s" : ""}. Check them below, then tap Track.`; saveImpDraft(); impRefresh();
   } catch (e) { S.impShotMsg = "Couldn't read that screenshot. Check your connection and try again, or type the bet below."; impRefresh(); }
 }
-function impParse() { const { idx, loading } = playerIndex(), txt = S.importText || ""; return { loading, r: txt.trim() ? parseBet(txt, idx) : { legs: [], missing: [], dec: null } }; }
+function impParse() { const { idx, loading } = playerIndex(), txt = S.importText || ""; return { loading, r: txt.trim() ? parseBet(txt, idx) : { legs: [], missing: [], unread: [], dec: null } }; }
+/* what we'll save: legs we can track, plus anything we couldn't match as legs you mark yourself */
+const impManual = (r, loading) => loading ? [] : [...r.missing.map(n => `${n}`), ...(r.unread || [])];
+function impEst(legs) {   // the app's odds for these legs, when it has a price for every one
+  let d = 1; for (const l of legs) { const g = findGame(l.sport, l.gid), m = g && (l.pid ? !l.group && mkt(g, `P:${l.pid}:${l.stat}:${l.target}`) : !/^T:/.test(l.k || "") && mkt(g, l.k)); if (!m) return null; d *= priceOf(m); }
+  return legs.length ? Math.round(d * 100) / 100 : null;
+}
 function impDyn() {
   const { loading, r } = impParse();
-  return `${S.impShotMsg ? `<div class="note">${esc(S.impShotMsg)}</div>` : ""}${loading ? `<div class="loadbox" style="padding:10px">Loading today's players…</div>` : ""}
-    ${r.legs.length || r.missing.length ? `<div class="imp-legs">${r.legs.map(l => { const g = findGame(l.sport, l.gid), when = g ? (isLive(g) ? "Live · " + clockLabel(l.sport, g) : g.status.state === "post" ? "Finished" : whenLabel(kick(g))) : ""; const now = l.pid && g && !isPre(g) ? legValue(l) : null, nowTxt = now && now.v != null ? ` · <span class="imp-now">${now.v} so far${now.v >= l.target ? " ✓" : ""}</span>` : "";
-      return l.pid ? `<div class="imp-leg ok"><span>✓</span><div><b>${esc(l.name)}</b> · ${l.target}+ ${esc(l.label)}${nowTxt}<small>${esc(l.team)} · ${g ? esc(vs(l.sport, g)) + " · " + when : ""}</small>${now && now.parts ? `<div class="tl-pps">${now.parts.map(({ m, r: q }) => `<span class="tl-pp">${esc(shortName(m.name))} <b>${q.v == null ? 0 : q.v}</b></span>`).join("")}</div>` : ""}</div></div>` : `<div class="imp-leg ok"><span>✓</span><div><b>${esc(l.label)}</b><small>${g ? esc(vs(l.sport, g)) + " · " + when : ""}</small></div></div>`; }).join("")}${r.missing.map(n => `<div class="imp-leg bad"><span>✗</span><div><b>${esc(n)}</b><small>Not found in today's or tomorrow's games. Check the spelling.</small></div></div>`).join("")}</div>` : ""}`;
+  return `${S.impShotMsg ? `<div class="note">${esc(S.impShotMsg)}</div>` : ""}${loading ? `<div class="loadbox" style="padding:10px">Looking up the players…</div>` : ""}
+    ${r.legs.length || (!loading && (r.missing.length || (r.unread || []).length)) ? `<div class="imp-legs">${r.legs.map(l => { const g = findGame(l.sport, l.gid), when = g ? (isLive(g) ? "Live · " + clockLabel(l.sport, g) : g.status.state === "post" ? "Finished" : whenLabel(kick(g))) : ""; const now = l.pid && g && !isPre(g) ? legValue(l) : null, nowTxt = now && now.v != null ? ` · <span class="imp-now">${now.v} so far${now.v >= l.target ? " ✓" : ""}</span>` : "";
+      return l.pid ? `<div class="imp-leg ok"><span>✓</span><div><b>${esc(l.name)}</b> · ${esc(l.group ? `${l.target}+ ${l.label}` : propText(l, " ").trim())}${nowTxt}<small>${esc(l.team)} · ${g ? esc(vs(l.sport, g)) + " · " + when : ""}</small>${now && now.parts ? `<div class="tl-pps">${now.parts.map(({ m, r: q }) => `<span class="tl-pp">${esc(shortName(m.name))} <b>${q.v == null ? 0 : q.v}</b></span>`).join("")}</div>` : ""}</div></div>` : `<div class="imp-leg ok"><span>✓</span><div><b>${esc(l.label)}</b><small>${g ? esc(vs(l.sport, g)) + " · " + when : ""}</small></div></div>`; }).join("")}${impManual(r, loading).map(n => `<div class="imp-leg man"><span>✋</span><div><b>${esc(n)}</b><small>Couldn't match this to a game, so it's saved as a leg you mark yourself. Check the spelling if it should track.</small></div></div>`).join("")}</div>` : ""}`;
 }
 // update only the parts that change, so the text box (and the phone keyboard) is never rebuilt
 function impRefresh() {
   const box = $("#impdyn"); if (!box) return;
-  { const { loading, r } = impParse(); if (r.missing.length && !loading && Date.now() - (S._snapAt || 0) > 60e3) { S._snapAt = Date.now(); reloadSnapshot().then(() => setTimeout(impRefresh, 1500)); } }   /* a name we can't find: maybe a game that's just been added, so fetch the latest list once */
+  { const { loading, r } = impParse(); if (r.missing.length && !loading && !S.impWide) { S.impWide = true; setTimeout(impRefresh, 50); }   /* a name we can't find: look at games later in the week too */
+    else if (r.missing.length && !loading && Date.now() - (S._snapAt || 0) > 60e3) { S._snapAt = Date.now(); reloadSnapshot().then(() => setTimeout(impRefresh, 1500)); } }   /* still missing: maybe a game that's just been added, so fetch the latest list once */   /* a name we can't find: maybe a game that's just been added, so fetch the latest list once */
   const html = impDyn(); if (box.dataset.h !== html) { box.innerHTML = html; box.dataset.h = html; }
-  const { r } = impParse(), o = $("#impodds"), go = $("[data-impgo]");
+  const { r, loading } = impParse(), o = $("#impodds"), go = $("[data-impgo]");
   if (o && !S.impOddsTyped && document.activeElement !== o) o.value = r.dec ? odds(r.dec) : "";
-  if (go) go.disabled = !r.legs.length;
+  if (o) { const est = !r.dec && impEst(r.legs); o.placeholder = est ? `${odds(est)} (our estimate)` : "3.00 or 2/1"; }
+  if (go) go.textContent = !r.legs.length && impManual(r, loading).length ? (S.user ? "Save it (you'll mark the result)" : "Sign in to save this bet") : S.user ? "Save and track" : "Track this bet";
 }
 function importSheet() {
   const { r } = impParse(), txt = S.importText || "";
@@ -2634,8 +2648,7 @@ function importSheet() {
     <div class="imp-ex">Examples: <button class="linkbtn" data-impex="Nicolas Jackson 2+ shots on target @ 2.50">Jackson 2+ shots on target</button> · <button class="linkbtn" data-impex="Luka Doncic 8+ assists @ 1.90">Doncic 8+ assists</button> · <button class="linkbtn" data-impex="Haaland to score @ 1.80">Haaland to score</button></div>
     <div id="impdyn">${impDyn()}</div>
     <div class="addrow"><div class="field" style="flex:1 1 100px"><label for="impodds">Odds</label><input id="impodds" value="${esc(S.impOddsTyped && S.impOdds ? S.impOdds : r.dec ? odds(r.dec) : "")}" placeholder="3.00 or 2/1"></div><div class="field" style="flex:1 1 100px"><label for="impstake">Stake £</label><input id="impstake" type="number" inputmode="decimal" min="0" step="0.5" value="${esc(S.impStake != null ? S.impStake : S.stake)}"></div></div>
-    ${S.user ? `<label class="optrow"><input type="checkbox" id="impsave" checked> Also save to My Bets</label>` : ""}
-    <button class="btn" data-impgo ${r.legs.length ? "" : "disabled"}>Track this bet</button></div>`;
+    <button class="btn" data-impgo>${S.user ? "Save and track" : "Track this bet"}</button></div>`;
 }
 /* ---------- tables + news (fetched on demand, straight from the feed) ---------- */
 const API2 = "https://site.api.espn.com/apis/v2/sports";
@@ -3036,14 +3049,15 @@ function friendsView() {
 }
 function viewMyBets() {
   const bets = S.user ? S.bets || [] : [], track = b => (b.legs || []).some(l => l.pid || l.k);
-  const savedCards = bets.filter(b => b.result === "open" && track(b)).map(b => ({ id: "s" + b.id, saved: b.id, text: b.label, legs: b.legs.filter(l => l.pid || l.k), dec: +b.odds_dec, stake: +b.stake }));
+  const savedCards = bets.filter(b => b.result === "open" && track(b)).map(b => ({ id: "s" + b.id, saved: b.id, text: b.label, legs: b.legs.filter(l => l.pid || l.k || l.manual), dec: +b.odds_dec, stake: +b.stake }));
   const local = localTracked(bets);
-  const chalCards = chalList().map((C, i) => [C, i]).filter(([C]) => C.active && (C.active.legs || []).some(l => l.k || l.pid)).map(([C, i]) => ({ id: "c" + C.id, chal: C.id, noX: true, tag: `£1K challenge ${i + 1} · step ${C.rung + 1}`, text: C.active.label, legs: C.active.legs, dec: +C.active.dec, stake: +C.bank }));
-  const cards = [...chalCards, ...local, ...savedCards].sort((a, b) => Math.min(...a.legs.map(l => +new Date(kick(findGame(l.sport, l.gid) || { start: 0 })) || 0)) - Math.min(...b.legs.map(l => +new Date(kick(findGame(l.sport, l.gid) || { start: 0 })) || 0)));
-  for (const c of cards) for (const l of c.legs) { const g = findGame(l.sport, l.gid); if (l.pid && g && !isPre(g) && !(l.sport === "nba" ? g.box : g.lineups)) loadDetail(l.sport + ":" + l.gid); }
+  const chalCards = chalList().map((C, i) => [C, i]).filter(([C]) => C.active && (C.active.legs || []).some(l => l.k || l.pid)).map(([C, i]) => ({ id: "c" + C.id, chal: C.id, noX: true, tag: `Challenge ${i + 1} · step ${C.rung + 1} of ${C.rungs}`, text: C.active.label, legs: C.active.legs, dec: +C.active.dec, stake: +C.bank }));
+  const cards = [...local, ...savedCards].sort((a, b) => Math.min(...a.legs.map(l => +new Date(kick(findGame(l.sport, l.gid) || { start: 0 })) || 0)) - Math.min(...b.legs.map(l => +new Date(kick(findGame(l.sport, l.gid) || { start: 0 })) || 0)));
+  for (const c of [...cards, ...chalCards]) for (const l of c.legs) { const g = findGame(l.sport, l.gid); if (l.pid && g && !isPre(g) && !(l.sport === "nba" ? g.box : g.lineups)) loadDetail(l.sport + ":" + l.gid); }
   const hand = bets.filter(b => b.result === "open" && !track(b)), settled = bets.filter(b => b.result !== "open");
   const head = `<div class="hd"><div><h1>My Bets</h1><p class="sub">Your bets update live and settle themselves at full time.</p></div><button class="btn ghost sm" data-import>+ Import a bet</button></div>`;
-  const live = cards.length ? `<section class="section"><h2>Live & upcoming</h2><div class="trk">${cards.map(betCard).join("")}</div></section>` : "";
+  const live = (chalCards.length ? `<section class="section"><div class="hd"><h2>£1K challenges</h2><a class="linkbtn" href="#challenge">Open £1K ›</a></div><div class="trk">${chalCards.map(betCard).join("")}</div></section>` : "")
+    + (cards.length ? `<section class="section"><h2>Live & upcoming</h2><div class="trk">${cards.map(betCard).join("")}</div></section>` : "");
   if (!sb || !S.user) return `${head}${live}${cards.length ? "" : `<div class="empty art"><img src="${art("empty-bets.webp")}" alt="" loading="lazy"><b>No bets yet</b><span>Import a bet to follow it live, e.g. "Haaland to score @ 1.80".</span></div>`}
     <a class="strip" href="#account"><span class="ic-dot">${ICON.chart}</span><span><b>Save your bets</b><small>Sign in free to keep your bets and see your profit.</small></span><span aria-hidden="true">›</span></a>`;
   return `${head}${walletStrip()}${live}
@@ -3364,6 +3378,7 @@ function betOutcome(legs) {   // "won" / "lost" once it's certain, otherwise nul
   if (!legs || !legs.length) return null;
   let all = true, lost = false;
   for (const l of legs) {
+    if (l.manual) { if (l.fst === "miss") lost = true; else if (l.fst !== "hit") all = false; continue; }   /* a leg you mark yourself */
     const g = findGame(l.sport, l.gid); if (!g) { all = false; continue; }
     if (l.group) {
       const gs = l.group.map(m => findGame(l.sport, m.gid)); if (gs.some(x => !x)) { all = false; continue; }
@@ -3486,7 +3501,7 @@ function render() {
   document.body.style.overflow = (S.drawer || S.slipOpen) ? "hidden" : "";
 }
 
-document.addEventListener("click", e => {
+document.addEventListener("click", async e => {
   const t = e.target.closest("button,[data-close]"); if (!t) return;
   const d = t.dataset;
   if (d.sport) { S.sport = d.sport; S.league = "all"; S.newsFilter = "all"; store.set("sport", S.sport); render(); }
@@ -3576,20 +3591,28 @@ document.addEventListener("click", e => {
     else pinGame(live, gid, ks => ks.filter(x => x !== k));
     render(); }
   else if (d.iosx !== undefined) { store.set("iosTipX", true); render(); }
+  else if (d.mleg) { const [id, i, st] = d.mleg.split("|"), b = (S.bets || []).find(x => String(x.id) === id); if (!b) return;
+    const legs = b.legs.map((l, k) => k === +i ? { ...l, fst: st } : l); b.legs = legs; render();
+    const r = await sb.from("bets").update({ legs }).eq("id", b.id); if (r.error) toast("Couldn't save. Check your connection."); else toast(st === "hit" ? "Marked as landed" : "Marked as lost"); autoAt = 0; autoSettle(); }
   else if (d.impex) { S.importText = d.impex; const t = $("#imptext"); if (t) t.value = d.impex; S.impOddsTyped = false; impRefresh(); }
   else if (d.untrack) { S.tracked = S.tracked.filter(t => t.id !== d.untrack); store.set("tracked", S.tracked); render(); }
   else if (d.impgo !== undefined) {
-    const { idx } = playerIndex(), r = parseBet(S.importText || "", idx); if (!r.legs.length) return;
-    const dec = parseOdds(($("#impodds") || {}).value) || r.dec, stake = +(($("#impstake") || {}).value) || 0;
-    if (S.user && sb && ($("#impsave") || {}).checked && !dec) { toast("Add the odds so it saves to My Bets and shows on all your devices"); const o = $("#impodds"); if (o) o.focus(); return; }
-    const text = r.legs.map(l => l.pid ? legText(l) : `${l.label} (${l.match})`).join(" + ").slice(0, 200);
-    const t = { id: "t" + Date.now(), text, legs: r.legs, dec, stake, at: new Date().toISOString() };
-    S.tracked = [t, ...(S.tracked || [])]; store.set("tracked", S.tracked);
-    if (S.user && sb && ($("#impsave") || {}).checked && dec) {
-      const gs = [...new Set(r.legs.map(l => l.gid))].map(id => r.legs.find(l => l.gid === id)).map(l => findGame(l.sport, l.gid)).filter(Boolean);
-      sb.from("bets").insert({ label: text, match: gs.map(g => vs(r.legs[0].sport, g)).join(", "), legs: r.legs.map(l => ({ ...l, type: "prop" })), odds_dec: Math.round(dec * 1000) / 1000, stake, sport: r.legs[0].sport, kickoff: gs.map(kick).sort()[0] }).select().single().then(x => { if (x.data) { S.bets.unshift(x.data); walletAdjust(-(+x.data.stake)); loadSocial(); } });
-    }
-    S.importOpen = false; S.importText = ""; S.impOdds = ""; S.impOddsTyped = false; S.impStake = null; saveImpDraft(); if (location.hash !== "#mybets") location.hash = "mybets"; render(); toast("Tracking your bet live");
+    const { idx, loading } = playerIndex(), raw = S.importText || "", r = parseBet(raw, idx);
+    if (!raw.trim()) { toast("Paste a screenshot or type your bet first"); const t = $("#imptext"); if (t) t.focus(); return; }
+    if (loading) { toast("Still looking up the players. Try again in a second"); return; }
+    const manual = impManual(r, false).map(label => ({ manual: true, label })), est = impEst(r.legs);
+    const dec = parseOdds(($("#impodds") || {}).value) || r.dec || (manual.length ? null : est), stake = +(($("#impstake") || {}).value) || 0;
+    if (!dec) { S.impShotMsg = "Add the odds from your bet slip (e.g. 9/2 or 5.5), then tap Save."; impRefresh(); const o = $("#impodds"); if (o) o.focus(); return; }
+    const legs = [...r.legs, ...manual], text = (legs.map(l => l.manual ? l.label : l.pid ? legText(l) : `${l.label} (${l.match})`).join(" + ") || raw.trim()).slice(0, 200);
+    const done = msg => { S.importOpen = false; S.importText = ""; S.impOdds = ""; S.impOddsTyped = false; S.impStake = null; S.impShotMsg = ""; saveImpDraft(); if (location.hash !== "#mybets") location.hash = "mybets"; render(); toast(msg); };
+    const local = () => { if (!r.legs.length) return false; S.tracked = [{ id: "t" + Date.now(), text, legs: r.legs, dec, stake, at: new Date().toISOString() }, ...(S.tracked || [])]; store.set("tracked", S.tracked); return true; };
+    if (!S.user || !sb) { if (local()) done("Tracking your bet on this device. Sign in to keep it on all your devices"); else toast("Sign in to save a bet you mark yourself"); return; }
+    const gs = [...new Set(r.legs.map(l => l.sport + ":" + l.gid))].map(k => { const [sp, id] = k.split(":"), g = findGame(sp, id); return g && [sp, g]; }).filter(Boolean);
+    const row = { label: text, match: gs.map(([sp, g]) => vs(sp, g)).join(", "), legs: legs.map(l => l.manual ? l : { ...l, type: "prop" }), odds_dec: Math.round(Math.max(1.01, dec) * 1000) / 1000, stake, sport: (r.legs[0] || {}).sport || "football", kickoff: gs.map(([, g]) => kick(g)).sort()[0] || null };
+    const res = await sb.from("bets").insert(row).select().single();
+    if (res.error || !res.data) { if (local()) done("Couldn't reach your account, so it's tracking on this device for now"); else toast("Couldn't save. Check your connection and try again"); return; }
+    S.bets.unshift(res.data); walletAdjust(-(+res.data.stake)); loadSocial();
+    done(!r.legs.length ? "Saved. Mark it won or lost in My Bets" : manual.length ? "Saved. Some legs track live, the rest you mark yourself" : !parseOdds(($("#impodds") || {}).value) && !r.dec ? `Saved at our estimated odds of ${odds(dec)}. Tap the bet to change them` : "Saved and tracking live");
   }
   else if (d.tipmode) { S.tipMode = d.tipmode; store.set("tipMode", d.tipmode); render(); }
   else if (d.chalodds2) { S.chalOdds = d.chalodds2; store.set("chalOdds", S.chalOdds); render(); }
@@ -3627,7 +3650,7 @@ document.addEventListener("input", e => {
 document.addEventListener("click", e => { if (e.target.closest("[data-injclose]")) { S.injOpen = null; render(); } if (e.target.closest("div[data-betviewx]")) { S.betView = null; render(); } if (e.target.closest("div[data-cashclose]")) { S.cashOpen = null; render(); } const shc = e.target.closest("[data-shareclose]"); if (shc && S.shareOpen) { if (shc.tagName === "A") setTimeout(() => { S.shareOpen = false; render(); }, 400); else { S.shareOpen = false; render(); } } if (e.target.closest("[data-importclose]")) { S.importOpen = false; saveImpDraft(); render(); } });
 document.addEventListener("input", e => {
   const id = e.target.id; if (!/^imp(text|odds|stake)$/.test(id)) return;
-  if (id === "imptext") { S.importText = e.target.value; clearTimeout(S._impT); S._impT = setTimeout(impRefresh, 350); }
+  if (id === "imptext") { S.importText = e.target.value; S.impShotMsg = ""; clearTimeout(S._impT); S._impT = setTimeout(impRefresh, 350); }
   if (id === "impodds") { S.impOdds = e.target.value; S.impOddsTyped = !!e.target.value.trim(); }
   if (id === "impstake") S.impStake = e.target.value;
   saveImpDraft();
