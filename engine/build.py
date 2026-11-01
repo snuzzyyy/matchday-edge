@@ -10,10 +10,11 @@ os.makedirs(CACHE, exist_ok=True); os.makedirs(SITE, exist_ok=True)
 
 BASE = "https://site.api.espn.com/apis/site/v2/sports"
 LEAGUES = [
-    ("eng.1", "Premier League", "EPL"), ("eng.2", "Championship", "CHAMP"),
+    ("eng.1", "Premier League", "EPL"), ("eng.2", "Championship", "CHAMP"), ("eng.3", "League One", "EFL1"), ("eng.4", "League Two", "EFL2"),
     ("uefa.champions", "Champions League", "UCL"), ("uefa.europa", "Europa League", "UEL"),
     ("esp.1", "La Liga", "LIGA"), ("ita.1", "Serie A", "SERIE A"), ("ger.1", "Bundesliga", "BUND"),
     ("fra.1", "Ligue 1", "L1"), ("sco.1", "Scottish Premiership", "SPFL"),
+    ("ned.1", "Eredivisie", "ERE"), ("por.1", "Primeira Liga", "POR"), ("usa.1", "MLS", "MLS"),
 ]
 DAYS_BACK, DAYS_FWD = 1, 5
 
