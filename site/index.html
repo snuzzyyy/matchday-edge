@@ -2489,14 +2489,14 @@ async function loadAccount() {
   const uid = S.user.id;
   const [p, b, c, w, lb] = await Promise.all([
     sb.from("profiles").select("*").eq("id", uid).maybeSingle(),
-    sb.from("bets").select("*").order("placed_at", { ascending: false }).limit(300),
+    sb.from("bets").select("*").eq("user_id", uid).order("placed_at", { ascending: false }).limit(300),
     sb.from("challenges").select("data").eq("user_id", uid).maybeSingle(),
     sb.from("pro_waitlist").select("user_id").eq("user_id", uid).maybeSingle(),
     sb.rpc("leaderboard")
   ]);
   const wl = await sb.from("wallets").select("*").eq("user_id", uid).maybeSingle(); S.walletReady = !wl.error; S.wallet = wl.data || null;
   S.profile = p.data || { id: uid, display_name: (S.user.user_metadata || {}).display_name || S.user.email.split("@")[0], fav_teams: [], plan: "free", show_on_leaderboard: true, created_at: S.user.created_at };
-  S.bets = b.data || []; S.chalAll = splitChal(c.data ? c.data.data : null); S.waitlisted = !!w.data; S.board = lb.data || [];
+  S.bets = (b.data || []).filter(x => x.user_id === uid);   // only your own bets (friends' bets are readable for the feed) S.chalAll = splitChal(c.data ? c.data.data : null); S.waitlisted = !!w.data; S.board = lb.data || [];
   render(); loadSocial();
 }
 if (sb) {
