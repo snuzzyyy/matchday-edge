@@ -1007,6 +1007,7 @@ const games = sport => sport === "nba" ? S.data.nba : S.data.football;
 const kick = g => g.kickoff || g.start;
 const isLive = g => g.status.state === "in";
 const isPre = g => g.status.state === "pre";
+const LOGO_FIX = { "nba-2": "img/logos/nba-2.webp" };   // teams whose ESPN logo is an alternate: use the main badge (Celtics = Lucky)
 function logo(sport, t, cls = "") {
   const src = S.logos[(sport === "nba" ? "nba" : "soccer") + "-" + t.id];
   if (src) return `<img class="logo ${cls}" src="${src}" alt="" loading="lazy">`;
@@ -2780,7 +2781,7 @@ try { const v = JSON.parse(sessionStorage.getItem("mde:view") || "null"); if (v 
 try { const hd = window.claude?.hot?.data; if (hd && hd.t) restored = hd; } catch {}
 if (restored) { S.drawer = restored.drawer || null; S.slipOpen = !!restored.slipOpen; S.boxSide = restored.boxSide || {}; S.sport = restored.sport || S.sport; S.win = restored.win || S.win; S.league = restored.league || S.league; S.accaWin = restored.accaWin; }
 Promise.all([fetch("data.json").then(r => r.json()), fetch("logos.json").then(r => r.json()).catch(() => ({}))]).then(([d, l]) => {
-  S.data = d; S.logos = l;
+  S.data = d; S.logos = Object.assign(l, LOGO_FIX);
   // drop slip legs whose game has started or vanished
   S.slip = S.slip.filter(x => { const g = findGame(x.sport, x.gid); return g && isPre(g); }); save();
   render();
