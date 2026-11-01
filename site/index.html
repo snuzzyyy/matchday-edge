@@ -438,7 +438,7 @@ a.prof-bdg{text-decoration:none}
 .lg-hd.live-hd span{display:flex;align-items:center;gap:8px}
 .chips.scroll{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-mask-image:linear-gradient(90deg,#000 85%,transparent);mask-image:linear-gradient(90deg,#000 85%,transparent);padding-right:24px}
 .chips.scroll::-webkit-scrollbar{display:none}
-.chips.scroll .chip{white-space:nowrap;flex:none}
+.chips.scroll .chip{white-space:nowrap;flex:none}@media (hover:hover) and (pointer:fine){.chips.scroll{flex-wrap:wrap;overflow:visible;-webkit-mask-image:none;mask-image:none;padding-right:0}}   /* mouse: show every chip (no sideways swipe on a PC) */
 .more{font-size:12px;color:var(--blue-2);font-weight:600;padding:2px 0;text-align:left}
 @media (max-width:640px){
   .fx{grid-template-columns:46px minmax(0,1fr);row-gap:10px;padding:12px 14px}
@@ -500,7 +500,7 @@ a.prof-bdg{text-decoration:none}
 .stake label{font-size:13px;color:var(--fg-2);flex:1}
 .stake .in{display:flex;align-items:center;background:var(--surface-2);border:1px solid var(--line-2);border-radius:8px;padding:0 10px;width:110px}
 .stake input{width:100%;background:none;border:0;color:var(--fg);font-family:var(--display);font-size:18px;font-weight:700;padding:7px 0;outline:none}
-.meter{height:8px;border-radius:8px;background:var(--surface-3);overflow:hidden}.bc-chance{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:12.5px;color:var(--fg-2);margin-bottom:-4px}.bc-chance small{color:var(--muted);font-size:11px}.bc-chance b{font-family:var(--display);font-size:20px}.bc-meter{height:10px}
+.meter{height:8px;border-radius:8px;background:var(--surface-3);overflow:hidden}.bc-chance{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:12.5px;color:var(--fg-2);margin-bottom:-4px}.bc-chance small{color:var(--muted);font-size:11px}.bc-chance b{font-family:var(--display);font-size:20px}.bc-meter{height:10px}.tl-pc{font-weight:700;white-space:nowrap}
 .meter i{display:block;height:100%;border-radius:8px;background:linear-gradient(90deg,var(--live),var(--amber),var(--win))}
 .books{display:flex;flex-wrap:wrap;gap:6px}
 .books a{font-size:11.5px;font-weight:700;padding:6px 9px;border-radius:6px;text-decoration:none;color:var(--fg);background:var(--surface-3)}
@@ -2522,7 +2522,21 @@ function legChance(l) {
     return who === "each" ? (a == null || b == null ? null : a * b) : who === "home" ? a : b;
   }
   if (isPre(g)) { const m = mkt(g, l.k); return m ? m.p : l.p ?? null; }
-  const m = liveMarkets(l.sport, g).find(x => x.k === l.k); return m ? (m.state === "won" ? 1 : m.state === "lost" ? 0 : m.p) : null;
+  const m = liveMarkets(l.sport, g).find(x => x.k === l.k); if (m) return m.state === "won" ? 1 : m.state === "lost" ? 0 : m.p;
+  /* no market to read (e.g. the pre-match line has gone): work an Over/Under out from the score, the pace and the time left */
+  const ou = String(l.label || "").match(/^(Over|Under) ([\d.]+) (points|goals|corners|cards)/i); if (!ou) return null;
+  const unit = ou[3].toLowerCase(), line = +ou[2], sv = k => (g.stats || []).find(x => x.k === k), M = g.model || {};
+  const cur = unit === "points" || unit === "goals" ? (+g.home.score || 0) + (+g.away.score || 0) : unit === "corners" ? (sv("wonCorners") ? sv("wonCorners").h + sv("wonCorners").a : null) : (sv("yellowCards") ? sv("yellowCards").h + sv("yellowCards").a + (sv("redCards") ? sv("redCards").h + sv("redCards").a : 0) : null);
+  if (cur == null) return null;
+  const prior = unit === "points" ? M.proj || (g.odds && +g.odds.total) || null : unit === "goals" ? (M.xgH || 0) + (M.xgA || 0) || null : unit === "corners" ? M.corners : M.cards;
+  const over = paceChance(cur, Math.floor(line) + 1 - cur, gameFrac(l.sport, g), prior, unit === "points" ? "PTS" : ""); if (over == null) return null;
+  return /over/i.test(ou[1]) ? over : 1 - over;
+}
+/* each open leg shows its own chance too, so the bet's total makes sense */
+function withPc(i, l) {
+  const h = i.html; if (i.st === "hit" || i.st === "miss" || i.st === "void" || /chance now/.test(h)) return h;
+  const c = legChance(l), k = h.indexOf('<div class="tl-num"><span>'); if (c == null || k < 0) return h;
+  const e = h.indexOf("</span>", k + 26); return h.slice(0, e) + ` <span class="tl-pc" style="color:${tierColor(c)}">· ${pct(c)} chance</span>` + h.slice(e);
 }
 function betChance(legs) { let p = 1, unknown = 0; for (const l of legs) { const c = legChance(l); if (c == null) unknown++; else p *= c; } return { p, unknown }; }
 function betCard(t) {
@@ -2533,7 +2547,7 @@ function betCard(t) {
   const x = t.noX ? "" : t.saved ? `<button class="x" data-delbet="${t.saved}" aria-label="Delete bet">✕</button>` : `<button class="x" data-untrack="${t.id}" aria-label="Stop tracking">✕</button>`;
   const BC = !t.result || t.result === "open" ? betChance(t.legs) : null, showC = BC && !lost && !(hit && hit + voids === n) && BC.unknown < n;
   const chanceRow = showC ? `<div class="bc-chance"><span>${started ? "Chance it lands now" : "Chance it lands"}${BC.unknown ? ` <small>(${BC.unknown} leg${BC.unknown > 1 ? "s" : ""} not counted)</small>` : ""}</span><b style="color:${tierColor(BC.p)}">${pct(BC.p)}</b></div><div class="meter bc-meter"><i style="width:${Math.max(2, BC.p * 100)}%"></i></div>` : "";
-  return `<article class="trk-card ${t.chal ? "chalcard" : ""}"><div class="trk-hd"><div>${t.tag ? `<a class="chaltag" href="#challenge">🏆 ${esc(t.tag)} ›</a>` : ""}<b>${esc(title)}</b><small>${t.dec ? odds(t.dec) + " · " : ""}${t.stake ? `£${(+t.stake).toFixed(2).replace(/\.00$/, "")} returns ${money(t.stake * (t.dec || 1))}` : ""}</small></div>${overall}${x}</div>${chanceRow}${info.map(i => i.html).join("")}</article>`;
+  return `<article class="trk-card ${t.chal ? "chalcard" : ""}"><div class="trk-hd"><div>${t.tag ? `<a class="chaltag" href="#challenge">🏆 ${esc(t.tag)} ›</a>` : ""}<b>${esc(title)}</b><small>${t.dec ? odds(t.dec) + " · " : ""}${t.stake ? `£${(+t.stake).toFixed(2).replace(/\.00$/, "")} returns ${money(t.stake * (t.dec || 1))}` : ""}</small></div>${overall}${x}</div>${chanceRow}${info.map((i, k) => showC ? withPc(i, t.legs[k]) : i.html).join("")}</article>`;
 }
 function trackerHTML(bare, extra) {
   const all = [...(S.tracked || []), ...(extra || [])], sportOf = t => (t.legs[0] || {}).sport, T = bare ? all : all.filter(t => sportOf(t) === S.sport), other = all.length - T.length;
