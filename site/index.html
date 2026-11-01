@@ -188,7 +188,7 @@ select.addmore{width:100%;background:none;border:1px dashed var(--line-2);color:
 .st-k{display:grid;gap:5px;min-width:0}.st-k b{font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .st-bar{display:block;height:6px;position:relative;background:var(--surface-3);border-radius:4px}.st-bar i{position:absolute;top:0;bottom:0;border-radius:4px}.st-bar.up i{left:50%;background:var(--win)}.st-bar.down i{right:50%;background:var(--loss)}
 .st-bar::after{content:"";position:absolute;left:50%;top:-2px;bottom:-2px;width:1px;background:var(--muted)}
-.shotbtn{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;align-items:center;width:100%;text-align:left;padding:12px 14px;border-radius:12px;border:1px dashed var(--blue-2);background:rgba(61,123,255,.08);color:var(--fg);font:inherit;cursor:pointer}.shotbtn > span:first-child{font-size:24px}.shotbtn b{display:block;font-size:14.5px}.shotbtn small{display:block;font-size:12.5px;color:var(--muted)}
+.pastehint{display:block;margin-top:4px;color:var(--blue-2);font-weight:600}.shotbtn{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;align-items:center;width:100%;text-align:left;padding:12px 14px;border-radius:12px;border:1px dashed var(--blue-2);background:rgba(61,123,255,.08);color:var(--fg);font:inherit;cursor:pointer}.shotbtn > span:first-child{font-size:24px}.shotbtn b{display:block;font-size:14.5px}.shotbtn small{display:block;font-size:12.5px;color:var(--muted)}
 .acmode{margin-bottom:-6px}.acmode .dot{width:7px;height:7px;display:inline-block;vertical-align:1px}
 .ag-score{font-family:var(--display);font-weight:700;font-size:16px;color:var(--fg);padding:0 2px}.live-tag{display:inline-flex;align-items:center;gap:5px;color:var(--live);font-weight:700}.live-tag .dot{width:7px;height:7px}
 a.prof-bdg{text-decoration:none}
@@ -2420,6 +2420,18 @@ async function shotToCanvas(file) {
   const dark = sum / (px.length / 4) < 110; for (let i = 0; i < px.length; i += 4) { let v = px[i] * .3 + px[i + 1] * .59 + px[i + 2] * .11; if (dark) v = 255 - v; px[i] = px[i + 1] = px[i + 2] = v; }
   x.putImageData(d, 0, 0); return c;
 }
+const PC_PASTE = !!(window.matchMedia && matchMedia("(pointer:fine)").matches);
+/* paste a screenshot (Ctrl+V after Win+Shift+S) or drop an image anywhere: opens Import and reads it */
+function shotFrom(list) { for (const it of list || []) { const f = it.kind === "file" ? it.getAsFile() : it instanceof File ? it : null; if (f && /^image\//.test(f.type)) return f; } return null; }
+function importShot(f) {
+  if (!S.importOpen) { if (!(S.importText || "").trim()) { S.impOddsTyped = false; S.impOdds = ""; S.impStake = null; } S.importOpen = true; saveImpDraft(); S.slipOpen = false; render(); }
+  S.impShotMsg = ""; setTimeout(() => readShot(f), 30);
+}
+document.addEventListener("paste", e => { const f = shotFrom(e.clipboardData && e.clipboardData.items); if (!f) return;
+  const ae = document.activeElement; if (!S.importOpen && ae && /^(INPUT|TEXTAREA)$/.test(ae.tagName)) return;
+  e.preventDefault(); importShot(f); });
+document.addEventListener("dragover", e => { if (e.dataTransfer && [...e.dataTransfer.types].includes("Files")) e.preventDefault(); });
+document.addEventListener("drop", e => { const f = shotFrom(e.dataTransfer && e.dataTransfer.files); if (!f) return; e.preventDefault(); importShot(f); });
 async function readShot(file) {
   const box = $("#impdyn"); const say = m => { if (box) { box.innerHTML = `<div class="loadbox" style="padding:10px">${m}</div>`; box.dataset.h = ""; } };
   say("Reading your screenshot…");
@@ -2432,7 +2444,8 @@ async function readShot(file) {
     if (!lines.length) { S.impShotMsg = "Couldn't spot any of today's games in that screenshot. Try a clearer one, or type the bet below."; impRefresh(); return; }
     S.importText = lines.join("\n"); const t = $("#imptext"); if (t) t.value = S.importText;
     const st = raw.match(/stake[^0-9£]{0,12}£?\s*(\d+(?:\.\d{1,2})?)/i) || raw.match(/£\s*(\d+(?:\.\d{1,2})?)\s*(?:stake|bet)/i); if (st) { S.impStake = st[1]; const i = $("#impstake"); if (i) i.value = st[1]; }
-    S.impOddsTyped = false; S.impShotMsg = `Found ${lines.length} leg${lines.length > 1 ? "s" : ""}. Check them below, then tap Track.`; saveImpDraft(); impRefresh();
+    const od = raw.match(/(?:total )?odds[^0-9a-z]{0,6}(\d{1,4}\/\d{1,3}|\d{1,4}\.\d{1,3}|evs|evens)\b/i); const odv = od && parseOdds(od[1]);
+    S.impOddsTyped = false; if (odv) { S.impOdds = od[1]; S.impOddsTyped = true; const o = $("#impodds"); if (o) o.value = od[1]; } S.impShotMsg = `Found ${lines.length} leg${lines.length > 1 ? "s" : ""}. Check them below, then tap Track.`; saveImpDraft(); impRefresh();
   } catch (e) { S.impShotMsg = "Couldn't read that screenshot. Check your connection and try again, or type the bet below."; impRefresh(); }
 }
 function impParse() { const { idx, loading } = playerIndex(), txt = S.importText || ""; return { loading, r: txt.trim() ? parseBet(txt, idx) : { legs: [], missing: [], dec: null } }; }
@@ -2453,7 +2466,7 @@ function importSheet() {
   const { r } = impParse(), txt = S.importText || "";
   return `<div class="scrim top" data-importclose></div><div class="ijsheet imp" role="dialog" aria-modal="true" aria-label="Import a bet"><button class="close sm ij-x" data-importclose aria-label="Close">✕</button>
     <div><h2>Import a bet</h2><p class="sub" style="margin:4px 0 0">Add a screenshot of your bet slip, or type it, and we'll track it live.</p></div>
-    <button type="button" class="shotbtn" data-shotpick><span>📷</span><span><b>Read a screenshot</b><small>Sky Bet, Paddy Power and most bet slips. It stays on your phone.</small></span></button>
+    <button type="button" class="shotbtn" data-shotpick><span>📷</span><span><b>Read a screenshot</b><small>Sky Bet, Paddy Power and most bet slips. It stays on your ${PC_PASTE ? "device" : "phone"}.${PC_PASTE ? "<br><b class=\"pastehint\">On a PC: snip it (Win + Shift + S), then press Ctrl + V here, or drop the image on this box.</b>" : ""}</small></span></button>
     <div class="field"><label for="imptext">Or type / paste your bet</label><textarea id="imptext" rows="3" placeholder="e.g. Damian Lillard & Tyrese Maxey to score 25+ points each @ 3.00">${esc(txt)}</textarea></div>
     <div class="imp-ex">Examples: <button class="linkbtn" data-impex="Nicolas Jackson 2+ shots on target @ 2.50">Jackson 2+ shots on target</button> · <button class="linkbtn" data-impex="Luka Doncic 8+ assists @ 1.90">Doncic 8+ assists</button> · <button class="linkbtn" data-impex="Haaland to score @ 1.80">Haaland to score</button></div>
     <div id="impdyn">${impDyn()}</div>
