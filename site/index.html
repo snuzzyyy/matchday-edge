@@ -729,7 +729,7 @@ h3{font-size:15px;font-weight:700}
 /* social */
 .av{border-radius:50%;object-fit:cover;flex:none;display:inline-grid;place-items:center;background:linear-gradient(135deg,var(--blue),var(--violet));color:#fff;font-family:var(--display);font-weight:800}
 .acct-btn img{width:100%;height:100%;border-radius:50%;object-fit:cover}
-.avwrap{position:relative;cursor:pointer;flex:none;border-radius:50%}
+.avwrap{position:relative;cursor:pointer;flex:none;border-radius:50%;background:none;border:0;padding:0;color:inherit;font:inherit}
 .avwrap:focus-within{outline:2px solid var(--blue-2);outline-offset:3px}
 .avcam{position:absolute;right:-2px;bottom:-2px;width:26px;height:26px;border-radius:50%;background:var(--surface-3);border:2px solid var(--surface);display:grid;place-items:center;font-size:12px}
 .fcode{font-family:var(--display);letter-spacing:.12em;color:var(--tang-2)}
@@ -886,7 +886,7 @@ textarea{background:var(--bg-2);border:1px solid var(--line-2);border-radius:10p
   <span id="srcnote">Live scores and stats: ESPN feed, every 10s · Predictions refresh every 20 min · Reference prices: DraftKings feed converted to UK odds</span>
 </footer></div>
 <button class="fab" id="fab" hidden><span>Bet slip</span><span class="c" id="fabc">0</span><span id="fabo"></span></button>
-<div id="layer"></div><div id="implayer"></div><input type="file" id="avatarPick" accept="image/*" class="sr" tabindex="-1" aria-hidden="true">
+<div id="layer"></div><div id="implayer"></div><input type="file" id="avatarPick" accept="image/*" tabindex="-1" aria-hidden="true" style="position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;pointer-events:none">
 
 <script>
 (() => {
@@ -1974,7 +1974,7 @@ function viewAccount(mode = "account") {
     ${ft === "feed" ? feedView() : ft === "board" ? boardView() : friendsView()}`;
   }
 
-  return `<section class="prof"><div class="prof-top"><label class="avwrap" for="avatarPick" title="Change profile photo">${avatarHTML(P, 72)}<span class="avcam" aria-hidden="true">📷</span></label>
+  return `<section class="prof"><div class="prof-top"><button type="button" class="avwrap" data-pickphoto aria-label="Change profile photo">${avatarHTML(P, 72)}<span class="avcam" aria-hidden="true">📷</span></button>
     <div class="who"><b>${esc(P.display_name || "")}</b><div class="prof-bdg">${badgesHTML(P)}${planChip(P)}</div><small>Member since ${new Date(P.created_at || S.user.created_at).toLocaleDateString("en-GB", { month: "short", year: "numeric" })}</small></div></div>
     ${S.socialReady && P.friend_code ? `<div class="prof-code"><div><small>Friend code</small><b class="fcode">${esc(P.friend_code)}</b></div><div class="prof-acts"><button class="fc-btn" data-copycode aria-label="Copy friend code">⧉ Copy</button><button class="fc-btn" data-invite aria-label="Share invite link">↗ Share</button></div></div>` : ""}</section>
   ${m}
@@ -2083,7 +2083,7 @@ function myBetsView(inTab) {
 function profileView() {
   const P = S.profile || {}, favs = P.fav_teams || [];
   return `<section class="section"><h2>Your details</h2><form class="addrow" id="nameForm"><div class="field"><label for="dn">Display name</label><input id="dn" maxlength="24" value="${esc(P.display_name || "")}"></div><div class="field" style="flex:0 0 auto;align-self:end"><button class="btn ghost" type="submit">Save</button></div></form>
-    <div class="addrow"><label class="btn ghost sm" for="avatarPick" style="cursor:pointer">📷 ${P.avatar_url ? "Change" : "Add"} profile photo</label>${P.avatar_url ? `<button class="btn ghost sm" data-noavatar>Remove photo</button>` : ""}</div>
+    <div class="addrow"><button type="button" class="btn ghost sm" data-pickphoto>📷 ${P.avatar_url ? "Change" : "Add"} profile photo</button>${P.avatar_url ? `<button class="btn ghost sm" data-noavatar>Remove photo</button>` : ""}</div>
     <label class="optrow"><input type="checkbox" id="shareOpt" ${P.share_bets !== false ? "checked" : ""}> Let my friends see my bets (they can react and tail them)</label>
     <label class="optrow"><input type="checkbox" id="lbOpt" ${P.show_on_leaderboard !== false ? "checked" : ""}> Show me on my friends' leaderboard</label></section>
   <section class="section"><h2>Favourite teams</h2><div class="favs">${favs.length ? favs.map(f => `<span class="fav">${logo(f.sport, { id: f.id, name: f.name, abbr: f.name.slice(0, 3), color: "#334155" })}${esc(f.name)}<button class="x" data-unfav="${f.sport}|${f.id}" aria-label="Remove">✕</button></span>`).join("") : `<span style="color:var(--muted)">No favourites yet. Add your teams to star them in fixtures.</span>`}</div>
@@ -2300,6 +2300,7 @@ document.addEventListener("click", e => {
   else if (d.rung) { S.rungSel = +d.rung; render(); }
   else if (d.inj) { S.injOpen = d.inj; render(); }
   else if (d.import !== undefined) { S.importOpen = true; S.slipOpen = false; render(); setTimeout(() => { const t = $("#imptext"); t && t.focus(); }, 50); }
+  else if (d.pickphoto !== undefined) { const f = $("#avatarPick"); f.value = ""; f.click(); }
   else if (d.iosx !== undefined) { store.set("iosTipX", true); render(); }
   else if (d.impex) { S.importText = d.impex; const t = $("#imptext"); if (t) t.value = d.impex; S.impOddsTyped = false; impRefresh(); }
   else if (d.untrack) { S.tracked = S.tracked.filter(t => t.id !== d.untrack); store.set("tracked", S.tracked); render(); }
