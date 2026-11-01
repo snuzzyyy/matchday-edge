@@ -3561,6 +3561,17 @@ function applySB(sp, e) {
   if (prev === "in" && ty.state === "post") g._fin = true;
   return before !== JSON.stringify([g.status, g.home.score, g.away.score]);
 }
+/* score and clock from a game's own page: it's often ahead of the scoreboard list, and games can drop off that list */
+function applyHeader(sp, g, s) {
+  const c = ((s.header || {}).competitions || [])[0]; if (!c || !c.status || !c.status.type) return false;
+  const H = (c.competitors || []).find(x => x.homeAway === "home"), A = (c.competitors || []).find(x => x.homeAway === "away"); if (!H || !A || H.score == null) return false;
+  const st = c.status, ty = st.type, prev = g.status.state, before = JSON.stringify([g.status, g.home.score, g.away.score]);
+  g.status = { state: ty.state, detail: ty.shortDetail || ty.detail, clock: st.displayClock, period: st.period, completed: !!ty.completed };
+  g.home.score = H.score; g.away.score = A.score;
+  if (sp === "nba" && (H.linescores || []).length) { g.home.lines = H.linescores.map(x => Math.round(num(x.displayValue ?? x.value))); g.away.lines = (A.linescores || []).map(x => Math.round(num(x.displayValue ?? x.value))); }
+  if (prev === "in" && ty.state === "post") g._fin = true;
+  return before !== JSON.stringify([g.status, g.home.score, g.away.score]);
+}
 function boxMap(s) { const o = {}; for (const t of (s.boxscore || {}).teams || []) o[t.team.id] = Object.fromEntries((t.statistics || []).map(x => [x.name, x.displayValue])); return o; }
 function parseLineups(g, s) {
   const out = {};
@@ -3625,7 +3636,7 @@ function applyNba(g, s) {
 async function loadDetail(key) {
   const [sp, id] = key.split(":"), g = findGame(sp, id); if (!g || g._luAt && Date.now() - g._luAt < 60e3) return;
   g._luAt = Date.now();
-  try { const wasPost = g.status.state === "post"; if (sp === "nba") { if (!isPre(g)) applyNba(g, await getJ(`${SB}/basketball/nba/summary?event=${g.id}`)); } else { const s = await getJ(`${SB}/soccer/${g.league}/summary?event=${g.id}`); if (isPre(g)) parseLineups(g, s); else applyFb(g, s); } if (wasPost) g._postDetail = true; } catch {}
+  try { const wasPost = g.status.state === "post"; if (sp === "nba") { if (!isPre(g)) { const s = await getJ(`${SB}/basketball/nba/summary?event=${g.id}`); applyHeader(sp, g, s); applyNba(g, s); } } else { const s = await getJ(`${SB}/soccer/${g.league}/summary?event=${g.id}`); if (isPre(g)) parseLineups(g, s); else { applyHeader(sp, g, s); applyFb(g, s); } } if (wasPost) g._postDetail = true; } catch {}
   g._luDone = true; render();
 }
 let ticking = false;
@@ -3638,7 +3649,7 @@ async function liveTick() {
     let changed = false, ok = 0, tried = paths.size;
     await Promise.all([...paths].map(async p => { try { const sb = await getJ(`${SB}/${p}/scoreboard`); ok++; for (const e of sb.events || []) changed = applySB(p.startsWith("basketball") ? "nba" : "football", e) || changed; } catch {} }));
     const live = [...S.data.football.filter(g => isLive(g) || g._fin).map(g => ["football", g]), ...S.data.nba.filter(g => isLive(g) || g._fin).map(g => ["nba", g])];
-    await Promise.all(live.map(async ([sp, g]) => { try { const s = await getJ(`${SB}/${sp === "nba" ? "basketball/nba" : "soccer/" + g.league}/summary?event=${g.id}`); sp === "nba" ? applyNba(g, s) : applyFb(g, s); g._fin = false; changed = true; } catch {} }));
+    await Promise.all(live.map(async ([sp, g]) => { try { const s = await getJ(`${SB}/${sp === "nba" ? "basketball/nba" : "soccer/" + g.league}/summary?event=${g.id}`); const wasFin = g._fin; applyHeader(sp, g, s); sp === "nba" ? applyNba(g, s) : applyFb(g, s); if (wasFin || g.status.state !== "post") g._fin = false; changed = true; } catch {} }));
     if (ok || !tried) { S.liveAt = new Date().toISOString(); S.liveFail = 0; } else S.liveFail = (S.liveFail || 0) + 1;
     const ae = document.activeElement, typing = ae && /^(INPUT|SELECT|TEXTAREA)$/.test(ae.tagName) && ae.type !== "checkbox" && Date.now() - (S._typedAt || 0) < (ae.tagName === "SELECT" ? 20e3 : 8e3);   /* only hold the redraw while someone is actually typing or choosing */
     if (changed && !typing) render(); else renderChrome();
