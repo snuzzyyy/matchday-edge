@@ -82,7 +82,7 @@ All three SQL files **have been run** on the live Supabase project.
 
 ## 5. Features (what exists, where it lives in `index.html`)
 
-Main tabs (`VIEWS`): **Live · Games (fixtures) · Accas · Bets · Friends · Tables · News · £1K**, plus `#account` (👤 button). Routing is hash-based (`view()`), state lives in the global `S` object, everything renders through `render()`.
+Main tabs (`VIEWS`): **Live · Games (fixtures) · Accas · Tips (best bets, id `bets`) · My Bets (`mybets`) · Friends · Tables · News · £1K**, plus `#account` (👤 button). Routing is hash-based (`view()`), state lives in the global `S` object, everything renders through `render()`.
 
 - **Live**: live cards with mini stats, plain-English in-play insights (corner pace vs expected, favourite losing), tracked bets at the top.
 - **Games/Fixtures**: grouped by day/league, "In play" block with rich rows, "Your teams" (favourites), 1/X/2 price buttons.
@@ -97,6 +97,9 @@ Main tabs (`VIEWS`): **Live · Games (fixtures) · Accas · Bets · Friends · T
 - **Accounts (Supabase)**: sign-up/in (confirm email OFF), profile photo upload (cropped to 320px webp, `avatars/{uid}/avatar.webp`), My bets with P/L, favourite teams, privacy toggles.
 - **Friends** (`#friends`): invite link `?invite=CODE` (auto-connects after sign-up), friend codes with Copy/Share, feed with reactions 🔥👏😂😬 and "Tail this bet", friends-only leaderboard, friend profiles (`mateSheet`).
 - **Badges/plan**: `badgesHTML` (OWNER blue-violet, DEV orange-pink, PRO gold small), `planChip` ("★ PRO PLAN"). Pro is "Coming soon" with a waitlist; nothing is charged.
+- **My Bets** (`#mybets`, `viewMyBets`): live-tracked bets (`trackerHTML(true)`, all sports) plus saved bets/P&L when signed in. Live page only shows a link card. The 👤 page links here instead of having its own bets tab.
+- **Re-render gotcha**: `render()` runs every 10s and rebuilds `#main`/`#layer`. Anything the user is typing into or picking with must live outside them: the import sheet is in `#implayer` (built once, then `impRefresh()` updates only the results), the photo picker is the persistent `#avatarPick` input in `<body>`. The drawer keeps its scroll and skips the slide-in when the same sheet is re-rendered.
+- **iPhone**: no native app. iPhones use the site as a home-screen web app (`apple-touch-icon.png`, `apple-mobile-web-app-*` meta). `iosTip()` shows a one-time "Add to Home Screen" card in iOS Safari; `app.html` has iPhone and Android steps (iPhone first on iOS). Text boxes are 16px on touch screens so Safari doesn't zoom.
 - **Self-update**: `checkVersion()` compares the page's `mde-build` meta with the live one every 3 min / on focus and reloads, restoring view state from sessionStorage.
 
 ---
