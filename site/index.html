@@ -2619,6 +2619,7 @@ function impDyn() {
 // update only the parts that change, so the text box (and the phone keyboard) is never rebuilt
 function impRefresh() {
   const box = $("#impdyn"); if (!box) return;
+  { const { loading, r } = impParse(); if (r.missing.length && !loading && Date.now() - (S._snapAt || 0) > 60e3) { S._snapAt = Date.now(); reloadSnapshot().then(() => setTimeout(impRefresh, 1500)); } }   /* a name we can't find: maybe a game that's just been added, so fetch the latest list once */
   const html = impDyn(); if (box.dataset.h !== html) { box.innerHTML = html; box.dataset.h = html; }
   const { r } = impParse(), o = $("#impodds"), go = $("[data-impgo]");
   if (o && !S.impOddsTyped && document.activeElement !== o) o.value = r.dec ? odds(r.dec) : "";
