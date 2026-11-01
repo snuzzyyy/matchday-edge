@@ -2327,6 +2327,7 @@ document.addEventListener("click", async e => {
   else if (d.invite !== undefined) {
     const { link, text } = inviteText();
     // the phone's own share menu where the browser has one (iPhone Safari, Chrome); otherwise our own sheet (the Android app)
+    if (window.MDEApp && MDEApp.share) { MDEApp.share(text); return; }   // Android app 1.3+: the phone's own share menu
     if (navigator.share) { try { await navigator.share({ title: "Matchday Edge", text }); } catch (err) { if (err && err.name !== "AbortError") { S.shareOpen = true; render(); } } return; }
     S.shareOpen = true; render();
   }
