@@ -567,7 +567,7 @@ a.prof-bdg{text-decoration:none}
 .res.W{background:var(--win);color:var(--win-ink)}.res.L{background:var(--loss)}.res.C{background:var(--blue)}.res.T{background:var(--amber);color:#2A1A00}
 .rb-note{margin:0;font-size:12.5px;color:var(--muted)}
 .rb-legs{display:grid;gap:8px}.rb-foot{display:flex;justify-content:space-between;align-items:center;gap:10px}
-.chalsum{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.chalsum{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:8px}.cs-new{border-style:dashed;color:var(--fg-2)}.cs-new b{color:var(--fg-2)}
 .cs{display:grid;gap:3px;justify-items:start;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 12px;color:var(--fg);font:inherit;cursor:pointer}
 .cs.on{border-color:var(--tang);background:radial-gradient(90% 160% at 100% 0%,rgba(255,122,47,.18),transparent 60%),var(--surface)}
 .cs-hd{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--fg-2)}.cs-hd img{width:18px;height:18px}
@@ -1410,8 +1410,8 @@ function viewFixtures() {
 
 /* ---------- best bets ---------- */
 function promo() {
-  const C = chalNow(), done = C.rung >= C.rungs, n = C.bets.length;
-  return `<a class="strip chal" href="#challenge"><span class="ic-dot">${TAB_ICONS.challenge}</span><span><b>£1 → £1K challenge</b><small>${done ? "Finished 🏆" : `Step ${C.rung + 1} of ${C.rungs} · ${money(chalTotal(C))} on the ladder${n ? ` · ${n} bet${n > 1 ? "s" : ""} running` : ""}`}</small></span><span aria-hidden="true">›</span></a>`;
+  const L = chalList(), run = L.filter(C => C.active).length, C = chalNow();
+  return `<a class="strip chal" href="#challenge"><span class="ic-dot">${TAB_ICONS.challenge}</span><span><b>£1 → £1K challenge</b><small>${L.length > 1 ? `${L.length} challenges · ${run} bet${run === 1 ? "" : "s"} running` : C.rung >= C.rungs ? "Finished 🏆" : `Step ${C.rung + 1} of ${C.rungs} · bank ${money(+C.bank || 0)}${C.active ? " · bet running" : ""}`}</small></span><span aria-hidden="true">›</span></a>`;
 }
 const winChips = () => `<div class="chips winrow">${Object.entries(WIN_NAME).map(([k, l]) => `<button class="chip" data-win="${k}" aria-pressed="${S.win === k}">${l}</button>`).join("")}</div>`;
 function pickCard(c) {
@@ -1732,8 +1732,9 @@ function challengeOptions() {   // bets at around evens from football and the NB
   return { singles: singles.slice(0, 6), doubles: doubles.slice(0, 3) };
 }
 const today = () => new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
-const CH_DEFAULT = () => ({ start: 1, target: 1000, rungs: 10, rung: 0, bank: 1, attempts: 1, started: today(), history: [], bets: [], past: [] });
-const CH_MAX = 3;   /* bets running at once on the ladder */
+const CH_DEFAULT = () => ({ start: 1, target: 1000, rungs: 10, rung: 0, bank: 1, attempts: 1, started: today(), history: [], active: null, past: [] });
+const CH_MAX = 3;   /* challenges open at once */
+const chId = () => "c" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
 // which sport an old ladder's bets were on (old saves didn't record it)
 function ladderSport(C) {
   const legSport = ((C.active && C.active.legs) || []).map(l => l.sport)[0]; if (legSport) return legSport;
@@ -1763,32 +1764,27 @@ function applySpooky() {
   for (const im of document.querySelectorAll("img[data-hw]")) { const want = on ? im.dataset.hw : im.dataset.plain; if (im.getAttribute("src") !== want) im.setAttribute("src", want); }
 }
 const SPN = { football: "Football", nba: "NBA" };
-/* one £1K ladder for football and the NBA together, with up to 3 bets running; older accounts had a ladder per sport and get merged */
+/* up to 3 separate £1K challenges, each one a ladder that can use football or NBA bets. Older data: a ladder per sport (v2) or one ladder with several bets (v3) */
 function normChal(d) {
-  if (d && d.v === 3) { const C = d.ladder; if (C) { C.bets = C.bets || []; C.past = C.past || []; C.history = C.history || []; } return d; }
-  const a = splitChal(d), L = ["football", "nba"].filter(sp => a[sp] && !ladderEmpty(a[sp])).map(sp => ({ sp, C: a[sp] }));
-  if (!L.length) return { v: 3, ladder: null };
-  const base = L.reduce((x, y) => (y.C.rung || 0) > (x.C.rung || 0) || ((y.C.rung || 0) === (x.C.rung || 0) && (+y.C.bank || 0) > (+x.C.bank || 0)) ? y : x);
-  const bet = x => ({ id: "b" + Math.random().toString(36).slice(2, 9), sport: x.sp, legs: x.C.active.legs || [], label: x.C.active.label || "", match: x.C.active.match || "", dec: +x.C.active.dec || 2, p: x.C.active.p, custom: !!x.C.active.custom, stake: +x.C.bank || 0 });
-  const C = { ...CH_DEFAULT(), ...base.C, bets: [], past: [...(base.C.past || [])], history: (base.C.history || []).map(h => ({ sport: base.sp, ...h })) }; delete C.active;
-  if (base.C.active) { C.bets.push(bet(base)); C.bank = 0; }
-  for (const o of L) if (o !== base) {
-    C.past.push(...(o.C.past || [])); C.history.push(...(o.C.history || []).map(h => ({ sport: o.sp, ...h })));
-    C.taken = Math.round(((+C.taken || 0) + (+o.C.taken || 0)) * 100) / 100;
-    if (o.C.active) { C.bets.push(bet(o)); C.added = Math.round(((+C.added || 0) + (+o.C.bank || 0) + (+o.C.added || 0)) * 100) / 100; }
+  if (d && d.v === 4) { d.ladders = (d.ladders || []).map(C => ({ ...CH_DEFAULT(), ...C, history: C.history || [], past: C.past || [] })); return d; }
+  const out = { v: 4, ladders: [], migrated: true };
+  if (d && d.v === 3) {
+    const L = d.ladder; if (!L) return { v: 4, ladders: [] };
+    const bets = L.bets || [], { bets: _b, peak: _p, ...base } = L, first = { ...CH_DEFAULT(), ...base, id: chId(), active: null, history: L.history || [], past: L.past || [] };
+    if ((+L.bank || 0) >= .01 || (L.history || []).length || !bets.length) out.ladders.push(first);
+    for (const b of bets) { const { stake, id, ...A } = b, C = out.ladders.length ? { ...CH_DEFAULT(), id: chId() } : { ...first, history: first.history, past: first.past };
+      C.bank = Math.round((+stake || 0) * 100) / 100; C.active = A; if (!out.ladders.includes(C)) out.ladders.push(C); }
+    out.ladders = out.ladders.slice(0, CH_MAX); return out;
   }
-  C.history.sort((x, y) => String(y.at || "").localeCompare(String(x.at || ""))); C.rung = chalRung(C); C.migrated = true;
-  return { v: 3, ladder: C };
+  const a = splitChal(d);
+  for (const sp of ["football", "nba"]) if (a[sp] && !ladderEmpty(a[sp])) { const C = { ...CH_DEFAULT(), ...a[sp], id: chId() }; if (C.active) C.active = { sport: sp, ...C.active }; out.ladders.push(C); }
+  if (!out.ladders.length) return { v: 4, ladders: [] };
+  return out;
 }
-const chalNow = () => { const C = S.user ? ((S.chalAll || {}).ladder || CH_DEFAULT()) : { ...CH_DEFAULT(), ...(S.data.challenge || {}), bets: [] }; C.past = C.past || []; C.history = C.history || []; C.bets = C.bets || []; return C; };
-const chalPick = d => normChal(d).ladder;
-const chalStaked = C => (C.bets || []).reduce((a, b) => a + (+b.stake || 0), 0);
-const chalTotal = C => Math.round(((+C.bank || 0) + chalStaked(C)) * 100) / 100;
-const chalTargets = C => { const st = C.start || 1; return [...Array(C.rungs).keys()].map(i => st * 2 ** i).concat((C.target || 1000) * st); };
-function chalRung(C) {   // the step you're on: each doubling of the ladder (a win at just under evens counts)
-  const T = chalTargets(C), t = chalTotal(C); if (t >= T[C.rungs] - 1e-9) return C.rungs;
-  let r = 0; for (let i = 1; i < C.rungs; i++) if (t >= T[i] * .95 - 1e-9) r = i; return r;
-}
+const chalList = () => S.user ? ((S.chalAll || {}).ladders || []) : [];
+const chalIdx = () => { const L = chalList(), i = L.findIndex(C => C.id === S.chalSel); return i >= 0 ? i : 0; };
+const chalNow = () => { const L = chalList(); if (!S.user) return { ...CH_DEFAULT(), ...(S.data.challenge || {}) }; const C = L[chalIdx()] || { ...CH_DEFAULT(), id: "new" }; C.past = C.past || []; C.history = C.history || []; return C; };
+const chalPick = d => { const L = normChal(d).ladders || []; return L.length ? L.reduce((x, y) => (y.rung || 0) > (x.rung || 0) ? y : x) : null; };
 const fmtBank = v => v >= 1000 ? "£" + (v / 1000).toFixed(v % 1000 ? 1 : 0) + "k" : "£" + (Math.round(v * 100) / 100);
 function activeResult(A) {   // once the game(s) finish, read the result from the final score (A = one ladder bet)
   if (!A || !A.legs || !A.legs.some(l => l.k && l.gid)) return null;   // hand-logged bets have no game to read
@@ -1796,16 +1792,21 @@ function activeResult(A) {   // once the game(s) finish, read the result from th
   for (const l of A.legs) { const g = findGame(l.sport, l.gid); if (!g || g.status.state !== "post") { all = false; continue; } const m = liveMarkets(l.sport, g).find(x => x.k === l.k); if (!m) { all = false; continue; } if (m.state === "lost") anyLost = true; else if (m.state !== "won") all = false; }
   return anyLost ? "L" : all ? "W" : null;
 }
-function chalPath(C) {   // the ladder's targets, with where you are now on the current step
-  const T = chalTargets(C), r = Math.min(C.rung, C.rungs); return T.map((v, i) => Math.round((i === r && r < C.rungs ? chalTotal(C) : v) * 100) / 100);
+const stepsWon = C => [...C.history].reverse().filter(h => h.result === "W" || (h.result === "C" && h.adv));
+// the real ladder: actual banks for steps already won, the picked bet's real return next, then evens after that
+function chalPath(C) {
+  const won = stepsWon(C).map(h => +h.ret), out = [C.start];
+  if (C.rung === 0) out[0] = C.bank;
+  for (let i = 1; i <= C.rungs; i++) out.push(i === C.rung ? C.bank : i < C.rung && won[i - 1] != null ? won[i - 1] : i === C.rung + 1 && C.active ? C.bank * C.active.dec : out[i - 1] * 2);
+  return out.map(v => Math.round(v * 100) / 100);
 }
 const ladderLabel = v => v >= 1000 ? "£" + (v / 1000).toFixed(1).replace(/\.0$/, "") + "k" : v < 10 ? "£" + (Math.round(v * 10) / 10) : "£" + Math.round(v);   // short labels so 11 bars fit on a phone; exact amounts show above and in the step card
 function rungDetail(C, i) {
-  const T = chalTargets(C), tot = chalTotal(C), n = C.bets.length;
-  if (i < C.rung) return `<b>Step ${i + 1} · <span style="color:var(--win)">Done ✓</span></b><span>Your ladder passed ${money(T[i + 1])}.</span>`;
-  if (i === C.rung && C.rung < C.rungs) return `<b>Step ${i + 1} · <span style="color:var(--blue-2)">You're here</span></b><span>${money(tot)} on the ladder${n ? ` · ${n} bet${n > 1 ? "s" : ""} running (${money(chalStaked(C))} staked)` : ""}.</span><span class="rd-num">Get to ${money(T[i + 1])} for step ${i + 2}.</span>`;
-  if (i >= C.rungs) return `<b>${C.rung >= C.rungs ? "Finished 🏆" : "The finish line"}</b><span>${C.rung >= C.rungs ? `£${C.start} turned into ${money(tot)}.` : `Get your ladder to ${money(T[C.rungs])}.`}</span>`;
-  return `<b>Step ${i + 1} · Locked</b><span>Opens when your ladder reaches ${money(T[i])}.</span>`;
+  const P = chalPath(C), stake = P[i], h = stepsWon(C)[i];
+  if (i < C.rung && h) return `<b>Step ${i + 1} · <span style="color:var(--win)">${h.result === "C" ? "Cashed out ✓" : "Won ✓"}</span></b><span>${esc(h.bet)}${h.match ? ` · ${esc(h.match)}` : ""}</span><span class="rd-num">${esc(h.odds)} · £${h.stake} → £${h.ret} · ${esc(h.date)}</span>`;
+  if (i === C.rung && C.rung < C.rungs) return C.active ? `<b>Step ${i + 1} · <span style="color:var(--blue-2)">Running</span></b><span>${esc(C.active.label)} · ${esc(C.active.match)}</span><span class="rd-num">${odds(C.active.dec)} · £${C.bank} to return ${money(C.bank * C.active.dec)}</span>` : `<b>Step ${i + 1} · No bet picked yet</b><span>Choose one of the suggestions below with "Use for step ${i + 1}".</span>`;
+  if (i >= C.rungs) return `<b>${C.rung >= C.rungs ? "Finished 🏆" : "The finish line"}</b><span>${C.rung >= C.rungs ? `£${C.start} turned into ${money(stake)}.` : `On your prices so far, and evens from here, you'd finish on ${money(stake)}.`}</span>`;
+  return `<b>Step ${i + 1} · Locked</b><span>Stake about ${money(stake)} to return about ${money(P[i + 1] || stake * 2)}${i > C.rung + 1 || !C.active ? " at evens" : ""}. Opens after step ${i}.</span>`;
 }
 function histRow(h) {
   if (h.result === "T") return `<div class="hrow"><span class="res T">£</span><span><b>Took money out</b><br><span style="color:var(--muted);font-size:12px">${esc(h.date)} · bank ${money(+h.before)} → ${money(+h.before - +h.stake)}</span></span><span></span><span class="num" style="font-size:16px;color:var(--amber)">${money(+h.stake)}</span></div>`;
@@ -1813,102 +1814,95 @@ function histRow(h) {
   return `<div class="hrow"><span class="res ${h.result}">${h.result}</span><span><b>${esc(h.bet)}</b><br><span style="color:var(--muted);font-size:12px">${h.sport ? SPN[h.sport] + " · " : ""}${esc(h.date)} · ${h.result === "C" ? "cashed out" : esc(h.odds)}${h.match ? " · " + esc(h.match) : ""}</span></span><span class="num" style="font-size:16px">${money(+h.stake)}</span><span class="num" style="font-size:16px;color:${col}">${h.result === "L" ? "–" : money(+h.ret)}</span></div>`;
 }
 function chalTotals(C) {   // money in and out of one ladder, across every attempt
-  const begun = (C.history || []).length || (C.bets || []).length || C.rung;
+  const begun = (C.history || []).length || C.active || C.rung;
   const started = (C.past || []).length + (begun ? 1 : 0);
   const taken = (C.past || []).reduce((a, p) => a + (+p.taken || 0) + (p.outcome === "completed" ? +p.peak || 0 : 0), 0) + (+C.taken || 0);
   const added = (C.past || []).reduce((a, p) => a + (+p.added || 0), 0) + (+C.added || 0);
-  return { started, putIn: started * (C.start || 1) + added, taken, riding: begun ? chalTotal(C) : 0 };
+  return { started, putIn: started * (C.start || 1) + added, taken, riding: begun ? +C.bank || 0 : 0 };
 }
-function chalSummary() {
-  const T = chalTotals(chalNow()), net = T.taken + T.riding - T.putIn;
-  return T.putIn ? `<section class="chalsum one"><div class="cs-total"><div><small>So far</small><b class="${net > 0 ? "pos" : net < 0 ? "neg" : ""}">${(net > 0 ? "+" : net < 0 ? "-" : "") + money(Math.abs(net))}</b></div><span>${money(T.putIn)} put in · ${money(T.taken)} taken out · ${money(T.riding)} on the ladder</span></div></section>` : "";
+function chalSummary() {   // pick a challenge: up to 3 open at once
+  const L = chalList(), sel = chalIdx();
+  const card = (C, i) => `<button class="cs ${i === sel ? "on" : ""}" data-chalsel="${C.id}" aria-pressed="${i === sel}"><span class="cs-hd">🏆 Challenge ${i + 1}</span><b>${C.rung >= C.rungs ? "Done 🏆" : money(+C.bank || 0)}</b><small>${C.rung >= C.rungs ? "Finished" : `Step ${(C.rung || 0) + 1} · ${C.active ? `${C.active.sport ? SPN[C.active.sport] + " bet" : "Bet"} running` : "Pick a bet"}`}</small></button>`;
+  const A = L.map(chalTotals), put = A.reduce((a, t) => a + t.putIn, 0), taken = A.reduce((a, t) => a + t.taken, 0), riding = A.reduce((a, t) => a + t.riding, 0), net = taken + riding - put;
+  return `<section class="chalsum">${L.map(card).join("")}${L.length < CH_MAX ? `<button class="cs cs-new" data-chalnew><span class="cs-hd">＋ New challenge</span><b>£1</b><small>${L.length ? `${CH_MAX - L.length} more allowed` : "Start your first"}</small></button>` : ""}
+    ${put ? `<div class="cs-total"><div><small>All challenges</small><b class="${net > 0 ? "pos" : net < 0 ? "neg" : ""}">${(net > 0 ? "+" : net < 0 ? "-" : "") + money(Math.abs(net))}</b></div><span>${money(put)} put in · ${money(taken)} taken out · ${money(riding)} still on the ladders</span></div>` : ""}</section>`;
 }
 function viewChallenge() {
-  const C = chalNow(), mine = !!S.user, tot = chalTotal(C), bets = C.bets, free = CH_MAX - bets.length, bank = Math.round((+C.bank || 0) * 100) / 100;
-  const rungs = chalPath(C), T = chalTargets(C);
+  const C = chalNow(), mine = !!S.user, L = chalList(), n = chalIdx() + 1, none = mine && !L.length;
+  const rungs = chalPath(C), maxR = Math.max(...rungs);
   const left = Math.max(0, C.rungs - C.rung), O = challengeOptions(), pAt = p => Math.pow(p, left);
   const sel = S.rungSel != null && S.rungSel <= C.rungs ? S.rungSel : Math.min(C.rung, C.rungs);
   const ladder = rungs.map((v, i) => `<button class="rung ${i < C.rung ? "done" : i === C.rung ? "now" : ""} ${i === sel ? "sel" : ""}" data-rung="${i}" aria-label="Step ${i + 1}"><i style="height:${18 + i * 11}px"></i><span>${ladderLabel(v)}</span></button>`).join("");
-  const done = C.rung >= C.rungs, canAdd = mine && !done && free > 0 && bank >= .01;
-  const useBtn = attr => mine ? (canAdd ? `<button class="add" ${attr}>Add to ladder</button>` : "") : `<a class="add" href="#account" style="text-decoration:none">Sign in to use</a>`;
-  const sportTag = sp => `<span class="ch-sp">${SPN[sp]}</span>`;
-  const single = c => `<article class="pick"><div class="ring" style="--p:${Math.round(c.m.p * 100)};--c:${tierColor(c.m.p)}"><span>${pct(c.m.p)}</span></div><div><div class="sel">${esc(c.m.label)}</div><div class="mt">${sportTag(c.sport)}<button class="more" data-open="${c.sport}:${c.g.id}">${esc(vs(c.sport, c.g))}</button><span>· ${whenLabel(kick(c.g))}</span></div></div><ul class="why">${reasons(c.sport, c.g, c.m).slice(0, 2).map(w => `<li>${esc(w)}</li>`).join("")}</ul><div class="pfoot"><div class="price"><span class="big">${odds(c.m.dec)}</span><small>${bank >= .01 ? `${money(bank)} returns ${money(bank * c.m.dec)}` : ""}</small></div>${useBtn(`data-chaluse="${c.sport}|${c.g.id}|${c.m.k}"`)}</div></article>`;
-  const dbl = d => `<article class="pick"><div class="ring" style="--p:${Math.round(d.p * 100)};--c:${tierColor(d.p)}"><span>${pct(d.p)}</span></div><div><div class="sel">Double</div><div class="mt">${sportTag(d.a.sport)}Two short-priced legs that make roughly evens together</div></div><ul class="why">${[d.a, d.b].map(c => `<li>${esc(c.m.label)} (${esc(vs(c.sport, c.g))}, ${whenLabel(kick(c.g))}) · ${odds(priceOf(c.m))}</li>`).join("")}</ul><div class="pfoot"><div class="price"><span class="big">${odds(d.d)}</span><small>${bank >= .01 ? `${money(bank)} returns ${money(bank * d.d)} (est.)` : ""}</small></div>${useBtn(`data-chaluse="${d.a.sport}|${d.a.g.id}|${d.a.m.k}|${d.b.g.id}|${d.b.m.k}"`)}</div></article>`;
-  const runCard = (b, i) => { const auto = activeResult(b), linked = (b.legs || []).some(l => l.k && findGame(l.sport, l.gid));
-    return `<section class="runbet"><div class="rb-top"><span class="tag evens">Bet ${i + 1}${b.sport ? " · " + SPN[b.sport] : ""}</span>${mine ? `<button class="linkbtn" data-chalclear="${b.id}">Remove</button>` : ""}</div>
-      <div class="rb-main"><div><div class="sel" style="font-size:16px">${esc(b.label)}</div><div class="mt">${esc(b.match)}${(b.legs || []).some(l => l.kick) ? " · " + b.legs.filter(l => l.kick).map(l => whenLabel(l.kick)).filter((x, i, a) => a.indexOf(x) === i).join(", ") : ""}</div></div>
-      <div class="rb-odds"><label for="rbodds-${b.id}" class="sr">Odds</label><input id="rbodds-${b.id}" class="oddin ${b.custom ? "mine" : ""}" data-chalodds="${b.id}" value="${odds(b.dec)}" autocomplete="off" ${mine ? "" : "disabled"}><small>${b.custom ? "your price" : "tap to change"}</small></div></div>
-      <div class="rb-sum">${mine ? `<label class="rb-stake"><span>Stake £</span><input class="oddin" data-chalstake="${b.id}" value="${(+b.stake).toFixed(2).replace(/\.00$/, "")}" inputmode="decimal" autocomplete="off" aria-label="Your stake in pounds. Tap to change"><small>tap to change</small></label>` : `<span>£${b.stake} stake</span>`}<b>Returns ${money(b.stake * b.dec)}</b></div>
-      ${linked ? `<div class="rb-legs">${b.legs.map(l => legInfo(l).html).join("")}</div>` : ""}
-      ${linked ? `<div class="rb-foot"><span class="rb-note">${auto ? (auto === "W" ? "Final score's in: settling as a win…" : "Final score's in: settling as lost…") : "Settles itself at full time."}</span>${mine ? `<button class="linkbtn" data-cashopen="bet:${b.id}">Cash out</button>` : ""}</div>`
-        : mine ? `<div class="addrow"><button class="btn win" data-chalres="W|${b.id}">It won</button><button class="btn lose" data-chalres="L|${b.id}">It lost</button><button class="btn ghost" data-cashopen="bet:${b.id}">Cash out</button></div>` : ""}</section>`; };
+  const useBtn = (attr, label) => mine ? (C.rung >= C.rungs ? "" : `<button class="add" ${attr}>${label}</button>`) : `<a class="add" href="#account" style="text-decoration:none">Sign in to use</a>`;
+  const stepWord = `Use for step ${C.rung + 1}`, sportTag = sp => `<span class="ch-sp">${SPN[sp]}</span>`;
+  const single = c => `<article class="pick"><div class="ring" style="--p:${Math.round(c.m.p * 100)};--c:${tierColor(c.m.p)}"><span>${pct(c.m.p)}</span></div><div><div class="sel">${esc(c.m.label)}</div><div class="mt">${sportTag(c.sport)}<button class="more" data-open="${c.sport}:${c.g.id}">${esc(vs(c.sport, c.g))}</button><span>· ${whenLabel(kick(c.g))}</span></div></div><ul class="why">${reasons(c.sport, c.g, c.m).slice(0, 2).map(w => `<li>${esc(w)}</li>`).join("")}</ul><div class="pfoot"><div class="price"><span class="big">${odds(c.m.dec)}</span><small>£${C.bank} returns ${money(C.bank * c.m.dec)}</small></div>${useBtn(`data-chaluse="${c.sport}|${c.g.id}|${c.m.k}"`, stepWord)}</div></article>`;
+  const dbl = d => `<article class="pick"><div class="ring" style="--p:${Math.round(d.p * 100)};--c:${tierColor(d.p)}"><span>${pct(d.p)}</span></div><div><div class="sel">Double</div><div class="mt">${sportTag(d.a.sport)}Two short-priced legs that make roughly evens together</div></div><ul class="why">${[d.a, d.b].map(c => `<li>${esc(c.m.label)} (${esc(vs(c.sport, c.g))}, ${whenLabel(kick(c.g))}) · ${odds(priceOf(c.m))}</li>`).join("")}</ul><div class="pfoot"><div class="price"><span class="big">${odds(d.d)}</span><small>£${C.bank} returns ${money(C.bank * d.d)} (est.)</small></div>${useBtn(`data-chaluse="${d.a.sport}|${d.a.g.id}|${d.a.m.k}|${d.b.g.id}|${d.b.m.k}"`, stepWord)}</div></article>`;
+  const A = C.active, auto = activeResult(A), linked = !!(A && (A.legs || []).some(l => l.k && findGame(l.sport, l.gid)));
+  const running = A ? `<section class="runbet"><div class="rb-top"><span class="tag evens">Step ${C.rung + 1} bet${A.sport ? " · " + SPN[A.sport] : ""}</span>${mine ? `<button class="linkbtn" data-chalclear>Change bet</button>` : ""}</div>
+      <div class="rb-main"><div><div class="sel" style="font-size:16px">${esc(A.label)}</div><div class="mt">${esc(A.match)}${(A.legs || []).some(l => l.kick) ? " · " + A.legs.filter(l => l.kick).map(l => whenLabel(l.kick)).filter((x, i, a) => a.indexOf(x) === i).join(", ") : ""}</div></div>
+      <div class="rb-odds"><label for="rbodds" class="sr">Odds</label><input id="rbodds" class="oddin ${A.custom ? "mine" : ""}" data-chalodds value="${odds(A.dec)}" autocomplete="off" ${mine ? "" : "disabled"}><small>${A.custom ? "your price" : "tap to change"}</small></div></div>
+      <div class="rb-sum">${mine ? `<label class="rb-stake"><span>Stake £</span><input class="oddin" data-chalstake value="${(+C.bank).toFixed(2).replace(/\.00$/, "")}" inputmode="decimal" autocomplete="off" aria-label="Your stake in pounds. Tap to change"><small>tap to change</small></label>` : `<span>£${C.bank} stake</span>`}<b>Returns ${money(C.bank * A.dec)}</b></div>
+      ${linked ? `<div class="rb-legs">${A.legs.map(l => legInfo(l).html).join("")}</div>` : ""}
+      ${linked ? `<div class="rb-foot"><span class="rb-note">${auto ? (auto === "W" ? "Final score's in: settling as a win…" : "Final score's in: settling as lost…") : "Settles itself at full time."}</span>${mine ? `<button class="linkbtn" data-cashopen="bet">Cash out</button>` : ""}</div>`
+        : mine ? `<div class="addrow"><button class="btn win" data-chalres="W">It won</button><button class="btn lose" data-chalres="L">It lost</button><button class="btn ghost" data-cashopen="bet">Cash out</button></div>` : ""}</section>` : "";
+  const done = C.rung >= C.rungs;
   const thisAttempt = C.history.length ? `<div class="hist">${C.history.map(histRow).join("")}</div>` : `<div class="empty">No bets in this attempt yet.</div>`;
-  const past = C.past.length ? `<div class="pastlist">${C.past.map(p => `<details class="past"><summary><span class="pt-badge ${p.outcome}">${p.outcome === "completed" ? "🏆 Completed" : p.outcome === "cashed" ? "💰 Cashed out" : p.outcome === "lost" ? `Lost at step ${p.reached + 1}` : "Stopped"}</span><span class="pt-main"><b>Attempt ${p.n}</b><small>${esc(p.started)}${p.ended && p.ended !== p.started ? " – " + esc(p.ended) : ""}</small></span><span class="pt-peak"><small>${p.taken ? "Taken out" : "Best bank"}</small><b>${p.taken ? money(p.taken) : fmtBank(p.peak)}</b></span></summary>
+  const allPast = [...L.flatMap((x, i) => (x.past || []).map(p => ({ ...p, ch: i + 1 }))), ...((S.chalAll || {}).closed || [])].sort((x, y) => String(y.ended || "").localeCompare(String(x.ended || "")));
+  const past = allPast.length ? `<div class="pastlist">${allPast.map(p => `<details class="past"><summary><span class="pt-badge ${p.outcome}">${p.outcome === "completed" ? "🏆 Completed" : p.outcome === "cashed" ? "💰 Cashed out" : p.outcome === "lost" ? `Lost at step ${p.reached + 1}` : "Stopped"}</span><span class="pt-main"><b>${p.ch ? `Challenge ${p.ch} · ` : ""}Attempt ${p.n}</b><small>${esc(p.started)}${p.ended && p.ended !== p.started ? " – " + esc(p.ended) : ""}</small></span><span class="pt-peak"><small>${p.taken ? "Taken out" : "Best bank"}</small><b>${p.taken ? money(p.taken) : fmtBank(p.peak)}</b></span></summary>
       <div class="hist">${(p.history || []).map(histRow).join("")}</div></details>`).join("")}</div>` : `<div class="empty">Finished attempts show here: how far each one got and every bet in it.</div>`;
-  const slots = `<div class="ch-slots">${[...Array(CH_MAX).keys()].map(i => `<span class="${i < bets.length ? "on" : ""}"></span>`).join("")}<small>${bets.length} of ${CH_MAX} bets running${bank >= .01 ? ` · ${money(bank)} not on a bet yet` : ""}</small></div>`;
-  return `<div class="hd"><div><h1>£1 → £1K challenge</h1><p class="sub">One ladder for football and the NBA. Turn £1 into £1K with bets at around evens, with up to ${CH_MAX} bets running at once. ${mine ? "" : "Sign in to run your own ladder."}</p></div></div>
+  if (none) return `<div class="hd"><div><h1>£1 → £1K challenge</h1><p class="sub">Turn £1 into £1K, one bet at around evens at a time. Use football or NBA bets, and run up to ${CH_MAX} challenges at once.</p></div></div>
+    <img class="banner" src="${art("challenge-banner.webp")}" alt="A glowing staircase of ten steps rising to the top">${chalSummary()}<section class="section"><h2>Previous challenges</h2>${past}</section>`;
+  return `<div class="hd"><div><h1>£1 → £1K challenge</h1><p class="sub">Turn £1 into £1K, one bet at around evens at a time. Use football or NBA bets${mine ? `, and run up to ${CH_MAX} challenges at once.` : "."} ${mine ? "" : "Sign in to run your own ladder."}</p></div></div>
   <img class="banner" src="${art("challenge-banner.webp")}" alt="A glowing staircase of ten steps rising to the top">
   ${mine ? chalSummary() : ""}
   <section class="chal-hero">
-    <div class="chal-top"><div><div class="eyebrow">Attempt ${C.attempts || 1} · ${done ? "complete" : `step ${C.rung + 1} of ${C.rungs}`}</div><div class="bankv">${fmtBank(tot)}<small>${done ? "🏆" : `→ ${money(T[C.rung + 1])} next`}</small></div></div>
-    <div><div class="eyebrow">Doublings to go</div><div class="bankv" style="font-size:44px">${left}</div></div></div>
+    <div class="chal-top"><div><div class="eyebrow">${mine ? `Challenge ${n} · ` : ""}Attempt ${C.attempts || 1} · ${done ? "complete" : `step ${C.rung + 1} of ${C.rungs}`}</div><div class="bankv">${fmtBank(C.bank)}<small>${done ? "🏆" : `→ ${money(rungs[C.rung + 1])} next`}</small></div></div>
+    <div><div class="eyebrow">Wins needed</div><div class="bankv" style="font-size:44px">${left}</div></div></div>
     <div class="ladder" aria-label="Challenge ladder. Tap a step to see it.">${ladder}</div>
-    ${mine && !done ? slots : ""}
-    ${mine && !done && bank >= .01 && (C.rung > 0 || C.history.length) ? `<div class="cash-row"><span>${C.taken ? `${money(C.taken)} taken out so far` : "Want to bank some winnings?"}</span><button class="btn ghost sm" data-cashopen="take">Take money out</button></div>` : C.taken ? `<div class="cash-row"><span>${money(C.taken)} taken out so far</span></div>` : ""}
+    ${mine && !done && !A && C.bank > 0 && (C.rung > 0 || C.history.length) ? `<div class="cash-row"><span>${C.taken ? `${money(C.taken)} taken out so far` : "Want to bank some winnings?"}</span><button class="btn ghost sm" data-cashopen="take">Take money out</button></div>` : C.taken ? `<div class="cash-row"><span>${money(C.taken)} taken out so far</span></div>` : ""}
     <div class="rdetail" aria-live="polite">${rungDetail(C, sel)}</div>
   </section>
   ${!mine ? `<div class="note">Playing with friends? <a href="#account">Create a free account</a> to run your own ladder.</div>` : ""}
-  ${done && mine ? `<div class="chal-log"><b>You did it. £${C.start} → ${fmtBank(tot)}.</b><button class="btn" data-chalreset>Save it and start a new ladder</button></div>` : bets.map(runCard).join("")}
-  ${!done ? `<section class="section"><div class="tierhd"><span class="tag evens">Add a bet</span><span class="sub" style="margin:0">${!mine ? "Bets at around evens from football and the NBA." : free <= 0 ? `You've got ${CH_MAX} bets running, the most at one time. Add another when one settles.` : bank < .01 ? "All your ladder money is on bets. Lower a stake above to free some up for another bet." : `Football and NBA bets at around evens. The stake is the ${money(bank)} not on a bet yet (you can change it after).`}</span></div>
-  ${!mine || canAdd ? `<div class="oddsmode"><div class="seg3 two" role="group" aria-label="Which prices to suggest"><button data-chalodds2="over" aria-pressed="${S.chalOdds !== "near"}">Evens or bigger</button><button data-chalodds2="near" aria-pressed="${S.chalOdds === "near"}">Include just under evens</button></div>
-    <p class="risk-desc">${S.chalOdds === "near" ? "Shows prices down to 5/6. Slightly more likely to win, but a win returns a bit under double (e.g. £1 at 10/11 returns £1.91)." : "Only evens (1/1) or bigger, so every win at least doubles that stake."}</p></div>
+  ${done && mine ? `<div class="chal-log"><b>You did it. £${C.start} → ${fmtBank(C.bank)}.</b><button class="btn" data-chalreset>Save it and start again</button></div>` : running}
+  ${!done && !A ? `<section class="section"><div class="tierhd"><span class="tag evens">Step ${C.rung + 1}</span><span class="sub" style="margin:0">Football and NBA bets to turn ${fmtBank(C.bank)} into ${fmtBank(C.bank * 2)}. Pick one.</span></div>
+  <div class="oddsmode"><div class="seg3 two" role="group" aria-label="Which prices to suggest"><button data-chalodds2="over" aria-pressed="${S.chalOdds !== "near"}">Evens or bigger</button><button data-chalodds2="near" aria-pressed="${S.chalOdds === "near"}">Include just under evens</button></div>
+    <p class="risk-desc">${S.chalOdds === "near" ? "Shows prices down to 5/6. Slightly more likely to win, but a win returns a bit under double (e.g. £1 at 10/11 returns £1.91)." : "Only evens (1/1) or bigger, so every win at least doubles your bank."}</p></div>
   <div class="pgrid">${O.singles.map(single).join("")}${O.doubles.map(dbl).join("")}</div>
   ${!O.singles.length && !O.doubles.length ? `<div class="empty">No suitable bets in the next few days${S.chalOdds !== "near" ? '. Try including prices just under evens' : ""}.</div>` : ""}
-  ${mine ? `<details class="ownbet"><summary>Placed a different bet? Log it yourself</summary>${chalLogForm(C)}</details>` : ""}` : ""}</section>` : ""}
-  <section class="section"><div class="hd"><h2>This attempt</h2>${mine && (C.history.length || bets.length) ? `<button class="linkbtn" data-chalreset>Give up and start again</button>` : ""}</div>${thisAttempt}</section>
+  ${mine ? `<details class="ownbet"><summary>Placed a different bet? Log it yourself</summary>${chalLogForm(C)}</details>` : ""}</section>` : ""}
+  <section class="section"><div class="hd"><h2>This attempt</h2>${mine ? `<span>${C.history.length || A ? `<button class="linkbtn" data-chalreset>Give up and start again</button>` : ""}${L.length > 1 || C.history.length || A ? ` <button class="linkbtn" data-chalclose style="color:var(--loss);margin-left:10px">Close this challenge</button>` : ""}</span>` : ""}</div>${thisAttempt}</section>
   <section class="section"><h2>Previous challenges</h2>${past}</section>
   <section class="section"><h2>The maths</h2><div class="odds-math">
     <div class="cbox"><span class="k">At 50% a bet</span><span class="v">1 in ${Math.round(1 / pAt(.5)).toLocaleString("en-GB")}</span><span class="k">to finish from here</span></div>
     <div class="cbox"><span class="k">At 55% a bet</span><span class="v">1 in ${Math.round(1 / pAt(.55)).toLocaleString("en-GB")}</span><span class="k">to finish from here</span></div>
     <div class="cbox"><span class="k">At 60% a bet</span><span class="v">1 in ${Math.round(1 / pAt(.6)).toLocaleString("en-GB")}</span><span class="k">to finish from here</span></div>
     <div class="cbox"><span class="k">Most you can lose</span><span class="v">£${C.start}</span><span class="k">per attempt</span></div>
-  </div><p class="note">Each doubling is a fresh coin-flip-ish bet, so the chances multiply. That's why it's a £1 challenge: the downside is a quid and the upside is a grand.</p></section>`;
+  </div><p class="note">Each step is a fresh coin-flip-ish bet, so the chances multiply. That's why it's a £1 challenge: the downside is a quid and the upside is a grand.</p></section>`;
 }
 function chalLogForm(C) {
-  return `<form class="chal-log" id="chalLog"><b>Log a bet: ${fmtBank(C.bank)} stake (the money not on a bet)</b><div class="addrow"><div class="field"><label for="cl-bet">Your bet</label><input id="cl-bet" placeholder="e.g. Grizzlies to win" required></div><div class="field" style="flex:0 1 120px"><label for="cl-odds">Odds</label><input id="cl-odds" placeholder="EVS or 2.0" required></div></div>
+  return `<form class="chal-log" id="chalLog"><b>Log step ${C.rung + 1}: ${fmtBank(C.bank)} → about ${fmtBank(C.bank * 2)}</b><div class="addrow"><div class="field"><label for="cl-bet">Your bet</label><input id="cl-bet" placeholder="e.g. Grizzlies to win" required></div><div class="field" style="flex:0 1 120px"><label for="cl-odds">Odds</label><input id="cl-odds" placeholder="EVS or 2.0" required></div></div>
   <div class="addrow"><button class="btn win" type="submit" data-res="W">It won</button><button class="btn lose" type="submit" data-res="L">It lost</button></div></form>`;
 }
 // what your open bets would pay back if every one lands (saved bets + running £1K steps)
 const openReturns = () => (S.bets || []).filter(b => b.result === "open").reduce((a, b) => a + +b.stake * +b.odds_dec, 0)
-  + (S.user ? chalNow().bets.reduce((a, b) => a + +b.stake * +b.dec, 0) : 0);
-const chalOpen = () => S.user ? chalStaked(chalNow()) : 0;
+  + chalList().filter(C => C.active).reduce((a, C) => a + +C.bank * +C.active.dec, 0);
+const chalOpen = () => chalList().filter(C => C.active).reduce((a, C) => a + (+C.bank || 0), 0);
 const chalDate = () => new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short" });
-function chalAfter(C, msg) {   // after money moves: update the step, end the attempt if the ladder is empty
-  const before = C.rung; C.peak = Math.max(+C.peak || 0, chalTotal(C)); C.rung = chalRung(C); S.rungSel = null;
-  if (chalTotal(C) < .01) { archiveAttempt(C, "lost"); toast(`Unlucky. That attempt is saved in Previous challenges. Back to £${C.start} for attempt ${C.attempts}`); }
-  else if (C.rung >= C.rungs) toast(`You've done it! £${C.start} → ${money(chalTotal(C))}`);
-  else toast(msg + (C.rung > before ? ` · up to step ${C.rung + 1}` : ""));
+function chalSettle(res, bet, match, dec, id) {   // one challenge's bet won or lost (a bet you logged yourself, or the running one)
+  const C0 = id ? chalList().find(x => x.id === id) : chalNow(); if (!C0) return;
+  const C = JSON.parse(JSON.stringify(C0)), stake = C.bank, sport = C.active && C.active.sport;
+  const entry = { at: new Date().toISOString(), date: chalDate(), bet, match: match || "", odds: S.fmt === "dec" ? dec.toFixed(2) : frac(dec), stake, result: res, ret: res === "W" ? Math.round(stake * dec * 100) / 100 : 0, ...(sport ? { sport } : {}) };
+  const was = !!C.active; C.history.unshift(entry); C.active = null; S.rungSel = null;
+  if (res === "W") { C.bank = entry.ret; C.rung += 1; toast(C.rung >= C.rungs ? "You've done it! £" + C.start + " → £" + C.bank : "Nice one. Bank now £" + C.bank); }
+  else { archiveAttempt(C, "lost"); toast("Unlucky. Saved to Previous challenges. Back to £" + C.start + " for attempt " + C.attempts); }
+  if (res === "W") walletAdjust(was ? entry.ret : entry.ret - stake);   /* winnings land in your bookie balance */
+  else if (!was) walletAdjust(-stake);
   saveChal(C);
 }
-function chalSettleBet(id, res) {   // one ladder bet won or lost
-  const C = JSON.parse(JSON.stringify(chalNow())), b = C.bets.find(x => x.id === id); if (!b) return;
-  const ret = res === "W" ? Math.round(b.stake * b.dec * 100) / 100 : 0;
-  C.history.unshift({ at: new Date().toISOString(), date: chalDate(), bet: b.label, match: b.match || "", odds: S.fmt === "dec" ? (+b.dec).toFixed(2) : frac(+b.dec), stake: b.stake, result: res, ret, sport: b.sport });
-  C.bets = C.bets.filter(x => x.id !== id); C.bank = Math.round(((+C.bank || 0) + ret) * 100) / 100;
-  if (ret) walletAdjust(ret);   /* winnings land in your bookie balance */
-  chalAfter(C, ret ? `Nice one. ${money(ret)} back on the ladder` : "That one lost");
-}
-function chalSettleManual(res, bet, dec) {   // a bet you logged yourself: staked from the money not on a bet
-  const C = JSON.parse(JSON.stringify(chalNow())), stake = Math.round((+C.bank || 0) * 100) / 100; if (stake < .01) { toast("All your ladder money is on bets already"); return; }
-  const ret = res === "W" ? Math.round(stake * dec * 100) / 100 : 0;
-  C.history.unshift({ at: new Date().toISOString(), date: chalDate(), bet, match: "", odds: S.fmt === "dec" ? dec.toFixed(2) : frac(dec), stake, result: res, ret });
-  C.bank = Math.round((stake - stake + ret) * 100) / 100; walletAdjust(ret - stake);
-  chalAfter(C, ret ? `Nice one. ${money(ret)} back on the ladder` : "That one lost");
-}
 function archiveAttempt(C, outcome) {
-  const peak = Math.max(C.start, +C.peak || 0, chalTotal(C), ...C.history.filter(h => h.result === "W" || h.result === "C").map(h => +h.ret));
+  const peak = Math.max(C.start, ...C.history.filter(h => h.result === "W" || h.result === "C").map(h => +h.ret));
   C.past.unshift({ n: C.attempts || 1, started: C.started || "", ended: today(), outcome, reached: C.rung, peak, taken: C.taken || 0, added: C.added || 0, history: C.history });
-  Object.assign(C, { rung: 0, bank: C.start, attempts: (C.attempts || 1) + 1, started: today(), history: [], bets: [], taken: 0, added: 0, peak: 0 });
+  Object.assign(C, { rung: 0, bank: C.start, attempts: (C.attempts || 1) + 1, started: today(), history: [], active: null, taken: 0, added: 0 });
 }
 
 /* ---------- match drawer ---------- */
@@ -2728,7 +2722,7 @@ async function loadAccount() {
   const wl = await sb.from("wallets").select("*").eq("user_id", uid).maybeSingle(); S.walletReady = !wl.error; S.wallet = wl.data || null;
   S.profile = p.data || { id: uid, display_name: (S.user.user_metadata || {}).display_name || S.user.email.split("@")[0], fav_teams: [], plan: "free", show_on_leaderboard: true, created_at: S.user.created_at };
   S.bets = (b.data || []).filter(x => x.user_id === uid);   /* only your own bets: friends' bets are readable for the feed */
-  if (!c.error) { S.chalAll = normChal(c.data ? c.data.data : null); S.chalLoaded = true; if (S.chalAll.ladder && S.chalAll.ladder.migrated) { delete S.chalAll.ladder.migrated; saveChal(S.chalAll.ladder); } } S.waitlisted = !!w.data; S.board = lb.data || [];
+  if (!c.error) { S.chalAll = normChal(c.data ? c.data.data : null); S.chalLoaded = true; if (S.chalAll.migrated) { delete S.chalAll.migrated; saveChalAll(); } } S.waitlisted = !!w.data; S.board = lb.data || [];
   render(); loadSocial();
 }
 if (sb) {
@@ -2817,7 +2811,7 @@ function viewPerks() {
   if (!S.user) return `<div class="hd"><div><h1>Plans</h1><p class="sub">Sign in to see your plan.</p></div></div><a class="btn" href="#account">Sign in</a>`;
   const P = S.profile || {}, pro = P.plan === "pro", b = P.badges || [];
   const EVERY = [["📡", "Live scores and stats", "Every game, updating every 10 seconds"], ["🎯", "Tips for every game", "Our model's pick, the chance and a fair price"], ["🧩", "Acca builder", "The safest leg in every game you pick"],
-    ["📈", "Bets that track themselves", "Live progress, settled automatically, full breakdowns"], ["🏆", "£1 → £1K challenge", "One ladder for football and NBA, up to 3 bets at once"], ["👥", "Friends, following and Top players", "Feeds, leaderboards and copying bets"], ["💷", "Balance tracking", "Updates as your bets settle"], ["🔔", "Bet alerts", "A ping when a leg lands, a player is one away, or a bet settles"], ["🏀", "Player bets", "Points, rebounds, shots, fouls and more, tracked live"], ["📸", "Screenshot import", "Snap your bookie slip and it tracks itself"]];
+    ["📈", "Bets that track themselves", "Live progress, settled automatically, full breakdowns"], ["🏆", "£1 → £1K challenges", "Football or NBA bets, up to 3 challenges at once"], ["👥", "Friends, following and Top players", "Feeds, leaderboards and copying bets"], ["💷", "Balance tracking", "Updates as your bets settle"], ["🔔", "Bet alerts", "A ping when a leg lands, a player is one away, or a bet settles"], ["🏀", "Player bets", "Points, rebounds, shots, fouls and more, tracked live"], ["📸", "Screenshot import", "Snap your bookie slip and it tracks itself"]];
   const PRO_NOW = [["★", "Gold PRO badge", "Next to your name in feeds, profiles and leaderboards"], ["🚫", "No Pro adverts", "The upgrade cards are hidden for you"], ["⚡", "First to try new features", "Pro members get new tools before everyone else"]];
   const PRO_SOON = [["💱", "Real UK bookmaker prices", "Sky Bet, Paddy Power, William Hill and Betfair side by side"], ["🧠", "Deeper models", "Half-time markets and smarter in-play player chances"], ["📚", "Unlimited saved accas", "Build, save and share accas with friends"]];
   const row = ([i, t, d], st) => `<div class="pk-row ${st ? "pk-" + st : ""}"><span class="pk-ic">${i}</span><span><b>${t}</b><small>${d}</small></span><span class="pk-st">${st === "have" ? "✓" : st === "soon" ? "Soon" : ""}</span></div>`;
@@ -2942,8 +2936,9 @@ function feedItems() {
     else { const pl = (+b.returns || 0) - +b.stake; items.push({ t: b.settled_at || b.placed_at, b, html: b.result === "won" ? `<b>${esc(who.display_name)}</b>${badgesHTML(who, 1)} won <span class="pos">+${gbp(pl)}</span>` : b.result === "lost" ? `<b>${esc(who.display_name)}</b>${badgesHTML(who, 1)} lost <span class="neg">${gbp(-b.stake)}</span>` : `<b>${esc(who.display_name)}</b>'s bet was void`, tone: b.result }); }
   }
   for (const [uid, D] of Object.entries(S.friendChal || {})) {
-    const who = person(uid), C = normChal(D).ladder; if (!C) continue;
-    for (const h of (C.history || [])) if (h.at) items.push({ t: h.at, html: h.result === "W" ? `<b>${esc(who.display_name)}</b> won a £1K challenge bet: <span class="pos">${fmtBank(h.ret)}</span> back on the ladder` : h.result === "L" ? `<b>${esc(who.display_name)}</b> lost a £1K challenge bet of ${fmtBank(h.stake)}` : `<b>${esc(who.display_name)}</b> moved money on their £1K ladder`, sub: `${esc(h.bet)} @ ${esc(h.odds)}`, uid });
+    const who = person(uid); for (const C of normChal(D).ladders || []) {
+    for (const h of (C.history || [])) if (h.at) items.push({ t: h.at, html: h.result === "W" ? `<b>${esc(who.display_name)}</b> won a £1K challenge step and now has <span class="pos">${fmtBank(h.ret)}</span>` : h.result === "L" ? `<b>${esc(who.display_name)}</b>'s £1K challenge ended on ${fmtBank(h.stake)}` : `<b>${esc(who.display_name)}</b> moved money on their £1K challenge`, sub: `${esc(h.bet)} @ ${esc(h.odds)}`, uid });
+  }
   }
   return items.sort((a, b) => new Date(b.t) - new Date(a.t)).slice(0, 60);
 }
@@ -2994,7 +2989,7 @@ function viewMyBets() {
   const bets = S.user ? S.bets || [] : [], track = b => (b.legs || []).some(l => l.pid || l.k);
   const savedCards = bets.filter(b => b.result === "open" && track(b)).map(b => ({ id: "s" + b.id, saved: b.id, text: b.label, legs: b.legs.filter(l => l.pid || l.k), dec: +b.odds_dec, stake: +b.stake }));
   const local = localTracked(bets);
-  const chalCards = S.user ? chalNow().bets.filter(b => (b.legs || []).some(l => l.k || l.pid)).map((b, i) => ({ id: "c" + b.id, chal: b.id, noX: true, tag: `£1K challenge · bet ${i + 1}`, text: b.label, legs: b.legs, dec: +b.dec, stake: +b.stake })) : [];
+  const chalCards = chalList().map((C, i) => [C, i]).filter(([C]) => C.active && (C.active.legs || []).some(l => l.k || l.pid)).map(([C, i]) => ({ id: "c" + C.id, chal: C.id, noX: true, tag: `£1K challenge ${i + 1} · step ${C.rung + 1}`, text: C.active.label, legs: C.active.legs, dec: +C.active.dec, stake: +C.bank }));
   const cards = [...chalCards, ...local, ...savedCards].sort((a, b) => Math.min(...a.legs.map(l => +new Date(kick(findGame(l.sport, l.gid) || { start: 0 })) || 0)) - Math.min(...b.legs.map(l => +new Date(kick(findGame(l.sport, l.gid) || { start: 0 })) || 0)));
   for (const c of cards) for (const l of c.legs) { const g = findGame(l.sport, l.gid); if (l.pid && g && !isPre(g) && !(l.sport === "nba" ? g.box : g.lineups)) loadDetail(l.sport + ":" + l.gid); }
   const hand = bets.filter(b => b.result === "open" && !track(b)), settled = bets.filter(b => b.result !== "open");
@@ -3050,7 +3045,7 @@ function profileShowcase(uid) {
   const profit = settled.reduce((a, b) => a + (+b.returns || 0) - +b.stake, 0);
   let streak = 0; for (const b of done) { if (b.result === "won") streak++; else break; }
   const bestOdds = won.reduce((m, b) => Math.max(m, +b.odds_dec), 0), big = [...won].sort((a, b) => (+b.returns - +b.stake) - (+a.returns - +a.stake))[0];
-  const chL = normChal(me ? S.chalAll : (S.friendChal || {})[uid]).ladder, topStep = chL ? Math.max(chL.rung || 0, ...(chL.past || []).map(x => x.reached || 0)) : 0;
+  const chLs = normChal(me ? S.chalAll : (S.friendChal || {})[uid]).ladders || [], topStep = Math.max(0, ...chLs.map(c => Math.max(c.rung || 0, ...(c.past || []).map(x => x.reached || 0))));
   const A = [["🎯", "First win", "Win a bet", won.length > 0], ["🔥", "Hot streak", "Win 3 in a row", streak >= 3 || done.some((b, i) => done.slice(i, i + 3).length === 3 && done.slice(i, i + 3).every(x => x.result === "won"))],
     ["🧩", "Acca hero", "Win a 3+ leg bet", won.some(b => (b.legs || []).length >= 3)], ["🚀", "Long shot", "Win at 3/1 or bigger", bestOdds >= 4],
     ["📈", "In profit", "Be up after 5+ bets", settled.length >= 5 && profit > 0], ["🪜", "Climber", "Reach step 3 of the £1K", topStep >= 2], ["🗓️", "Regular", "Save 10 bets", bets.length >= 10]];
@@ -3071,13 +3066,13 @@ function mateSheet(uid) {
   const settled = bets.filter(b => b.result !== "open"), won = settled.filter(b => b.result === "won").length, decided = settled.filter(b => b.result !== "void").length;
   const profit = settled.reduce((a, b) => a + (+b.returns || 0) - +b.stake, 0), staked = settled.reduce((a, b) => a + +b.stake, 0);
   const isFr = !!(S.friends || {})[uid], shares = me || bets.length || (isFr ? p.share_bets !== false : !!p.bets_public), pc = S.people[uid] || {}, iFollow = S.following && S.following.has(uid);
-  const lad = normChal(me ? S.chalAll : (S.friendChal || {})[uid]).ladder, ladders = lad && ((lad.history || []).length || (lad.bets || []).length || lad.rung || (lad.past || []).length) ? [lad] : [];
+  const ladders = (normChal(me ? S.chalAll : (S.friendChal || {})[uid]).ladders || []).filter(C => (C.history || []).length || C.active || C.rung || (C.past || []).length);
   return `<div class="scrim top" data-mateclose></div><div class="ijsheet" role="dialog" aria-modal="true" aria-label="${esc(p.display_name)}"><button class="close sm ij-x" data-mateclose aria-label="Close">✕</button>
     <div class="ij-head">${avatarHTML(p, 64)}<div><h2>${esc(p.display_name)}</h2>${badgesHTML(p) || p.plan === "pro" ? `<div class="bdgrow">${badgesHTML(p)}${p.plan === "pro" ? planChip(p) : ""}</div>` : ""}<span class="ij-team">${me ? "That's you" : isFr ? "Friend" : "Player"}${pc.followers != null ? ` · ${pc.followers} follower${pc.followers === 1 ? "" : "s"} · ${pc.following} following` : ""}${p.created_at ? " · joined " + new Date(p.created_at).toLocaleDateString("en-GB", { month: "short", year: "numeric" }) : ""}${p.friend_code ? ` · code <b class="fcode">${esc(p.friend_code)}</b>` : ""}</span></div></div>
     ${!me && S.followReady ? `<div class="followrow"><button class="btn sm ${iFollow ? "ghost" : ""}" data-follow="${uid}">${iFollow ? "Following ✓" : "+ Follow"}</button>${isFr ? "" : `<small>${p.bets_public ? "Their bets are public: you can copy them" : "Their bets are private"}</small>`}</div>` : ""}
     ${profileShowcase(uid)}
     ${!me && (S.friendWallets || {})[uid] ? `<div class="mchips"><span class="mchip">💷 Balance ${money(+S.friendWallets[uid].amount)}</span></div>` : ""}
-    ${ladders.length ? `<div class="mchips">${ladders.map(C => `<span class="mchip">🏆 £1K · ${C.rung >= C.rungs ? "Done" : `step ${(C.rung || 0) + 1} · ${money(chalTotal({ bets: [], ...C }))}`}</span>`).join("")}</div>` : ""}
+    ${ladders.length ? `<div class="mchips">${ladders.map((C, i) => `<span class="mchip">🏆 £1K #${i + 1} · ${C.rung >= C.rungs ? "Done" : `step ${(C.rung || 0) + 1} · ${money(+C.bank || 0)}`}</span>`).join("")}</div>` : ""}
 
     ${bets.length ? `<h3 class="bv-h">Recent bets</h3><div class="btiles">${bets.slice(0, 10).map(betTile).join("")}</div>`
       : `<div class="empty art mate-empty"><img src="${art("empty-bets.webp")}" alt="" loading="lazy"><b>${shares ? "No bets yet" : "Bets kept private"}</b><span>${shares ? `When ${esc(me ? "you save" : p.display_name + " saves")} a bet, it shows here and in your feed.` : `${esc(p.display_name)} has chosen to keep their bets private.`}</span></div>`}</div>`;
@@ -3099,8 +3094,13 @@ async function uploadAvatar(file) {
     await saveProfile({ avatar_url: url }); toast("Looking good");
   } catch (err) { toast("Couldn't upload that photo"); }
 }
-async function saveChal(C) { if (!S.chalLoaded) { toast("Your £1K ladder hasn't loaded yet. Try again in a moment"); loadAccount(); return; }   /* never save over a ladder we haven't read */
-  S.chalAll = { v: 3, ladder: C }; render(); const r = await sb.from("challenges").upsert({ user_id: S.user.id, data: S.chalAll, updated_at: new Date().toISOString() }); if (r.error) toast("Couldn't save. Check your connection."); }
+function saveChal(C) {   // save one challenge (a new one is added, up to 3)
+  const L = [...chalList()], i = L.findIndex(x => x.id === C.id);
+  if (i >= 0) L[i] = C; else { if (L.length >= CH_MAX) { toast(`You can have ${CH_MAX} challenges open at once`); return; } C.id = C.id && C.id !== "new" ? C.id : chId(); L.push(C); S.chalSel = C.id; }
+  S.chalAll = { ...(S.chalAll || {}), v: 4, ladders: L }; return saveChalAll();
+}
+async function saveChalAll() { if (!S.chalLoaded) { toast("Your £1K challenges haven't loaded yet. Try again in a moment"); loadAccount(); return; }   /* never save over challenges we haven't read */
+  render(); const r = await sb.from("challenges").upsert({ user_id: S.user.id, data: S.chalAll, updated_at: new Date().toISOString() }); if (r.error) toast("Couldn't save. Check your connection."); }
 async function saveProfile(patch) { Object.assign(S.profile, patch); render(); const r = await sb.from("profiles").update(patch).eq("id", S.user.id); if (r.error) toast("Couldn't save. Check your connection."); }
 
 document.addEventListener("submit", async e => {
@@ -3140,7 +3140,7 @@ document.addEventListener("submit", async e => {
   } else if (f.id === "chalLog") {
     const res = (e.submitter && e.submitter.dataset.res) || "W", o = parseOdds(val("cl-odds"));
     if (!o) { toast("Odds look wrong. Try EVS or 2.0"); return; }
-    chalSettleManual(res, val("cl-bet").trim(), o);
+    chalSettle(res, val("cl-bet").trim(), "", o);
   }
 });
 document.addEventListener("click", async e => {
@@ -3202,18 +3202,22 @@ document.addEventListener("click", async e => {
   }
   else if (d.unfav) { const [sp, id] = d.unfav.split("|"); saveProfile({ fav_teams: (S.profile.fav_teams || []).filter(x => !(x.sport === sp && x.id === id)) }); }
   else if (d.waitlist !== undefined) { const r = await sb.from("pro_waitlist").upsert({ user_id: S.user.id }); if (r.error) toast("Couldn't join. Try again."); else { S.waitlisted = true; render(); toast("You're on the Pro waitlist"); } }
-  else if (d.chalreset !== undefined) { const C = JSON.parse(JSON.stringify(chalNow())); if (C.history.length || C.rung || C.bets.length) archiveAttempt(C, C.rung >= C.rungs ? "completed" : "stopped"); S.rungSel = null; saveChal(C); toast("New ladder started"); }
+  else if (d.chalreset !== undefined) { const C = JSON.parse(JSON.stringify(chalNow())); if (C.history.length || C.rung || C.active) archiveAttempt(C, C.rung >= C.rungs ? "completed" : "stopped"); S.rungSel = null; saveChal(C); toast("Started again from £" + C.start); }
+  else if (d.chalsel) { S.chalSel = d.chalsel; S.rungSel = null; render(); }
+  else if (d.chalnew !== undefined) { if (chalList().length >= CH_MAX) { toast(`You can have ${CH_MAX} challenges open at once`); return; } const C = { ...CH_DEFAULT(), id: chId() }; S.rungSel = null; saveChal(C); S.chalSel = C.id; render(); toast("New challenge started with £1"); }
+  else if (d.chalclose !== undefined) { const C = JSON.parse(JSON.stringify(chalNow())); if (!C.id || C.id === "new") return; if (!confirm("Close this challenge? It moves to Previous challenges.")) return;
+    if (C.active) walletAdjust(+C.bank); const closed = [...((S.chalAll || {}).closed || [])]; if (C.history.length || C.rung) { archiveAttempt(C, C.rung >= C.rungs ? "completed" : "stopped"); }
+    closed.unshift(...(C.past || [])); S.chalAll = { ...(S.chalAll || {}), v: 4, ladders: chalList().filter(x => x.id !== C.id), closed: closed.slice(0, 50) }; S.chalSel = null; S.rungSel = null; saveChalAll(); toast("Challenge closed"); }
   else if (d.chaluse) {
     const parts = d.chaluse.split("|"), sp = parts[0], pairs = parts.length === 3 ? [[parts[1], parts[2]]] : [[parts[1], parts[2]], [parts[3], parts[4]]];
     const legs = pairs.map(([gid, k]) => { const g = findGame(sp, gid), m = g && mkt(g, k); return g && m ? { sport: sp, gid, k, label: m.label, match: vs(sp, g), kick: kick(g), p: m.p, dec: priceOf(m), ...propLeg(m) } : null; }).filter(Boolean);
     if (!legs.length) return;
-    const C = JSON.parse(JSON.stringify(chalNow())), stake = Math.round((+C.bank || 0) * 100) / 100;
-    if (C.bets.length >= CH_MAX) { toast(`You've already got ${CH_MAX} bets running`); return; } if (stake < .01) { toast("All your ladder money is on bets. Lower a stake first"); return; }
-    C.bets.push({ id: "b" + Date.now().toString(36), sport: sp, legs, label: legs.map(legText).join(" + "), match: legs.map(l => l.match).join(", "), dec: Math.round(legs.reduce((a, l) => a * l.dec, 1) * 1000) / 1000, p: legs.reduce((a, l) => a * l.p, 1), stake });
-    C.bank = 0; S.rungSel = C.rung; saveChal(C); walletAdjust(-stake); toast(`Added: ${money(stake)} on ${legs.map(legText).join(" + ")}`); scrollTo({ top: 0, behavior: "smooth" });
+    const C = JSON.parse(JSON.stringify(chalNow()));
+    C.active = { sport: sp, legs, label: legs.map(legText).join(" + "), match: legs.map(l => l.match).join(", "), dec: Math.round(legs.reduce((a, l) => a * l.dec, 1) * 1000) / 1000, p: legs.reduce((a, l) => a * l.p, 1) };
+    S.rungSel = C.rung; saveChal(C); walletAdjust(-C.bank); toast(`Added to challenge ${chalIdx() + 1}, step ${C.rung + 1}`); scrollTo({ top: 0, behavior: "smooth" });
   }
-  else if (d.chalclear) { const C = JSON.parse(JSON.stringify(chalNow())), b = C.bets.find(x => x.id === d.chalclear); if (b) { C.bets = C.bets.filter(x => x !== b); C.bank = Math.round(((+C.bank || 0) + +b.stake) * 100) / 100; walletAdjust(+b.stake); saveChal(C); toast("Bet removed. Its stake is back on the ladder"); } }
-  else if (d.chalres) { const [res, id] = d.chalres.split("|"); chalSettleBet(id, res); }
+  else if (d.chalclear !== undefined) { const C = JSON.parse(JSON.stringify(chalNow())); if (C.active) walletAdjust(+C.bank); C.active = null; saveChal(C); }
+  else if (d.chalres) { const C = chalNow(); if (C.active) chalSettle(d.chalres, C.active.label, C.active.match, C.active.dec, C.id); }
   else if (d.savebet !== undefined) {
     if (!S.user) { S.slipOpen = false; location.hash = "account"; return; }
     if (!S.slip.length) return;
@@ -3240,28 +3244,30 @@ function iosTip() {
 }
 /* ---------- £1K challenge: cash out / take money out ---------- */
 function cashSheet() {
-  const C = chalNow(), id = String(S.cashOpen || "").startsWith("bet:") ? S.cashOpen.slice(4) : null, A = id && C.bets.find(b => b.id === id), mode = A ? "bet" : "take", bank = +C.bank || 0;
+  const C = chalNow(), A = C.active, mode = S.cashOpen === "bet" && A ? "bet" : "take";
   return `<div class="scrim top" data-cashclose></div><div class="ijsheet" role="dialog" aria-modal="true" aria-label="Cash out"><button class="close sm ij-x" data-cashclose aria-label="Close">✕</button>
-    <div><h2>${mode === "bet" ? "Cash out this bet" : "Take money out"}</h2><p class="sub" style="margin:4px 0 0">${mode === "bet" ? `You staked ${money(A.stake)} on ${esc(A.label)}. Enter what the bookie paid you and it goes back on the ladder.` : `You've got ${money(bank)} on the ladder that isn't on a bet. Whatever you take out leaves the ladder.`}</p></div>
-    <div class="field"><label for="cashamt">${mode === "bet" ? "Cash-out amount £" : "Amount to take out £"}</label><input id="cashamt" type="number" inputmode="decimal" min="0" step="0.01" placeholder="${mode === "bet" ? money(A.stake * A.dec * .8).slice(1) : (Math.floor(bank / 2 * 100) / 100).toFixed(2)}"></div>
+    <div><h2>${mode === "bet" ? "Cash out this bet" : "Take money out"}</h2><p class="sub" style="margin:4px 0 0">${mode === "bet" ? `You staked ${money(C.bank)} on ${esc(A.label)}. Enter what the bookie paid you. Your bank becomes that amount. If it's more than your stake, step ${C.rung + 1} counts as done.` : `Your bank is ${money(C.bank)}. Whatever you take out leaves the ladder, and the next steps are worked out from what's left.`}</p></div>
+    <div class="field"><label for="cashamt">${mode === "bet" ? "Cash-out amount £" : "Amount to take out £"}</label><input id="cashamt" type="number" inputmode="decimal" min="0" step="0.01" placeholder="${mode === "bet" ? money(C.bank * A.dec * .8).slice(1) : (Math.floor(C.bank / 2 * 100) / 100).toFixed(2)}"></div>
     ${mode === "take" ? `<div class="chips">${[.25, .5, 1].map(f => `<button class="chip" data-cashpart="${f}">${f === 1 ? "All of it" : f === .5 ? "Half" : "A quarter"}</button>`).join("")}</div>` : ""}
-    <button class="btn" data-cashgo="${mode === "bet" ? "bet:" + A.id : "take"}">${mode === "bet" ? "Confirm cash out" : "Take it out"}</button></div>`;
+    <button class="btn" data-cashgo="${mode}">${mode === "bet" ? "Confirm cash out" : "Take it out"}</button></div>`;
 }
 function cashGo(mode) {
   const amt = Math.round(parseFloat(($("#cashamt") || {}).value) * 100) / 100, C = JSON.parse(JSON.stringify(chalNow()));
   if (!(amt > 0)) { toast("Enter an amount"); return; }
-  const date = chalDate(), at = new Date().toISOString(), id = String(mode).startsWith("bet:") ? mode.slice(4) : null, b = id && C.bets.find(x => x.id === id);
-  S.cashOpen = null;
-  if (b) {
-    C.history.unshift({ at, date, bet: b.label, match: b.match || "", odds: "cash out", stake: b.stake, result: "C", ret: amt, sport: b.sport });
-    C.bets = C.bets.filter(x => x !== b); C.bank = Math.round(((+C.bank || 0) + amt) * 100) / 100; walletAdjust(amt);
-    chalAfter(C, `Cashed out for ${money(amt)}`); return;
+  const date = chalDate(), at = new Date().toISOString();
+  if (mode === "bet" && C.active) {
+    const stake = C.bank, adv = amt > stake;
+    C.history.unshift({ at, date, bet: C.active.label, match: C.active.match || "", odds: "cash out", stake, result: "C", ret: amt, adv, ...(C.active.sport ? { sport: C.active.sport } : {}) });
+    C.active = null; C.bank = amt; if (adv) C.rung += 1; walletAdjust(amt);
+    toast(adv ? `Cashed out for ${money(amt)}. On to step ${C.rung + 1}` : `Cashed out for ${money(amt)}. Still on step ${C.rung + 1}`);
+  } else {
+    if (amt > C.bank + 1e-9) { toast(`You only have ${money(C.bank)}`); return; }
+    C.history.unshift({ at, date, bet: "Took money out", stake: amt, before: C.bank, result: "T", ret: 0 });
+    C.taken = Math.round(((C.taken || 0) + amt) * 100) / 100; C.bank = Math.round((C.bank - amt) * 100) / 100;
+    if (C.bank <= 0) { archiveAttempt(C, "cashed"); toast(`Banked ${money(amt)}. Ladder saved and a new one started`); }
+    else toast(`Took out ${money(amt)}. ${money(C.bank)} stays on the ladder`);
   }
-  if (amt > (+C.bank || 0) + 1e-9) { toast(`You've only got ${money(+C.bank || 0)} that isn't on a bet`); return; }
-  C.history.unshift({ at, date, bet: "Took money out", stake: amt, before: chalTotal(C), result: "T", ret: 0 });
-  C.taken = Math.round(((C.taken || 0) + amt) * 100) / 100; C.bank = Math.round((C.bank - amt) * 100) / 100;
-  if (chalTotal(C) < .01) { archiveAttempt(C, "cashed"); toast(`Banked ${money(amt)}. Ladder saved and a new one started`); S.rungSel = null; saveChal(C); return; }
-  C.rung = chalRung(C); S.rungSel = null; toast(`Took out ${money(amt)}. ${money(chalTotal(C))} stays on the ladder`); saveChal(C);
+  S.cashOpen = null; S.rungSel = null; saveChal(C);
 }
 /* ---------- automatic settling from final scores and player stats ---------- */
 const credit = b => b.result === "won" ? (+b.returns || 0) : b.result === "void" ? +b.stake : 0;
@@ -3380,8 +3386,8 @@ setInterval(alertTick, 15e3);
 let autoAt = 0;
 function autoSettle() {
   if (!sb || !S.user || !S.data || Date.now() - autoAt < 15e3) return; autoAt = Date.now();
-  if (S.chalLoaded) { const due = chalNow().bets.filter(b => activeResult(b)); if (due.length) sb.from("challenges").select("data").eq("user_id", S.user.id).maybeSingle().then(x => {   /* re-read first: the overnight job may have settled it */
-    S.chalAll = normChal(x.data ? x.data.data : null); for (const b of due) { const F = chalNow().bets.find(y => y.id === b.id), r = F && activeResult(F); if (r) chalSettleBet(F.id, r); } render(); }); }
+  if (S.chalLoaded) { const due = chalList().filter(C => C.active && activeResult(C.active)); if (due.length) sb.from("challenges").select("data").eq("user_id", S.user.id).maybeSingle().then(x => {   /* re-read first: the overnight job may have settled it */
+    S.chalAll = normChal(x.data ? x.data.data : null); for (const c of due) { const F = chalList().find(y => y.id === c.id), r = F && F.active && F.active.label === c.active.label && activeResult(F.active); if (r) chalSettle(r, F.active.label, F.active.match, F.active.dec, F.id); } render(); }); }
   pruneTracked();
   const skip = store.get("noAuto", []);
   for (const b of S.bets || []) if (b.result === "open" && !skip.includes(b.id)) { const r = betOutcome(b.legs); if (r) settleBet(b, r, true); }
@@ -3557,12 +3563,11 @@ document.addEventListener("change", e => { const t = e.target;
   if (t.dataset && (t.dataset.accaxadd || t.dataset.accalxadd) && t.value) { const live = !!t.dataset.accalxadd, gid = live ? t.dataset.accalxadd : t.dataset.accaxadd, st = live ? (S.accaLiveX = S.accaLiveX || {}) : (S.accaX = S.accaX || {}); st[gid] = [...(st[gid] || []), t.value]; (S.addOpen = S.addOpen || {})[(live ? "data-accalxadd-" : "data-accaxadd-") + gid] = false; render(); return; } if (t.id === "shotPick" && t.files && t.files[0]) { S.impShotMsg = ""; readShot(t.files[0]); } if (t.dataset && t.dataset.accalivealt) { const gid = t.dataset.accalivealt; if ((S._accaLiveLegs || []).some(x => x.g.id === gid)) pinGame(true, gid, ks => [t.value, ...ks.slice(1)]); else (S.accaLivePick = S.accaLivePick || {})[gid] = t.value; render(); } if (t.dataset && (t.dataset.accaxswap || t.dataset.accalxswap) && t.value) { const live = !!t.dataset.accalxswap, [gid, old] = (live ? t.dataset.accalxswap : t.dataset.accaxswap).split("|"); pinGame(live, gid, ks => ks.map(x => x === old ? t.value : x)); render(); return; } if (t.dataset && t.dataset.legodds) setLegOdds(t.dataset.legodds, t.value); if (t.dataset && t.dataset.slipodds !== undefined) setSlipOdds(t.value);
   if (t.dataset && t.dataset.accaodds) { const live = t.dataset.accaodds === "live", d = parseOdds(t.value), sig = live ? S._accaSigLive : S._accaSigPre; S.accaTyped = S.accaTyped || {};
     if (!t.value.trim()) S.accaTyped[live ? "live" : "pre"] = null; else if (!d) toast("Use odds like 9/2, EVS or 5.5"); else S.accaTyped[live ? "live" : "pre"] = { dec: Math.round(d * 1000) / 1000, sig };
-    $("#main")._h = null; render(); } if (t.dataset && t.dataset.chalstake && S.user) { const v = Math.round(parseFloat(String(t.value).replace(/[£\s,]/g, "")) * 100) / 100, C = JSON.parse(JSON.stringify(chalNow())), b = C.bets.find(x => x.id === t.dataset.chalstake);
-    if (!(v > 0) || !b) { toast("Type a stake like 0.50 or 2"); $("#main")._h = null; render(); }
-    else { const diff = Math.round((v - (+b.stake || 0)) * 100) / 100;   /* a lower stake goes back on the ladder; a higher one comes from the ladder, then from you */
-      if (diff) { const fromBank = Math.max(0, Math.min(diff, +C.bank || 0)); C.bank = Math.round(((+C.bank || 0) - (diff < 0 ? diff : fromBank)) * 100) / 100; if (diff > fromBank) C.added = Math.round(((+C.added || 0) + diff - fromBank) * 100) / 100;
-        b.stake = v; walletAdjust(-diff); saveChal(C); toast(`Stake set to ${money(v)}. Returns ${money(v * b.dec)}`); } } }
-  if (t.dataset && t.dataset.chalodds && S.user) { const o = parseOdds(t.value); if (!o) { toast("Use odds like 5/2, EVS or 3.5"); $("#main")._h = null; render(); } else { const C = JSON.parse(JSON.stringify(chalNow())), b = C.bets.find(x => x.id === t.dataset.chalodds); if (b) { b.custom = true; b.dec = Math.round(o * 1000) / 1000; saveChal(C); } } } if (t.dataset && t.dataset.accaalt) { const gid = t.dataset.accaalt; if ((S._accaLegs || []).some(x => x.g.id === gid)) pinGame(false, gid, ks => [t.value, ...ks.slice(1)]); else { S.accaPick = S.accaPick || {}; S.accaPick[gid] = t.value; } render(); } });
+    $("#main")._h = null; render(); } if (t.dataset && t.dataset.chalstake !== undefined && S.user) { const v = Math.round(parseFloat(String(t.value).replace(/[£\s,]/g, "")) * 100) / 100, C0 = chalNow();
+    if (!(v > 0) || !C0.active) { toast("Type a stake like 0.50 or 2"); $("#main")._h = null; render(); }
+    else { const C = JSON.parse(JSON.stringify(C0)), diff = Math.round((v - (+C.bank || 0)) * 100) / 100;
+      if (diff) { if (diff < 0) C.taken = Math.round(((+C.taken || 0) - diff) * 100) / 100; else C.added = Math.round(((+C.added || 0) + diff) * 100) / 100; C.bank = v; saveChal(C); walletAdjust(-diff); toast(`Stake set to ${money(v)}. Returns ${money(v * C.active.dec)}`); } } }
+  if (t.dataset && t.dataset.chalodds !== undefined && S.user) { const o = parseOdds(t.value); if (!o) { toast("Use odds like 5/2, EVS or 3.5"); $("#main")._h = null; render(); } else { const C = JSON.parse(JSON.stringify(chalNow())); if (C.active) { C.active.custom = true; C.active.dec = Math.round(o * 1000) / 1000; saveChal(C); } } } if (t.dataset && t.dataset.accaalt) { const gid = t.dataset.accaalt; if ((S._accaLegs || []).some(x => x.g.id === gid)) pinGame(false, gid, ks => [t.value, ...ks.slice(1)]); else { S.accaPick = S.accaPick || {}; S.accaPick[gid] = t.value; } render(); } });
 document.addEventListener("keydown", e => { const t = e.target; if (e.key === "Enter" && t.dataset && t.dataset.legodds) t.blur(); });
 document.addEventListener("focusin", e => { const t = e.target; if (t.dataset && t.dataset.legodds) setTimeout(() => t.select(), 0); });
 document.addEventListener("toggle", e => { const d = e.target; if (d && d.dataset && d.dataset.ap) (S.addOpen = S.addOpen || {})[d.dataset.ap] = d.open; }, true);
@@ -3706,7 +3711,7 @@ async function refreshMine() {
   if (!sb || !S.user || S.importOpen) return; const uid = S.user.id;
   const [b, c, w] = await Promise.all([sb.from("bets").select("*").eq("user_id", uid).order("placed_at", { ascending: false }).limit(300), sb.from("challenges").select("data").eq("user_id", uid).maybeSingle(), sb.from("wallets").select("*").eq("user_id", uid).maybeSingle()]);
   if (!b.error && b.data) S.bets = b.data.filter(x => x.user_id === uid);
-  if (!c.error) { S.chalAll = normChal(c.data ? c.data.data : null); S.chalLoaded = true; }
+  if (!c.error) { S.chalAll = normChal(c.data ? c.data.data : null); delete S.chalAll.migrated; S.chalLoaded = true; }
   if (!w.error) S.wallet = w.data || null;
   const ae = document.activeElement; if (ae && /^(INPUT|SELECT|TEXTAREA)$/.test(ae.tagName) && Date.now() - (S._typedAt || 0) < 8e3) renderChrome(); else render();
 }

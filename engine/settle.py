@@ -218,7 +218,7 @@ def settle_ladder(C, uid):
     if not res: return False
     stake, dec, d = C.get("bank", 1), float(A.get("dec") or 1), datetime.now(timezone.utc)
     entry = {"at": now(), "date": f"{d.day} {d:%b}", "bet": A.get("label", ""), "match": A.get("match", ""), "odds": f"{dec:.2f}", "stake": stake,
-             "result": "W" if res == "won" else "L", "ret": round(stake * dec, 2) if res == "won" else 0}
+             "result": "W" if res == "won" else "L", "ret": round(stake * dec, 2) if res == "won" else 0, **({"sport": A["sport"]} if A.get("sport") else {})}
     C["history"] = [entry] + (C.get("history") or []); C["active"] = None
     if res == "won":
         C["bank"] = entry["ret"]; C["rung"] = C.get("rung", 0) + 1
@@ -275,7 +275,10 @@ def settle_challenges():
     n = 0
     for row in http("GET", "challenges?select=user_id,data") or []:
         D, changed = row.get("data") or {}, False
-        if D.get("v") == 3:
+        if D.get("v") == 4:   # up to 3 separate challenges, each with one bet at a time (football or NBA)
+            for C in D.get("ladders") or []:
+                if C and settle_ladder(C, row["user_id"]): changed = True
+        elif D.get("v") == 3:
             if D.get("ladder") and settle_ladder3(D["ladder"], row["user_id"]): changed = True
         else:
             for C in ([D.get("football"), D.get("nba")] if D.get("v") == 2 else [D]):
