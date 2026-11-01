@@ -4,7 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#0D1324">
-<title>Matchday Edge for Android</title>
+<title>Get Matchday Edge</title>
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" href="icon-192.png">
 <meta property="og:image" content="https://snuzzyyy.github.io/matchday-edge/og.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@1,800&family=Figtree:wght@400;600;700&display=swap">
@@ -17,18 +18,38 @@ h1{font-family:"Barlow Condensed",sans-serif;font-style:italic;font-weight:800;f
 .sub{color:var(--muted);margin:4px 0 0}
 .dl{display:flex;align-items:center;justify-content:center;gap:10px;padding:16px;border-radius:14px;background:linear-gradient(90deg,var(--tang),#FF4F6D);color:#fff;font-weight:700;font-size:17px;text-decoration:none}
 ol{margin:0;padding:18px 18px 18px 38px;background:var(--surface);border:1px solid var(--line);border-radius:14px;display:grid;gap:10px}
-li b{color:#fff}.note{color:var(--muted);font-size:13.5px}a{color:#6C9BFF}
+li b{color:#fff}
+.os{display:grid;gap:14px}h2{font-family:"Barlow Condensed",sans-serif;font-style:italic;font-weight:800;font-size:24px;text-transform:uppercase;margin:6px 0 0}
+.open{display:flex;align-items:center;justify-content:center;padding:16px;border-radius:14px;background:var(--blue);color:#fff;font-weight:700;font-size:17px;text-decoration:none}
+.shr{display:inline-block;width:12px;height:14px;vertical-align:-2px;border:1.6px solid currentColor;border-top:0;border-radius:0 0 2px 2px;position:relative;margin:0 2px}.shr::before{content:"↑";position:absolute;left:50%;top:-9px;transform:translateX(-50%);font-size:12px;line-height:1;font-weight:700}
+#oswrap{display:flex;flex-direction:column;gap:26px}.ios-first #ios{order:-1}.note{color:var(--muted);font-size:13.5px}a{color:#6C9BFF}
 </style>
 </head>
 <body><main>
 <img src="img/feature.webp" alt="Matchday Edge: live stats, smarter bets" style="width:100%;height:auto;border-radius:16px;border:1px solid var(--line)">
-<div class="top"><img src="icon-192.png" alt=""><div><h1>Matchday <b>Edge</b></h1><p class="sub">Android app · 31 KB · updates itself</p></div></div>
-<a class="dl" href="MatchdayEdge.apk" download="MatchdayEdge.apk">Download the app</a>
+<div class="top"><img src="icon-192.png" alt=""><div><h1>Matchday <b>Edge</b></h1><p class="sub">For Android and iPhone · free · updates itself</p></div></div>
+<div id="oswrap">
+<section class="os" id="android"><h2>Android</h2>
+<a class="dl" href="MatchdayEdge.apk" download="MatchdayEdge.apk">Download the Android app</a>
 <ol>
-<li>Tap <b>Download the app</b>. If Chrome asks whether to keep the file, tap <b>Download anyway</b>.</li>
+<li>Tap <b>Download the Android app</b>. If Chrome asks whether to keep the file, tap <b>Download anyway</b>.</li>
 <li>Open the downloaded file from the notification or your <b>Files</b> app.</li>
 <li>If asked, allow your browser to <b>install unknown apps</b>, then go back.</li>
 <li>Tap <b>Install</b>. If Play Protect warns about an unknown developer, tap <b>More details</b> then <b>Install anyway</b>.</li>
 </ol>
 <p class="note">Not working? Open this page in <b>Chrome</b> rather than inside another app. Or skip the download: open <a href="./">the site</a> in Chrome, tap ⋮ and choose <b>Add to Home screen</b>.</p>
+</section>
+<section class="os" id="ios"><h2>iPhone</h2>
+<a class="open" href="./">Open Matchday Edge in Safari</a>
+<ol>
+<li>Open this page in <b>Safari</b>. If you came from WhatsApp, Instagram or Snapchat, tap the menu and choose <b>Open in Safari</b> first.</li>
+<li>Tap <b>Open Matchday Edge in Safari</b> above.</li>
+<li>Tap the <b>Share</b> button <span class="shr" aria-hidden="true"></span>. On newer iPhones, tap <b>•••</b> at the bottom first, then <b>Share</b>.</li>
+<li>Scroll down and tap <b>Add to Home Screen</b>. Leave <b>Open as Web App</b> switched on, then tap <b>Add</b>.</li>
+<li>Open <b>Matchday Edge</b> from your home screen and sign in there. It opens full screen like a normal app.</li>
+</ol>
+<p class="note">Nothing to download from the App Store. It updates itself, just like the Android app.</p>
+</section>
+</div>
+<script>if (/iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)) document.getElementById("oswrap").classList.add("ios-first");</script>
 </main></body></html>

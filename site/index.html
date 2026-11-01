@@ -19,7 +19,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="config.js"></script>
 <link rel="icon" type="image/png" href="icon-192.png">
-<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
 </head>
 <body>
@@ -826,6 +826,9 @@ h3{font-size:15px;font-weight:700}
 .trk-other{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;background:var(--surface);border:1px dashed var(--line-2);border-radius:12px;padding:10px 14px;font-size:13px;color:var(--fg-2);text-align:left}
 .trk-other b{color:var(--blue-2);white-space:nowrap}
 .trk{display:grid;gap:10px}
+.iostip{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:12px;align-items:center;background:radial-gradient(80% 160% at 100% 0%,rgba(61,123,255,.28),transparent 60%),var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 12px 12px 14px;margin-bottom:16px}
+.iostip img{width:44px;height:44px;border-radius:11px}.iostip b{display:block;font-size:14.5px}.iostip span{font-size:13px;color:var(--fg-2)}.iostip span b{display:inline;font-size:inherit;color:var(--fg)}
+.shr{display:inline-block;width:12px;height:14px;vertical-align:-2px;border:1.6px solid currentColor;border-top:0;border-radius:0 0 2px 2px;position:relative;margin:0 2px}.shr::before{content:"↑";position:absolute;left:50%;top:-9px;transform:translateX(-50%);font-size:12px;line-height:1;font-weight:700}
 .trk-link{margin-bottom:14px}.ic-dot{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:var(--surface-3)}.ic-dot svg{width:18px;height:18px}
 .trk-card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:grid;gap:10px}
 .trk-hd{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;align-items:start}
@@ -838,7 +841,8 @@ h3{font-size:15px;font-weight:700}
 .tl-num{display:flex;justify-content:space-between;font-size:12.5px;color:var(--fg-2)}.tl-num b{font-family:var(--display);font-size:18px;color:var(--fg)}
 .tl-leg.void .tl-bar i{background:var(--dim)}
 .tl-leg.hit .tl-num span:last-child{color:var(--win);font-weight:700}.tl-leg.miss .tl-num span:last-child{color:var(--loss);font-weight:700}
-.imp textarea{background:var(--bg-2);border:1px solid var(--line-2);border-radius:10px;padding:11px 12px;color:var(--fg);font:inherit;font-size:15px;resize:vertical;width:100%}
+.imp @media (pointer:coarse){.field input,.field select,textarea{font-size:16px!important}}  /* stops iPhone Safari zooming into text boxes */
+textarea{background:var(--bg-2);border:1px solid var(--line-2);border-radius:10px;padding:11px 12px;color:var(--fg);font:inherit;font-size:15px;resize:vertical;width:100%}
 .imp-ex{font-size:12px;color:var(--muted);line-height:1.8}.imp-ex .linkbtn{font-size:12px}
 .imp-legs{display:grid;gap:6px}
 .imp-leg{display:grid;grid-template-columns:22px minmax(0,1fr);gap:8px;align-items:start;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 11px;font-size:13.5px}
@@ -1911,6 +1915,7 @@ function allTeams() {
   return [...m.values()].sort((a, b) => a.name.localeCompare(b.name));
 }
 function proCard() {
+  if (S.user && S.profile && S.profile.plan === "pro") return "";   // already Pro: no advert
   const feats = [["Real UK bookmaker prices", "Live Sky Bet, Paddy Power, William Hill and Betfair odds side by side, with the best price highlighted."], ["Bet alerts", "A ping when one of your teams has a banker, or an in-play corners or cards angle opens up."], ["Deeper models", "Player shots, cards and points props, plus first-half and second-half markets."], ["Unlimited saved accas", "Build, save and share accas with your friends."]];
   const cta = !S.user ? `<a class="btn pro-btn" href="#account">Create a free account to join the waitlist</a>` : S.waitlisted ? `<span class="msg ok">${ICON.check.replace("<svg", '<svg style="width:16px;height:16px;vertical-align:-3px"')} You're on the waitlist. You'll hear first when Pro opens.</span>` : `<button class="btn pro-btn" data-waitlist>Join the waitlist</button><span style="color:var(--muted);font-size:13px">Free to join. No card needed.</span>`;
   return `<section class="pro"><img class="pro-art" src="img/pro-banner.webp" alt="Matchday Edge Pro"><div class="pro-top"><div><div class="pro-badge">Matchday Edge <span>PRO</span></div><p class="sub" style="margin-top:8px">More data, sharper picks and alerts, for players who bet every week.</p></div><span class="soon">Coming soon</span></div>
@@ -2196,12 +2201,20 @@ document.addEventListener("click", async e => {
 });
 document.addEventListener("change", e => { if (e.target.id === "avatarPick" && sb && S.user) { uploadAvatar(e.target.files[0]); e.target.value = ""; } if (e.target.id === "shareOpt" && sb && S.user) { saveProfile({ share_bets: e.target.checked }); toast(e.target.checked ? "Friends can see your bets" : "Your bets are now private"); } if (e.target.id === "lbOpt" && sb && S.user) { saveProfile({ show_on_leaderboard: e.target.checked }); sb.rpc("leaderboard").then(x => { if (x.data) { S.board = x.data; render(); } }); } });
 
+/* ---------- iPhone: suggest adding to the home screen (Safari only, once) ---------- */
+const IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+const STANDALONE = navigator.standalone === true || matchMedia("(display-mode: standalone)").matches;
+function iosTip() {
+  if (!IOS || STANDALONE || store.get("iosTipX", false)) return "";
+  const inApp = /FBAN|FBAV|Instagram|WhatsApp|Snapchat|GSA\/|CriOS|FxiOS|EdgiOS/.test(navigator.userAgent);
+  return `<div class="iostip"><img src="apple-touch-icon.png" alt=""><div><b>Get the app on your iPhone</b><span>${inApp ? `Open this page in <b>Safari</b> first, then tap Share and <b>Add to Home Screen</b>.` : `Tap the <b>Share</b> button <span class="shr" aria-hidden="true"></span> (on newer iPhones tap <b>•••</b> first), then <b>Add to Home Screen</b>.`}</span></div><button class="x" data-iosx aria-label="Hide">✕</button></div>`;
+}
 /* ---------- render ---------- */
 function render() {
   if (!S.data) return;
   renderChrome();
   const v = view();
-  $("#main").innerHTML = v === "friends" ? viewAccount("friends") : v === "account" ? viewAccount() : v === "tables" ? viewTables() : v === "news" ? viewNews() : v === "fixtures" ? viewFixtures() : v === "bets" ? viewBets() : v === "mybets" ? viewMyBets() : v === "acca" ? viewAcca() : v === "challenge" ? viewChallenge() : viewLive();
+  $("#main").innerHTML = iosTip() + (v === "friends" ? viewAccount("friends") : v === "account" ? viewAccount() : v === "tables" ? viewTables() : v === "news" ? viewNews() : v === "fixtures" ? viewFixtures() : v === "bets" ? viewBets() : v === "mybets" ? viewMyBets() : v === "acca" ? viewAcca() : v === "challenge" ? viewChallenge() : viewLive());
   const norail = v === "account" || v === "friends"; document.querySelector(".page").classList.toggle("norail", norail);
   $("#rail").innerHTML = norail ? "" : slipHTML();
   const L = $("#layer"), prevDr = $(".drawer"), dkey = S.drawer || (S.slipOpen ? "slip" : ""), same = !!(prevDr && dkey && prevDr.dataset.key === dkey), keepTop = same ? prevDr.scrollTop : 0;
@@ -2260,6 +2273,7 @@ document.addEventListener("click", e => {
   else if (d.rung) { S.rungSel = +d.rung; render(); }
   else if (d.inj) { S.injOpen = d.inj; render(); }
   else if (d.import !== undefined) { S.importOpen = true; S.slipOpen = false; render(); setTimeout(() => { const t = $("#imptext"); t && t.focus(); }, 50); }
+  else if (d.iosx !== undefined) { store.set("iosTipX", true); render(); }
   else if (d.impex) { S.importText = d.impex; const t = $("#imptext"); if (t) t.value = d.impex; S.impOddsTyped = false; impRefresh(); }
   else if (d.untrack) { S.tracked = S.tracked.filter(t => t.id !== d.untrack); store.set("tracked", S.tracked); render(); }
   else if (d.impgo !== undefined) {
