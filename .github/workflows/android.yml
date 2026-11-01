@@ -25,7 +25,8 @@ jobs:
         env:
           KS_B64: ${{ secrets.MDE_KEYSTORE_B64 }}
         run: |
-          if [ -n "$KS_B64" ]; then echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/matchday.keystore"; echo "MDE_KEYSTORE_PATH=$RUNNER_TEMP/matchday.keystore" >> "$GITHUB_ENV"; fi
+          if [ -z "$KS_B64" ]; then echo "::error::The MDE_KEYSTORE_B64 secret is missing, so the app would be signed with a throwaway key. Add it under Settings > Secrets and variables > Actions."; exit 1; fi
+          echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/matchday.keystore"; echo "MDE_KEYSTORE_PATH=$RUNNER_TEMP/matchday.keystore" >> "$GITHUB_ENV"
       - name: Build APK
         env:
           MDE_KEYSTORE_PASSWORD: ${{ secrets.MDE_KEYSTORE_PASSWORD }}

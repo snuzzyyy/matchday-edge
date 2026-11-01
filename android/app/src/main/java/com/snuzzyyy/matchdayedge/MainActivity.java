@@ -4,7 +4,9 @@ import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Color;
 import android.net.Uri;
+import android.content.ClipData;
 import android.os.Bundle;
+import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
@@ -29,7 +31,19 @@ public class MainActivity extends Activity {
         s.setDomStorageEnabled(true);
         s.setDatabaseEnabled(true);
         s.setCacheMode(WebSettings.LOAD_DEFAULT);
-        s.setUserAgentString(s.getUserAgentString() + " MatchdayEdgeApp/1.0");
+        s.setUserAgentString(s.getUserAgentString() + " MatchdayEdgeApp/1.3");
+        // Lets the site open the phone's own share menu (WhatsApp, Messages, Snapchat...)
+        web.addJavascriptInterface(new Object() {
+            @JavascriptInterface
+            public void share(String text) {
+                Intent send = new Intent(Intent.ACTION_SEND);
+                send.setType("text/plain");
+                send.putExtra(Intent.EXTRA_TEXT, text);
+                runOnUiThread(() -> { try { startActivity(Intent.createChooser(send, "Share")); } catch (Exception ignored) { } });
+            }
+        }, "MDEApp");
+        // Downloads (like a new version of the app) go to the phone's browser
+        web.setDownloadListener((url, ua, cd, mime, len) -> { try { startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url))); } catch (Exception ignored) { } });
         web.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest req) {
@@ -66,7 +80,13 @@ public class MainActivity extends Activity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (requestCode == PICK_FILE && fileCallback != null) {
-            fileCallback.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(resultCode, data));
+            Uri[] picked = WebChromeClient.FileChooserParams.parseResult(resultCode, data);
+            // some gallery apps hand the photo back as "clip data" instead
+            if (picked == null && resultCode == RESULT_OK && data != null && data.getClipData() != null && data.getClipData().getItemCount() > 0) {
+                ClipData c = data.getClipData();
+                picked = new Uri[] { c.getItemAt(0).getUri() };
+            }
+            fileCallback.onReceiveValue(picked);
             fileCallback = null;
             return;
         }
