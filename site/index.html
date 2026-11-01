@@ -2968,7 +2968,8 @@ function cashGo(mode) {
 const credit = b => b.result === "won" ? (+b.returns || 0) : b.result === "void" ? +b.stake : 0;
 async function walletAdjust(delta) {
   if (!S.wallet || !delta) return;
-  S.wallet.amount = Math.round((+S.wallet.amount + delta) * 100) / 100; render();
+  const cur = await sb.from("wallets").select("amount").eq("user_id", S.user.id).maybeSingle();   // fresh, in case the overnight job changed it
+  S.wallet.amount = Math.round(((cur.data ? +cur.data.amount : +S.wallet.amount) + delta) * 100) / 100; render();
   await sb.from("wallets").update({ amount: S.wallet.amount, updated_at: new Date().toISOString() }).eq("user_id", S.user.id);
 }
 async function walletSet(amount) {
@@ -2987,18 +2988,22 @@ const walletStrip = () => !S.user || S.walletReady === false ? "" : S.wallet
   ? `<a class="strip" href="#account"><span class="ic-dot">💷</span><span><b>Balance ${money(+S.wallet.amount)}</b><small>${(() => { const o = (S.bets || []).filter(b => b.result === "open").reduce((a, b) => a + +b.stake, 0); return o ? money(o) + " in open bets · " : ""; })()}${S.wallet.is_public ? "friends can see it" : "private"}</small></span><span aria-hidden="true">›</span></a>`
   : `<a class="strip" href="#account"><span class="ic-dot">💷</span><span><b>Track your balance</b><small>It updates itself as your bets settle</small></span><span aria-hidden="true">›</span></a>`;
 async function settleBet(b, res, auto) {
-  const before = credit(b);
+  const before = credit(b), prev = b.result;
   const returns = res === "won" ? Math.round(b.stake * b.odds_dec * 100) / 100 : res === "void" ? +b.stake : res === "lost" ? 0 : null;
   const settled_at = res === "open" ? null : new Date().toISOString();
   let legs = null;
   if (res !== "open" && (b.legs || []).some(l => (l.pid || l.k) && !l.fst && findGame(l.sport, l.gid))) {
     legs = b.legs.map(l => { const g0 = findGame(l.sport, l.gid); if (!(l.pid || l.k) || l.fst || !g0 || (l.pid && !g0._postDetail) || g0.status.state !== "post") return l; const i = legInfo0(l); return { ...l, fst: i.st, final: l.pid ? legValue(l).v : null }; });
-    b.legs = legs;
   }
-  Object.assign(b, { result: res, returns, settled_at }); render(); walletAdjust(credit(b) - before);
-  if (auto) toast(res === "won" ? `Winner! ${b.label.length > 40 ? b.label.slice(0, 40) + "…" : b.label} returned ${money(returns)}` : `Settled as lost: ${b.label.length > 44 ? b.label.slice(0, 44) + "…" : b.label}`);
+  // only change it if nobody else has (the overnight job may have settled it already)
   const upd = legs ? { result: res, returns, settled_at, legs } : { result: res, returns, settled_at };
-  let r = await sb.from("bets").update(upd).eq("id", b.id); if (r.error) r = await sb.from("bets").update({ result: res, returns, ...(legs ? { legs } : {}) }).eq("id", b.id); if (r.error) toast("Couldn't save."); else loadSocial();
+  let r = await sb.from("bets").update(upd).eq("id", b.id).eq("result", prev).select("id");
+  if (r.error) r = await sb.from("bets").update({ result: res, returns, ...(legs ? { legs } : {}) }).eq("id", b.id).eq("result", prev).select("id");
+  if (r.error) { toast("Couldn't save."); return; }
+  if (Array.isArray(r.data) && !r.data.length) { loadAccount(); return; }   // already settled elsewhere: just reload
+  if (legs) b.legs = legs;
+  Object.assign(b, { result: res, returns, settled_at }); render(); walletAdjust(credit(b) - before); loadSocial();
+  if (auto) toast(res === "won" ? `Winner! ${b.label.length > 40 ? b.label.slice(0, 40) + "…" : b.label} returned ${money(returns)}` : `Settled as lost: ${b.label.length > 44 ? b.label.slice(0, 44) + "…" : b.label}`);
   sb.rpc("leaderboard").then(x => { if (x.data) { S.board = x.data; render(); } });
 }
 function betOutcome(legs) {   // "won" / "lost" once it's certain, otherwise null
