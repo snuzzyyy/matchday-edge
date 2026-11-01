@@ -26,7 +26,7 @@ li b{color:#fff}
 </style>
 </head>
 <body><main>
-<img src="img/feature.webp" alt="Matchday Edge: live stats, smarter bets" style="width:100%;height:auto;border-radius:16px;border:1px solid var(--line)">
+<img id="feat" src="img/feature.webp" alt="Matchday Edge: live stats, smarter bets" style="width:100%;height:auto;border-radius:16px;border:1px solid var(--line)">
 <div class="top"><img src="icon-192.png" alt=""><div><h1>Matchday <b>Edge</b></h1><p class="sub">For Android and iPhone · free · updates itself</p></div></div>
 <div id="oswrap">
 <section class="os" id="android"><h2>Android</h2>
@@ -53,6 +53,7 @@ li b{color:#fff}
 <p class="note">Nothing to download from the App Store. It updates itself, just like the Android app.</p>
 </section>
 </div>
-<script>if (/MatchdayEdgeApp/.test(navigator.userAgent)) document.getElementById("inapp").hidden = false;
+<script>(() => { const d = new Date(new Date().toLocaleString("en-US", { timeZone: "Europe/London" })), m = d.getMonth(), day = d.getDate(); if ((m === 9 && day >= 17) || (m === 10 && day <= 7)) document.getElementById("feat").src = "img/halloween/feature.webp"; })();
+if (/MatchdayEdgeApp/.test(navigator.userAgent)) document.getElementById("inapp").hidden = false;
 if (/iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)) document.getElementById("oswrap").classList.add("ios-first");</script>
 </main></body></html>

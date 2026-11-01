@@ -918,6 +918,13 @@ a.prof-bdg{text-decoration:none}
 .bdg.sm{font-size:10.5px;padding:1px 7px 1px 6px;margin-left:5px}
 .bdg.dev{background:linear-gradient(100deg,#FF7A2F,#FF4F6D);box-shadow:0 0 12px -2px rgba(255,90,80,.75)}
 .bdg.owner{background:linear-gradient(100deg,#3D7BFF,#9A6BFF);box-shadow:0 0 12px -2px rgba(110,110,255,.8)}
+.haunt{display:none}
+body.spooky .haunt{display:block;font-family:var(--display);font-style:italic;font-weight:800;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--tang);line-height:1;margin-bottom:1px;text-shadow:0 0 8px rgba(255,122,47,.6)}
+body.spooky .bdg.owner::before{content:"👑";font-style:normal;margin-right:4px;font-size:.85em}body.spooky .bdg.owner::after{content:"👻";font-style:normal;margin-left:4px;font-size:.85em}
+body.spooky .bdg.dev::before{content:"🦇";font-style:normal;margin-right:4px;font-size:.85em}
+body.spooky .bdg.pro::after{content:"🎃";font-style:normal;margin-left:3px;font-size:.85em}
+body.spooky .bdg.sm::before,body.spooky .bdg.sm::after{display:none}
+body.spooky .top{background:radial-gradient(60% 140% at 100% 0%,rgba(255,122,47,.12),transparent 60%),radial-gradient(50% 140% at 0% 0%,rgba(154,107,255,.12),transparent 60%),linear-gradient(180deg,var(--bg-2),rgba(13,19,36,.94))}
 .bdg.pro{background:linear-gradient(100deg,#FFD24A,#FF9F1C);color:#3A2200;text-shadow:none;box-shadow:0 0 12px -3px rgba(255,190,60,.7)}
 .bdgrow{margin:2px 0 2px -6px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .planchip{display:inline-flex;align-items:center;gap:4px;width:max-content;font-size:11px;font-weight:800;letter-spacing:.08em;padding:3px 9px;border-radius:6px;background:var(--surface-3);color:var(--fg-2);margin:4px 0 2px}
@@ -1000,7 +1007,7 @@ textarea{background:var(--bg-2);border:1px solid var(--line-2);border-radius:10p
     <div class="bar">
       <a class="brand" href="#live" aria-label="Matchday Edge home">
         <span class="mark"><img src="mark.png" alt="" width="34" height="34"></span>
-        <span class="brand-txt"><span class="word">Matchday <b>Edge</b></span><span class="updated" id="updated"><span class="dot"></span><span>Loading…</span></span></span>
+        <span class="brand-txt"><span class="word"><span class="haunt">Haunted</span>Matchday <b>Edge</b></span><span class="updated" id="updated"><span class="dot"></span><span>Loading…</span></span></span>
       </a>
       <div class="sport" role="group" aria-label="Sport">
         <button id="sp-football" data-sport="football" aria-pressed="true" aria-label="Football"><img class="spi" src="img/icon-football.webp" alt=""><span class="sl">Football</span></button>
@@ -1670,6 +1677,12 @@ function splitChal(d) {   // stored as { v: 2, football: ladder, nba: ladder }; 
   if (d.football && ladderEmpty(d.nba) && !ladderEmpty(d.football) && ladderSport(d.football) === "nba") return { v: 2, nba: d.football };
   return d;
 }
+// ---------- Halloween theme: on from 17 Oct to 7 Nov (UK), can be switched off on the profile ----------
+const HW_SEASON = (() => { const d = new Date(new Date().toLocaleString("en-US", { timeZone: "Europe/London" })), m = d.getMonth(), day = d.getDate(); return (m === 9 && day >= 17) || (m === 10 && day <= 7); })();
+const spooky = () => HW_SEASON && store.get("spooky", true);
+const HW_ART = new Set(["challenge-banner.webp", "empty-news.webp", "account-hero.webp"]);
+const art = f => spooky() && HW_ART.has(f) ? "img/halloween/" + f : "img/" + f;
+const applySpooky = () => document.body.classList.toggle("spooky", spooky());
 const SPN = { football: "Football", nba: "NBA" };
 const chalNow = (sport = S.sport) => { const C = S.user ? ((S.chalAll || {})[sport] || CH_DEFAULT()) : (S.data.challenge || CH_DEFAULT()); C.past = C.past || []; C.history = C.history || []; return C; };
 const chalPick = d => { const a = splitChal(d), L = ["football", "nba"].map(k => a[k]).filter(Boolean); if (!L.length) return null; const best = L.reduce((x, y) => ((y.rung || 0) > (x.rung || 0) || (y.active && !x.active) ? y : x)); return { ...best, past: L.flatMap(c => c.past || []) }; };
@@ -1736,7 +1749,7 @@ function viewChallenge() {
   const past = C.past.length ? `<div class="pastlist">${C.past.map(p => `<details class="past"><summary><span class="pt-badge ${p.outcome}">${p.outcome === "completed" ? "🏆 Completed" : p.outcome === "cashed" ? "💰 Cashed out" : p.outcome === "lost" ? `Lost at step ${p.reached + 1}` : "Stopped"}</span><span class="pt-main"><b>Attempt ${p.n}</b><small>${esc(p.started)}${p.ended && p.ended !== p.started ? " – " + esc(p.ended) : ""}</small></span><span class="pt-peak"><small>${p.taken ? "Taken out" : "Best bank"}</small><b>${p.taken ? money(p.taken) : fmtBank(p.peak)}</b></span></summary>
       <div class="hist">${(p.history || []).map(histRow).join("")}</div></details>`).join("")}</div>` : `<div class="empty">Finished attempts show here: how far each one got and every bet in it.</div>`;
   return `<div class="hd"><div><h1>£1 → £1K challenge</h1><p class="sub">${mine ? `Your ${SPN[S.sport]} ladder. ` : ""}Roll £1 onto a bet at around evens, ten times over. ${mine ? "" : "Sign in to run your own ladder."}</p></div></div>
-  <img class="banner" src="img/challenge-banner.webp" alt="A glowing staircase of ten steps rising to a trophy">
+  <img class="banner" src="${art("challenge-banner.webp")}" alt="A glowing staircase of ten steps rising to the top">
   ${mine ? chalSummary() : ""}
   <section class="chal-hero">
     <div class="chal-top"><div><div class="eyebrow">Attempt ${C.attempts || 1} · ${done ? "complete" : `step ${C.rung + 1} of ${C.rungs}`}</div><div class="bankv">${fmtBank(C.bank)}<small>${done ? "🏆" : `→ ${money(rungs[C.rung + 1])} next`}</small></div></div>
@@ -2411,7 +2424,7 @@ function viewNews() {
     const want = NF === "injuries" ? INJ_RE : NF === "transfers" ? TRF_RE : null;
     const list = items.filter(([a]) => !want || want.test(a.headline + " " + (a.description || "")));
     const loading = fs.some(([f]) => f.loading && !f.data);
-    body = list.length ? `<div class="newslist">${list.slice(0, 60).map(([a, n]) => storyHTML(a, n)).join("")}</div>` : `<div class="loadbox art">${loading ? "Loading news…" : `<img src="img/empty-news.webp" alt="" loading="lazy"><span>${want ? "No stories about that right now." : "No news right now."}</span>`}</div>`;
+    body = list.length ? `<div class="newslist">${list.slice(0, 60).map(([a, n]) => storyHTML(a, n)).join("")}</div>` : `<div class="loadbox art">${loading ? "Loading news…" : `<img src="${art("empty-news.webp")}" alt="" loading="lazy"><span>${want ? "No stories about that right now." : "No news right now."}</span>`}</div>`;
     if (sp === "football") body = `<div class="chips scroll"><button class="chip" data-newsleague="all" aria-pressed="${!S.newsLeague || S.newsLeague === "all"}">All leagues</button>${S.data.leagues.map(l => `<button class="chip" data-newsleague="${l.id}" aria-pressed="${S.newsLeague === l.id}">${esc(l.name)}</button>`).join("")}</div>` + body;
   }
   return `<div class="hd"><div><h1>${sp === "nba" ? "NBA" : "Football"} news</h1><p class="sub">${sp === "nba" && NF === "injuries" ? "Every injured player, with teams playing soon at the top." : NF === "injuries" ? "Stories about injuries and fitness." : NF === "transfers" ? "Stories about transfers, signings and contracts." : "Latest stories. Tap one to read it in full."}</p></div>${chips}</div>${body}`;
@@ -2574,7 +2587,7 @@ function viewAccount(mode = "account") {
   if (S.recovery && S.user) return `<div class="hd"><div><h1>Set a new password</h1></div></div><form class="authcard" id="pwForm" style="max-width:420px"><div class="field"><label for="newpw">New password</label><input id="newpw" type="password" minlength="8" autocomplete="new-password" required></div>${m}<button class="btn" type="submit">Save password</button></form>`;
   if (!S.user) {
     const up = S.authTab === "up";
-    return `<div class="acct-wrap"><div class="acct-grid"><div class="acct-intro"><img class="acct-hero" src="img/account-hero.webp" alt=""><h1>${mode === "friends" ? "Bet with your friends" : "Your Matchday Edge account"}</h1><p class="sub">Free for you and your friends. Sign up in seconds.</p>
+    return `<div class="acct-wrap"><div class="acct-grid"><div class="acct-intro"><img class="acct-hero" src="${art("account-hero.webp")}" alt=""><h1>${mode === "friends" ? "Bet with your friends" : "Your Matchday Edge account"}</h1><p class="sub">Free for you and your friends. Sign up in seconds.</p>
       <ul class="perks"><li><span class="ic">${ICON.chart}</span><div><b>Track every bet</b><span>Save bets from your slip, mark them won or lost, and see your real profit and loss.</span></div></li>
       <li><span class="ic">${ICON.ladder}</span><div><b>Your own £1 → £1K ladder</b><span>Run the challenge yourself and log each result in one tap.</span></div></li>
       <li><span class="ic">${ICON.star}</span><div><b>Favourite teams</b><span>Your teams starred in fixtures and pinned to the top.</span></div></li>
@@ -2753,6 +2766,7 @@ function profileView() {
     <form class="setrow namerow" id="nameForm"><label for="dn"><small>Display name</small></label><input id="dn" maxlength="24" value="${esc(P.display_name || "")}" autocomplete="nickname"><button class="btn ghost sm" type="submit">Save</button></form>
     <div class="setrow"><span>${avatarHTML(P, 40)}</span><span><b>Profile photo</b><small>Or tap your picture at the top</small></span><span class="rowbtns"><button type="button" class="btn ghost sm" data-pickphoto>${P.avatar_url ? "Change" : "Add"}</button>${P.avatar_url ? `<button class="btn ghost sm" data-noavatar>Remove</button>` : ""}</span></div></div></section>
   ${walletSection(sw)}
+  ${HW_SEASON ? `<section class="section"><h2>Theme</h2><div class="setcard">${sw("spookyOpt", spooky(), "🎃 Halloween theme", "Haunted artwork and badges until 7 November")}</div></section>` : ""}
   <section class="section"><h2>Alerts</h2><div class="setcard">${sw("alertOpt", alertsOn(), "Bet alerts", ALERT_APP() ? "A notification when a leg lands, a player is one away, or a bet settles" : IOS && !STANDALONE ? "Add the app to your Home Screen to get notifications" : "A notification when a leg lands, a player is one away, or a bet settles")}</div></section>
   <section class="section"><h2>Privacy</h2><div class="setcard">
     ${sw("shareOpt", P.share_bets !== false, "Friends can see my bets", "They can react to them and tail them")}
@@ -2948,7 +2962,7 @@ document.addEventListener("click", async e => {
   }
 });
 document.addEventListener("change", async e => { if (e.target.id === "alertOpt") { if (e.target.checked) { const ok = await askAlerts(); store.set("alerts", true); store.set("alertKnown", []); toast(ok ? "Bet alerts on" : "Bet alerts on inside the app"); alertTick(); sendAlert("Bet alerts are on", "You'll hear when your legs land", "test"); } else { store.set("alerts", false); toast("Bet alerts off"); } } });
-document.addEventListener("change", e => { if ((e.target.id === "discOpt" || e.target.id === "pubOpt") && sb && S.user) { const k = e.target.id === "discOpt" ? "discoverable" : "bets_public"; saveProfile({ [k]: e.target.checked }); toast(k === "discoverable" ? (e.target.checked ? "People can find you" : "Hidden from search") : (e.target.checked ? "Your bets are public" : "Your bets are private again")); } if (e.target.id === "walletPub" && sb && S.user && S.wallet) { S.wallet.is_public = e.target.checked; sb.from("wallets").update({ is_public: e.target.checked }).eq("user_id", S.user.id); toast(e.target.checked ? "Friends can see your balance" : "Your balance is private"); render(); } if (e.target.id === "avatarPick" && sb && S.user) { S._picked = true; uploadAvatar(e.target.files[0]); e.target.value = ""; } if (e.target.id === "shareOpt" && sb && S.user) { saveProfile({ share_bets: e.target.checked }); toast(e.target.checked ? "Friends can see your bets" : "Your bets are now private"); } if (e.target.id === "lbOpt" && sb && S.user) { saveProfile({ show_on_leaderboard: e.target.checked }); sb.rpc("leaderboard").then(x => { if (x.data) { S.board = x.data; render(); } }); } });
+document.addEventListener("change", e => { if (e.target.id === "spookyOpt") { store.set("spooky", e.target.checked); applySpooky(); $("#main")._h = null; render(); } if ((e.target.id === "discOpt" || e.target.id === "pubOpt") && sb && S.user) { const k = e.target.id === "discOpt" ? "discoverable" : "bets_public"; saveProfile({ [k]: e.target.checked }); toast(k === "discoverable" ? (e.target.checked ? "People can find you" : "Hidden from search") : (e.target.checked ? "Your bets are public" : "Your bets are private again")); } if (e.target.id === "walletPub" && sb && S.user && S.wallet) { S.wallet.is_public = e.target.checked; sb.from("wallets").update({ is_public: e.target.checked }).eq("user_id", S.user.id); toast(e.target.checked ? "Friends can see your balance" : "Your balance is private"); render(); } if (e.target.id === "avatarPick" && sb && S.user) { S._picked = true; uploadAvatar(e.target.files[0]); e.target.value = ""; } if (e.target.id === "shareOpt" && sb && S.user) { saveProfile({ share_bets: e.target.checked }); toast(e.target.checked ? "Friends can see your bets" : "Your bets are now private"); } if (e.target.id === "lbOpt" && sb && S.user) { saveProfile({ show_on_leaderboard: e.target.checked }); sb.rpc("leaderboard").then(x => { if (x.data) { S.board = x.data; render(); } }); } });
 
 /* ---------- iPhone: suggest adding to the home screen (Safari only, once) ---------- */
 const IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
@@ -3110,6 +3124,7 @@ function autoSettle() {
 /* ---------- render ---------- */
 function render() {
   if (!S.data) return;
+  applySpooky();
   renderChrome();
   setTimeout(autoSettle, 0);
   const v = view();
