@@ -1698,15 +1698,24 @@ function playerIndex() {
 }
 function findPlayer(idx, q) {
   q = norm(q); if (q.length < 3) return null;
-  return idx.find(p => p.n === q) || idx.find(p => p.n.endsWith(" " + q)) || idx.find(p => p.n.includes(q)) || idx.find(p => q.split(" ").length > 1 && p.n.endsWith(" " + q.split(" ").pop()));
+  const qw = q.split(" "), first = qw[0], last = qw[qw.length - 1];
+  return idx.find(p => p.n === q) || idx.find(p => p.n.endsWith(" " + q)) || idx.find(p => p.n.includes(q))
+    || (qw.length > 1 && idx.find(p => p.n.startsWith(first + " ") && p.n.endsWith(" " + last)))      // small misspelling in the middle: "Shai Gil-Alexander"
+    || (qw.length > 1 && idx.find(p => p.n.startsWith(first + " ") && p.n.split(" ").some(w => w.length > 3 && last.length > 3 && (w.startsWith(last.slice(0, 4)) || last.startsWith(w.slice(0, 4))))))
+    || idx.find(p => qw.length > 1 && p.n.endsWith(" " + last));
 }
 function parseBet(text, idx) {
-  const legs = [], missing = [], om = text.match(/@\s*([0-9]+(?:\.[0-9]+)?(?:\s*\/\s*[0-9]+)?|evs|evens)/i), dec = om ? parseOdds(om[1]) : null;
+  const legs = [], missing = [], om = text.match(/@\s*([0-9]+(?:\.[0-9]+)?(?:\s*\/\s*[0-9]+)?|evs|evens)/i); let oddsFound = null;
   const LEG = l => l.match(/^(.*?)\s+(?:to\s+|-\s+|:\s*)(.+)$/i) || l.match(/^(.*?)\s+((?:over\s+)?\d.*)$/i);
   // "A 20+ points & B 6+ assists" is two legs; "A & B to score 25+ each" shares one stat
   const groups = [];
-  for (let line of text.replace(/@.*$/gm, "").split(/\n|;/)) {
-    line = line.trim(); if (!line) continue;
+  // bookie slips often put the player on one line and "To Record 4+ Rebounds" on the next: join them back up
+  const lines = [];
+  for (const l of text.replace(/@.*$/gm, "").split(/\n|;/).map(x => x.trim()).filter(Boolean)) {
+    if (/^(?:\d+\s*\/\s*\d+|\d+\.\d+|evs|evens)$/i.test(l)) { if (!oddsFound) oddsFound = parseOdds(l); continue; }   // a line that's just the odds
+    if (lines.length && /^(?:to\b|over\b|-\s|\d+(?:\.\d+)?\s*\+)/i.test(l) && !LEG(lines[lines.length - 1])) lines[lines.length - 1] += " " + l; else lines.push(l);
+  }
+  for (let line of lines) {
     const targets = (line.match(/\d+(?:\.\d+)?\s*\+|over\s*\d/gi) || []).length;
     if (targets < 2) { const m = LEG(line); if (m) groups.push({ names: m[1].split(/\s*(?:&|,|\band\b|\+)\s*/i), rest: m[2] }); continue; }
     const statOnly = x => Object.values(PROPS).some(L => L.some(([re]) => re.test(x)));
@@ -1719,7 +1728,7 @@ function parseBet(text, idx) {
     }
   }
   for (const { names: nms, rest } of groups) {
-    const names = nms.map(x => x.trim()).filter(Boolean);
+    const names = nms.map(x => x.replace(/\b(?:all|both|each|to)\b/gi, " ").replace(/\s+/g, " ").trim()).filter(Boolean);   // "A, B & C all to score"
     const tgt = (rest.match(/(\d+(?:\.\d+)?)\s*\+/) || [])[1], ov = (rest.match(/over\s*(\d+(?:\.\d+)?)/i) || [])[1];
     for (const nm of names) {
       const p = findPlayer(idx, nm); if (!p) { missing.push(nm); continue; }
@@ -1728,7 +1737,7 @@ function parseBet(text, idx) {
       legs.push({ sport: p.sport, gid: p.gid, side: p.side, pid: p.pid, name: p.name, team: p.team, stat: st[1], label: st[2], target });
     }
   }
-  return { legs, missing, dec };
+  return { legs, missing, dec: om ? parseOdds(om[1]) : oddsFound };
 }
 function legValue(l) {
   const g = findGame(l.sport, l.gid); if (!g) return { v: null, g };
@@ -1760,6 +1769,9 @@ function trackerHTML(bare) {
     const overall = lost ? `<span class="st lost">Lost</span>` : hit + voids === t.legs.length && hit ? `<span class="st won">Won ✓${voids ? ` (${voids} void)` : ""}</span>` : voids === t.legs.length ? `<span class="st void">Void</span>` : lost ? `<span class="st lost">Lost</span>` : started ? `<span class="st">${hit} of ${t.legs.length} landed</span>` : `<span class="st">Not started</span>`;
     return `<article class="trk-card"><div class="trk-hd"><div><b>${t.legs.length > 1 ? `${t.legs.length}-leg player bet` : esc(t.text)}</b><small>${t.dec ? odds(t.dec) + " · " : ""}${t.stake ? `£${t.stake} returns ${money(t.stake * (t.dec || 1))}` : ""}</small></div>${overall}<button class="x" data-untrack="${t.id}" aria-label="Stop tracking">✕</button></div>${rows}</article>`; }).join("")}</div></section>`;
 }
+// keep a half-typed import if the phone closes or reloads the app (e.g. while checking the bookie app)
+function saveImpDraft() { store.set("impDraft", S.importOpen ? { text: S.importText || "", odds: S.impOdds || "", typed: !!S.impOddsTyped, stake: S.impStake, t: Date.now() } : null); }
+{ const dr = store.get("impDraft", null); if (dr && Date.now() - dr.t < 12 * 3600e3) { S.importOpen = true; S.importText = dr.text; S.impOdds = dr.odds; S.impOddsTyped = dr.typed; S.impStake = dr.stake; } }
 function impParse() { const { idx, loading } = playerIndex(), txt = S.importText || ""; return { loading, r: txt.trim() ? parseBet(txt, idx) : { legs: [], missing: [], dec: null } }; }
 function impDyn() {
   const { loading, r } = impParse();
@@ -1781,7 +1793,7 @@ function importSheet() {
     <div class="field"><label for="imptext">Your bet</label><textarea id="imptext" rows="3" placeholder="e.g. Damian Lillard & Tyrese Maxey to score 25+ points each @ 3.00">${esc(txt)}</textarea></div>
     <div class="imp-ex">Examples: <button class="linkbtn" data-impex="Nicolas Jackson 2+ shots on target @ 2.50">Jackson 2+ shots on target</button> · <button class="linkbtn" data-impex="Luka Doncic 8+ assists @ 1.90">Doncic 8+ assists</button> · <button class="linkbtn" data-impex="Haaland to score @ 1.80">Haaland to score</button></div>
     <div id="impdyn">${impDyn()}</div>
-    <div class="addrow"><div class="field" style="flex:1 1 100px"><label for="impodds">Odds</label><input id="impodds" value="${r.dec ? odds(r.dec) : ""}" placeholder="3.00 or 2/1"></div><div class="field" style="flex:1 1 100px"><label for="impstake">Stake £</label><input id="impstake" type="number" inputmode="decimal" min="0" step="0.5" value="${S.stake}"></div></div>
+    <div class="addrow"><div class="field" style="flex:1 1 100px"><label for="impodds">Odds</label><input id="impodds" value="${esc(S.impOddsTyped && S.impOdds ? S.impOdds : r.dec ? odds(r.dec) : "")}" placeholder="3.00 or 2/1"></div><div class="field" style="flex:1 1 100px"><label for="impstake">Stake £</label><input id="impstake" type="number" inputmode="decimal" min="0" step="0.5" value="${esc(S.impStake != null ? S.impStake : S.stake)}"></div></div>
     ${S.user ? `<label class="optrow"><input type="checkbox" id="impsave" checked> Also save to My Bets</label>` : ""}
     <button class="btn" data-impgo ${r.legs.length ? "" : "disabled"}>Track this bet</button></div>`;
 }
@@ -2252,7 +2264,7 @@ function render() {
   if (S.shareOpen && S.user) L.insertAdjacentHTML("beforeend", shareSheet());
   const IL = $("#implayer");
   if (!S.importOpen) { if (IL.firstChild) IL.innerHTML = ""; }
-  else if (!$("#imptext")) { S.impOddsTyped = false; IL.innerHTML = importSheet(); }
+  else if (!$("#imptext")) IL.innerHTML = importSheet();
   else impRefresh();
   const dr = $(".drawer"); if (dr && dkey) { dr.dataset.key = dkey; if (same) { dr.style.animation = "none"; dr.scrollTop = keepTop; } }
   document.body.style.overflow = (S.drawer || S.slipOpen) ? "hidden" : "";
@@ -2299,7 +2311,7 @@ document.addEventListener("click", e => {
   else if (d.win) { S.win = d.win; render(); }
   else if (d.rung) { S.rungSel = +d.rung; render(); }
   else if (d.inj) { S.injOpen = d.inj; render(); }
-  else if (d.import !== undefined) { S.importOpen = true; S.slipOpen = false; render(); setTimeout(() => { const t = $("#imptext"); t && t.focus(); }, 50); }
+  else if (d.import !== undefined) { if (!(S.importText || "").trim()) { S.impOddsTyped = false; S.impOdds = ""; S.impStake = null; } S.importOpen = true; saveImpDraft(); S.slipOpen = false; render(); setTimeout(() => { const t = $("#imptext"); t && t.focus(); }, 50); }
   else if (d.pickphoto !== undefined) { const f = $("#avatarPick"); f.value = ""; f.click(); }
   else if (d.iosx !== undefined) { store.set("iosTipX", true); render(); }
   else if (d.impex) { S.importText = d.impex; const t = $("#imptext"); if (t) t.value = d.impex; S.impOddsTyped = false; impRefresh(); }
@@ -2313,7 +2325,7 @@ document.addEventListener("click", e => {
       const gs = [...new Set(r.legs.map(l => l.gid))].map(id => r.legs.find(l => l.gid === id)).map(l => findGame(l.sport, l.gid)).filter(Boolean);
       sb.from("bets").insert({ label: text, match: gs.map(g => vs(r.legs[0].sport, g)).join(", "), legs: r.legs.map(l => ({ ...l, type: "prop" })), odds_dec: Math.round(dec * 1000) / 1000, stake, sport: r.legs[0].sport, kickoff: gs.map(kick).sort()[0] }).select().single().then(x => { if (x.data) { S.bets.unshift(x.data); loadSocial(); } });
     }
-    S.importOpen = false; S.importText = ""; if (location.hash !== "#mybets") location.hash = "mybets"; render(); toast("Tracking your bet live");
+    S.importOpen = false; S.importText = ""; S.impOdds = ""; S.impOddsTyped = false; S.impStake = null; saveImpDraft(); if (location.hash !== "#mybets") location.hash = "mybets"; render(); toast("Tracking your bet live");
   }
   else if (d.chalodds2) { S.chalOdds = d.chalodds2; store.set("chalOdds", S.chalOdds); render(); }
   else if (d.accawin) { S.accaWin = d.accawin; render(); }
@@ -2337,8 +2349,14 @@ document.addEventListener("click", e => { const b = e.target.closest("[data-legr
 document.addEventListener("input", e => {
   if (e.target.id === "stake") { S.stake = Math.max(0, +e.target.value || 0); save(); const c = slipCalc(); document.querySelectorAll("#ret").forEach(r => r.textContent = money(S.stake * c.dec)); }
 });
-document.addEventListener("click", e => { if (e.target.closest("[data-injclose]")) { S.injOpen = null; render(); } const shc = e.target.closest("[data-shareclose]"); if (shc && S.shareOpen) { if (shc.tagName === "A") setTimeout(() => { S.shareOpen = false; render(); }, 400); else { S.shareOpen = false; render(); } } if (e.target.closest("[data-importclose]")) { S.importOpen = false; render(); } });
-document.addEventListener("input", e => { if (e.target.id === "imptext") { S.importText = e.target.value; clearTimeout(S._impT); S._impT = setTimeout(impRefresh, 350); } if (e.target.id === "impodds") S.impOddsTyped = !!e.target.value.trim(); });
+document.addEventListener("click", e => { if (e.target.closest("[data-injclose]")) { S.injOpen = null; render(); } const shc = e.target.closest("[data-shareclose]"); if (shc && S.shareOpen) { if (shc.tagName === "A") setTimeout(() => { S.shareOpen = false; render(); }, 400); else { S.shareOpen = false; render(); } } if (e.target.closest("[data-importclose]")) { S.importOpen = false; saveImpDraft(); render(); } });
+document.addEventListener("input", e => {
+  const id = e.target.id; if (!/^imp(text|odds|stake)$/.test(id)) return;
+  if (id === "imptext") { S.importText = e.target.value; clearTimeout(S._impT); S._impT = setTimeout(impRefresh, 350); }
+  if (id === "impodds") { S.impOdds = e.target.value; S.impOddsTyped = !!e.target.value.trim(); }
+  if (id === "impstake") S.impStake = e.target.value;
+  saveImpDraft();
+});
 document.addEventListener("keydown", e => { if (e.key === "Escape" && S.injOpen) { S.injOpen = null; render(); return; } if (e.key === "Escape" && (S.drawer || S.slipOpen)) { S.drawer = null; S.slipOpen = false; render(); } });
 addEventListener("hashchange", () => { if (view() === "friends" && S.user) loadSocial(); S.drawer = null; S.slipOpen = false; render(); scrollTo(0, 0); });
 setInterval(() => S.data && renderChrome(), 60000);
@@ -2443,7 +2461,7 @@ async function checkVersion() {
   try {
     const html = await (await fetch("./?b=" + Date.now(), { cache: "no-store" })).text();
     const m = html.match(/name="mde-build" content="([^"]+)"/);
-    const ae = document.activeElement, typing = ae && (ae.tagName === "INPUT" || ae.tagName === "SELECT");
+    const ae = document.activeElement, typing = S.importOpen || (ae && /^(INPUT|SELECT|TEXTAREA)$/.test(ae.tagName));
     if (m && m[1] !== BUILD && m[1] !== "dev" && !typing) { saveView(); location.replace(location.pathname + "?v=" + m[1] + location.hash); }
   } catch {}
 }
