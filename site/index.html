@@ -3583,6 +3583,7 @@ async function loadDetail(key) {
   g._luDone = true; render();
 }
 let ticking = false;
+for (const ev of ["input", "keydown", "focusin", "pointerdown"]) document.addEventListener(ev, () => { S._typedAt = Date.now(); }, true);
 async function liveTick() {
   if (ticking || !S.data || (document.visibilityState === "hidden" && !(alertsOn() && liveBetCount()))) return; ticking = true;
   try {
@@ -3593,7 +3594,7 @@ async function liveTick() {
     const live = [...S.data.football.filter(g => isLive(g) || g._fin).map(g => ["football", g]), ...S.data.nba.filter(g => isLive(g) || g._fin).map(g => ["nba", g])];
     await Promise.all(live.map(async ([sp, g]) => { try { const s = await getJ(`${SB}/${sp === "nba" ? "basketball/nba" : "soccer/" + g.league}/summary?event=${g.id}`); sp === "nba" ? applyNba(g, s) : applyFb(g, s); g._fin = false; changed = true; } catch {} }));
     if (ok || !tried) { S.liveAt = new Date().toISOString(); S.liveFail = 0; } else S.liveFail = (S.liveFail || 0) + 1;
-    const ae = document.activeElement, typing = ae && (ae.id === "stake" || ae.tagName === "INPUT" || ae.tagName === "SELECT");
+    const ae = document.activeElement, typing = ae && /^(INPUT|SELECT|TEXTAREA)$/.test(ae.tagName) && ae.type !== "checkbox" && Date.now() - (S._typedAt || 0) < (ae.tagName === "SELECT" ? 20e3 : 8e3);   /* only hold the redraw while someone is actually typing or choosing */
     if (changed && !typing) render(); else renderChrome();
   } finally { ticking = false; }
 }
