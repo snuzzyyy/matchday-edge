@@ -82,7 +82,7 @@ All three SQL files **have been run** on the live Supabase project.
 
 ## 5. Features (what exists, where it lives in `index.html`)
 
-Main tabs (`VIEWS`): **Live · Games (fixtures) · Accas · Tips (best bets, id `bets`) · My Bets (`mybets`) · Friends · Tables · News · £1K**, plus `#account` (👤 button). Routing is hash-based (`view()`), state lives in the global `S` object, everything renders through `render()`.
+Menu (`NAV`): **Live · Games · Bets · £1K · Friends**. Games holds Fixtures / Tables / News and Bets holds Tips (id `bets`) / Accas / My Bets, switched with the `subnav()` bar at the top of the page; the tab remembers the last sub-page (`S.lastSub`). `VIEWS` still lists every page id for routing, plus `#account` (👤 button). Routing is hash-based (`view()`), state lives in the global `S` object, everything renders through `render()`.
 
 - **Live**: live cards with mini stats, plain-English in-play insights (corner pace vs expected, favourite losing), tracked bets at the top.
 - **Games/Fixtures**: grouped by day/league, "In play" block with rich rows, "Your teams" (favourites), 1/X/2 price buttons.
@@ -100,6 +100,8 @@ Main tabs (`VIEWS`): **Live · Games (fixtures) · Accas · Tips (best bets, id 
 - **My Bets** (`#mybets`, `viewMyBets`): live-tracked bets (`trackerHTML(true)`, all sports) plus saved bets/P&L when signed in. Live page only shows a link card. The 👤 page links here instead of having its own bets tab.
 - **Re-render gotcha**: `render()` runs every 10s and rebuilds `#main`/`#layer`. Anything the user is typing into or picking with must live outside them: the import sheet is in `#implayer` (built once, then `impRefresh()` updates only the results), the photo picker is the persistent `#avatarPick` input in `<body>`. The drawer keeps its scroll and skips the slide-in when the same sheet is re-rendered.
 - **iPhone**: no native app. iPhones use the site as a home-screen web app (`apple-touch-icon.png`, `apple-mobile-web-app-*` meta). `iosTip()` shows a one-time "Add to Home Screen" card in iOS Safari; `app.html` has iPhone and Android steps (iPhone first on iOS). Text boxes are 16px on touch screens so Safari doesn't zoom.
+- **Bets settle themselves**: `legInfo()` tracks any leg (player props via `legValue`, match markets via `liveMarkets`), `betCard()` shows the live card, `autoSettle()` (every ~15s from `render`) settles open saved bets and the £1K bet once the result is certain. Hand-typed bets have no game attached, so they keep Won/Lost/Void buttons. A bet reopened by hand is remembered in `mde:noAuto` and left alone.
+- **£1K extras**: `chalPath()` builds the ladder from real returns; cash out a running bet or take money out (`cashSheet`, in `#cashlayer`).
 - **Self-update**: `checkVersion()` compares the page's `mde-build` meta with the live one every 3 min / on focus and reloads, restoring view state from sessionStorage.
 
 ---
