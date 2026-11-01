@@ -499,7 +499,7 @@ h3{font-size:15px;font-weight:700}
 .mk .pb span{font-family:var(--display);font-weight:600;width:32px;text-align:right}
 .mk .fo{font-family:var(--display);font-weight:600;color:var(--fg-2);text-align:right}
 .mk .fo small{display:block;font-family:var(--body);font-size:10px;color:var(--win)}
-.mk .odd{height:36px}
+.mk .odd{height:36px;width:100%}.mk:not(.hd){min-height:54px}.mk > span:last-child{display:flex;justify-content:center}.mst.quiet{background:none;color:var(--muted);font-weight:700;text-transform:none;letter-spacing:0;font-size:12px}
 .mst{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;padding:4px 8px;border-radius:6px;white-space:nowrap}
 .mst.won{background:rgba(34,216,143,.15);color:var(--win)}.mst.lost{background:var(--surface-3);color:var(--muted)}.mst.open{background:rgba(61,123,255,.14);color:var(--blue-2)}
 .mk.lost > span:first-child{color:var(--muted);text-decoration:line-through;text-decoration-color:var(--dim)}
@@ -1739,8 +1739,8 @@ function marketsTable(sport, g, only) {
   }
   const post = g.status.state === "post", ms = liveMarkets(sport, g).filter(m => !SKIP.has(m.k) && (!only || only.test(m.k)));
   const rank = { open: 0, won: 1, lost: 2 }; ms.sort((a, b) => rank[a.state] - rank[b.state]);
-  const stTag = m => m.state === "won" ? `<span class="mst won">${post ? "Won" : "Landed ✓"}</span>` : m.state === "lost" ? `<span class="mst lost">Lost</span>` : `<span class="mst open">Open</span>`;
-  return `<div class="mkts live"><div class="mk hd"><span>Market</span><span>${post ? "Result" : "Chance now"}</span><span class="fo">Pre-match</span><span style="text-align:center">Status</span></div>${ms.map(m => `<div class="mk ${m.state}"><span>${esc(m.label)}</span>${m.state === "open" ? `<span class="pb" style="--p:${Math.round(m.p * 100)};--c:${tierColor(m.p)}"><i></i><span>${pct(m.p)}</span></span>` : `<span class="pb"><span style="width:auto;color:var(--muted)">${m.state === "won" ? "Done" : "Out"}</span></span>`}<span class="fo">${pct(m.pre)}</span><span style="text-align:center">${m.state === "open" && !post && m.p > .02 && m.p < .98 ? `<button class="odd addlive" data-liveleg="${sport}|${g.id}|${m.k}" title="Add at fair price"><span class="pr">${odds(1 / m.p)}</span><span class="pp">+ add</span></button>` : stTag(m)}</span></div>`).join("")}</div>`;
+  const stTag = m => m.state === "won" ? `<span class="mst won">${post ? "Won" : "Landed ✓"}</span>` : m.state === "lost" ? `<span class="mst lost">Lost</span>` : m.p >= .98 ? `<span class="mst quiet">Too short</span>` : m.p <= .02 ? `<span class="mst quiet">Unlikely</span>` : `<span class="mst open">Open</span>`;
+  return `<div class="mkts live"><div class="mk hd"><span>Market</span><span>${post ? "Result" : "Chance"}</span><span class="fo">Before</span><span style="text-align:center">${post ? "" : "Price"}</span></div>${ms.map(m => `<div class="mk ${m.state}"><span>${esc(m.label)}</span>${m.state === "open" ? `<span class="pb" style="--p:${Math.round(m.p * 100)};--c:${tierColor(m.p)}"><i></i><span>${pct(m.p)}</span></span>` : `<span class="pb"><span style="width:auto;color:var(--muted)">${m.state === "won" ? "Done" : "Out"}</span></span>`}<span class="fo">${pct(m.pre)}</span><span style="text-align:center">${m.state === "open" && !post && m.p > .02 && m.p < .98 ? `<button class="odd addlive" data-liveleg="${sport}|${g.id}|${m.k}" title="Add at fair price"><span class="pr">${odds(1 / m.p)}</span><span class="pp">+ add</span></button>` : stTag(m)}</span></div>`).join("")}</div>`;
 }
 function last5Table(t) {
   if (!t.last5 || !t.last5.length) return "";
