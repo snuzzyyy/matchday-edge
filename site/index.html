@@ -1493,15 +1493,37 @@ function buildPreset(kind, win) {
 const PRESETS = [["safe", "Safe four", "Up to four bankers from different games."], ["goals", "Goals galore", "Over 1.5s, both teams to score and teams to score."], ["five", "Bigger punch", "Up to six legs at bigger prices for a real payout."], ["corners", "Corners & cards", "Stat markets backed by recent averages."]];
 function asLegs(list) { return list.map(({ sport, g, m }) => ({ id: legId(sport, g, m), sport, gid: g.id, k: m.k, label: m.label, match: vs(sport, g), p: m.p, dec: priceOf(m), orig: priceOf(m), est: !m.dec, estOrig: !m.dec, kick: kick(g), ...propLeg(m) })); }
 const accaWin = () => S.accaWin && upcoming(S.sport, S.accaWin).length ? S.accaWin : firstWin(S.sport);
+/* ready-made accas for the level you've picked (pre-match): the best double, treble and four-fold, plus a same-game one, each aimed at that level's odds */
+function levelPreset(n) {
+  const sp = S.sport, aw = accaWin(), r = RISK[S.accaRisk || "safe"], key = [sp, aw, S.accaRisk, n, sgAuto(), S.data.updated].join("|");
+  const C = (S._lvl = S._lvl || {})[key]; if (C && Date.now() - C.at < 30e3) return C.v;
+  const list = upcoming(sp, aw).filter(isPre); let out = [];
+  if (n === 1) {   // one game, a few bets that go together, inside the level's range
+    let best = null;
+    for (const g of list) for (const m of withBundles(legOptions(sp, g).map(x => x.m), priceOf)) { if (!m.bundle) continue; const d = bundlePrice(priceOf)(m); if (d >= Math.max(r.lo, r.target * .8) && d <= r.hi && (!best || m.p > best.m.p)) best = { g, m }; }   /* near the level's target, not just any tiny price */
+    out = best ? expandPick(best.g, best.m).map(x => ({ sport: sp, g: x.g, m: x.m })) : [];
+  } else if (list.length >= n) {
+    const t = Math.pow(r.target, 1 / n), saved = S._accaN; S._accaN = n;
+    const games = list.map(g => { const m = pickForTarget(legOptions(sp, g).map(x => x.m), priceOf, n); return { g, s: m ? Math.abs(Math.log(priceOf(m) / t)) - .5 * m.p : 9 }; }).sort((a, b) => a.s - b.s).slice(0, n).map(x => x.g);
+    const J = jointPick(games.map(g => ({ id: g.id, opts: legOptions(sp, g).map(x => x.m) })), priceOf); S._accaN = saved;
+    out = games.flatMap(g => J.get(g.id) ? [{ sport: sp, g, m: J.get(g.id) }] : []);
+  }
+  S._lvl[key] = { at: Date.now(), v: out }; return out;
+}
 function presetsHTML() {
-  const aw = accaWin();
+  const aw = accaWin(), R = RISK[S.accaRisk || "safe"];
+  const lvl = [[2, "Double", "Two games, one bet each."], [3, "Treble", "Three games, one bet each."], [4, "Four-fold", "Four games, one bet each."], [1, "Same-game", "A few bets from one game that go together."]].map(([n, t, d]) => {
+    const raw = levelPreset(n); if (raw.length < (n === 1 ? 2 : n)) return ""; const legs = asLegs(raw), c = slipCalc(legs), ok = c.dec >= R.lo && c.dec <= R.hi;
+    return `<button class="preset" data-preset="lvl:${n}"><span class="pt">${R.name} ${t.toLowerCase()}</span><span class="pd">${d}</span><span class="pd">${legs.map(l => esc(legText(l)) + ` <span style="color:var(--muted)">(${whenLabel(l.kick)})</span>`).join(" · ")}</span><span class="po"><b>${odds(c.dec)}</b><span class="pill ${c.p > .3 ? "good" : "hot"}">${pct(c.p)} chance</span></span>${ok ? "" : `<span class="pd" style="color:var(--amber)">Closest we could get to the ${R.name} range</span>`}</button>`;
+  }).join("");
   const presets = PRESETS.filter(p => S.sport === "football" || p[0] !== "corners").map(([k, t, d]) => {
     const legs = asLegs(buildPreset(k)); if (legs.length < 2) return "";
     const c = slipCalc(legs);
     return `<button class="preset" data-preset="${k}"><span class="pt">${t}</span><span class="pd">${d}</span><span class="pd">${legs.map(l => esc(l.label) + ` <span style="color:var(--muted)">(${whenLabel(l.kick)})</span>`).join(" · ")}</span><span class="po"><b>${odds(c.dec)}</b><span class="pill ${c.p > .3 ? "good" : "hot"}">${pct(c.p)} chance</span></span></button>`;
   }).join("");
-  return `<section class="section"><div class="hd"><h2>Ready-made accas · ${WIN_NAME[aw]}</h2><div class="chips">${["today", "tomorrow", "48h"].map(k => `<button class="chip" data-accawin="${k}" aria-pressed="${aw === k}" ${upcoming(S.sport, k).length ? "" : "disabled style=\"opacity:.4\""}>${WIN_NAME[k]}</button>`).join("")}</div></div>
-  ${firstWin(S.sport) !== "today" && !S.accaWin ? `<div class="note">All of today's ${S.sport === "nba" ? "NBA" : "football"} has started, so these use ${WIN_NAME[aw].toLowerCase()}'s games.${S.sport === "football" && upcoming("nba", "today").length ? ` Switch to <b>NBA</b> at the top for tonight's games.` : ""}</div>` : ""}<div class="presets">${presets || `<div class="empty">Not enough upcoming games to build one.</div>`}</div></section>
+  return `<section class="section"><div class="hd"><h2>Ready-made accas · ${R.name} · ${WIN_NAME[aw]}</h2><div class="chips">${["today", "tomorrow", "48h"].map(k => `<button class="chip" data-accawin="${k}" aria-pressed="${aw === k}" ${upcoming(S.sport, k).length ? "" : "disabled style=\"opacity:.4\""}>${WIN_NAME[k]}</button>`).join("")}</div></div>
+  ${firstWin(S.sport) !== "today" && !S.accaWin ? `<div class="note">All of today's ${S.sport === "nba" ? "NBA" : "football"} has started, so these use ${WIN_NAME[aw].toLowerCase()}'s games.${S.sport === "football" && upcoming("nba", "today").length ? ` Switch to <b>NBA</b> at the top for tonight's games.` : ""}</div>` : ""}<p class="sub" style="margin:-4px 0 10px">Built for the level you've picked above: the whole acca at ${R.hi > 1e8 ? odds(R.lo) + " or bigger" : R.lo < 1.1 ? "under " + odds(R.hi) : odds(R.lo) + " to " + odds(R.hi)}. Tap one to load it into your slip.</p>
+  <div class="presets">${lvl || `<div class="empty">Not enough upcoming games to build one.</div>`}</div>${presets ? `<h3 class="bv-h" style="margin-top:14px">Themed accas</h3><div class="presets">${presets}</div>` : ""}</section>
 `;
 }
 /* ---------- acca builder: pick games, it picks the safest leg in each ---------- */
@@ -3618,7 +3640,7 @@ document.addEventListener("click", async e => {
   else if (d.chalodds2) { S.chalOdds = d.chalodds2; store.set("chalOdds", S.chalOdds); render(); }
   else if (d.accawin) { S.accaWin = d.accawin; render(); }
   else if (d.boxside) { const [gid, sd] = d.boxside.split("|"); S.boxSide[gid] = sd; render(); }
-  else if (d.preset) { S.slip = asLegs(buildPreset(d.preset)); save(); render(); toast("Acca loaded into your slip"); }
+  else if (d.preset) { S.slip = asLegs(String(d.preset).startsWith("lvl:") ? levelPreset(+d.preset.slice(4)) : buildPreset(d.preset)); S.slipTot = null; save(); S.slipOpen = innerWidth <= 1100; render(); toast("Acca loaded into your slip"); }
   else if (d.double) { const [sp, g1, k1, g2, k2] = d.double.split("|"); S.slip = []; for (const [g, k] of [[g1, k1], [g2, k2]]) { const G = findGame(sp, g), m = mkt(G, k); S.slip.push(...asLegs([{ sport: sp, g: G, m }])); } save(); render(); toast("Double loaded into your slip"); }
   else if (t.id === "fab") { S.slipOpen = true; S.drawer = null; render(); }
 });
