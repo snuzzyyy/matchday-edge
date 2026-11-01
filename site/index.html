@@ -170,6 +170,10 @@ h3{font-size:15px;font-weight:700}
 .cmp i{display:block;height:100%;border-radius:5px;transition:width .3s}
 .cmp .h{background:var(--blue)}.cmp .a{background:var(--tang)}
 .btiles{display:grid;gap:8px}
+.plist{display:grid;gap:8px}.prow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:8px 10px}
+.prow-main{display:flex;align-items:center;gap:10px;min-width:0;background:none;border:0;color:var(--fg);font:inherit;text-align:left;cursor:pointer;padding:0}.prow-main b{display:block;font-size:14.5px}.prow-main small{display:block;font-size:12.5px;color:var(--muted)}.prow-main .pos{color:var(--win);font-weight:700}.prow-main .neg{color:var(--loss);font-weight:700}
+.toprow{display:grid;grid-template-columns:30px minmax(0,1fr);gap:8px;align-items:center}
+.followrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.followrow small{font-size:12.5px;color:var(--muted)}
 .showcase{display:grid;gap:10px}
 .sc-card{display:grid;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;color:var(--fg);font:inherit;text-align:left;width:100%}
 .ijsheet .sc-card{background:var(--bg-2)}
@@ -2022,7 +2026,7 @@ function betViewSheet(id) {
     : `<article class="trk-card"><div class="trk-hd"><div><b>${esc(b.label)}</b><small>${odds(+b.odds_dec)} · £${(+b.stake).toFixed(2)} returns ${money(+b.stake * +b.odds_dec)}</small></div><span class="st ${b.result}">${b.result}</span></div><p class="sub" style="margin:0">Typed in by hand, so there's no live tracking for this one.</p></article>`;
   return `<div class="scrim top" data-betviewx></div><div class="ijsheet" role="dialog" aria-modal="true" aria-label="Bet"><button class="close sm ij-x" data-betviewx aria-label="Close">✕</button>
     <div class="bv-who">${avatarHTML(who, 38)}<div><b>${mine ? "Your bet" : esc(who.display_name)}${mine ? "" : badgesHTML(who, 1)}</b><small>Placed ${ago2(b.placed_at)} ago${b.match && !L.length ? " · " + esc(b.match) : ""}</small></div></div>
-    ${card}${mine ? `<div class="bv-foot"><button class="linkbtn" data-delbet="${b.id}">Delete this bet</button></div>` : ""}${mine ? "" : `<div class="fi-acts">${reactBar(b)}${canTail(b) ? `<button class="btn sm tail" data-tail="${b.id}">Tail this bet</button>` : ""}</div>`}</div>`;
+    ${card}${mine ? `<div class="bv-foot"><button class="linkbtn" data-delbet="${b.id}">Delete this bet</button></div>` : ""}${mine ? "" : `<div class="fi-acts">${reactBar(b)}${canTail(b) ? `<button class="btn sm tail" data-tail="${b.id}">Copy bet</button>` : ""}</div>`}</div>`;
 }
 function betCard(t) {
   const info = t.legs.map(legInfo), n = t.legs.length, hit = info.filter(i => i.st === "hit").length, voids = info.filter(i => i.st === "void").length;
@@ -2274,12 +2278,12 @@ function viewAccount(mode = "account") {
   }
   const P = S.profile || {}, nFr = Object.keys(S.friends || {}).length;
   if (mode === "friends") {
-    const ft = ["feed", "board", "friends"].includes(S.friendTab) ? S.friendTab : "feed";
-    const tabsF = [["feed", "Feed"], ["board", "Leaderboard"], ["friends", `Your friends${nFr ? " · " + nFr : ""}`]];
+    const ft = ["feed", "top", "board", "friends"].includes(S.friendTab) ? S.friendTab : "feed";
+    const tabsF = [["feed", "Feed"], ["top", "Top players"], ["board", "Friends' board"], ["friends", "People"]];
     return `<div class="hd"><div><h1>Friends</h1><p class="sub">Their bets, reactions and the leaderboard.</p></div>${S.socialReady ? `<button class="btn sm" data-invite>Invite friends</button>` : ""}</div>
     ${S.socialReady === false ? `<div class="warn">Photos and friends need a quick database update. Ask Claude for the steps.</div>` : ""}
     <div class="subtabs" role="tablist">${tabsF.map(([k, l]) => `<button role="tab" data-ftab="${k}" aria-selected="${ft === k}">${l}</button>`).join("")}</div>
-    ${ft === "feed" ? feedView() : ft === "board" ? boardView() : friendsView()}`;
+    ${ft === "feed" ? feedView() : ft === "top" ? topView() : ft === "board" ? boardView() : friendsView()}`;
   }
 
   return `<section class="prof"><div class="prof-top"><button type="button" class="avwrap" data-pickphoto aria-label="Change profile photo">${avatarHTML(P, 72)}<span class="avcam" aria-hidden="true">📷</span></button>
@@ -2305,7 +2309,9 @@ function avatarHTML(p, size = 40) {
   p = p || {}; const nm = p.display_name || "?", ini = nm.split(/\s+/).filter(Boolean).slice(0, 2).map(x => x[0].toUpperCase()).join("");
   return p.avatar_url ? `<img class="av" src="${esc(p.avatar_url)}" alt="" style="width:${size}px;height:${size}px">` : `<span class="av ini" style="width:${size}px;height:${size}px;font-size:${Math.round(size * .4)}px">${esc(ini)}</span>`;
 }
-const person = id => id === (S.user && S.user.id) ? S.profile : (S.friends || {})[id] || { display_name: "A friend" };
+S.people = {}; S.peopleBets = {};
+const person = id => id === (S.user && S.user.id) ? S.profile : (S.friends || {})[id] || S.people[id] || { display_name: "A player" };
+const betsOf = uid => { const a = (S.feedBets || []).filter(b => b.user_id === uid), seen = new Set(a.map(b => b.id)); return [...a, ...(S.peopleBets[uid] || []).filter(b => !seen.has(b.id))].sort((x, y) => new Date(y.placed_at) - new Date(x.placed_at)); };
 const ago2 = iso => { const m = Math.round((Date.now() - new Date(iso)) / 6e4); return m < 1 ? "now" : m < 60 ? m + "m" : m < 1440 ? Math.round(m / 60) + "h" : Math.round(m / 1440) + "d"; };
 async function loadSocial() {
   if (!sb || !S.user) return;
@@ -2313,9 +2319,12 @@ async function loadSocial() {
   if (fr.error) { S.socialReady = false; render(); return; }
   S.socialReady = true;
   const ids = (fr.data || []).map(x => x.friend_id);
+  const fl = await sb.from("follows").select("followee").eq("follower", S.user.id);
+  S.followReady = !fl.error; S.following = new Set(S.followReady ? (fl.data || []).map(r => r.followee) : []);
+  if (S.followReady) { const pp = await sb.rpc("people", { ids: [...new Set([S.user.id, ...S.following])] }); if (pp.data) for (const x of pp.data) S.people[x.id] = { ...(S.people[x.id] || {}), ...x }; }
   const [pr, bt, ch] = await Promise.all([
     ids.length ? sb.from("profiles").select("*").in("id", ids) : { data: [] },
-    sb.from("bets").select("*").in("user_id", [S.user.id, ...ids]).order("placed_at", { ascending: false }).limit(120),
+    sb.from("bets").select("*").in("user_id", [...new Set([S.user.id, ...ids, ...S.following])]).order("placed_at", { ascending: false }).limit(150),
     ids.length ? sb.from("challenges").select("user_id,data").in("user_id", ids) : { data: [] }
   ]);
   S.friends = Object.fromEntries((pr.data || []).map(p => [p.id, p]));
@@ -2340,7 +2349,7 @@ function reactBar(b) {
   const list = (S.reacts || {})[b.id] || [], me = S.user.id;
   return `<div class="rx">${REACTS.map(([k, e]) => { const n = list.filter(r => r.emoji === k).length, mine = list.some(r => r.emoji === k && r.user_id === me); return `<button class="rxb ${mine ? "on" : ""}" data-react="${b.id}|${k}" aria-pressed="${mine}" aria-label="React ${k}">${e}${n ? `<span>${n}</span>` : ""}</button>`; }).join("")}</div>`;
 }
-function canTail(b) { return b.result === "open" && b.user_id !== S.user.id && (b.legs || []).some(l => { const g = findGame(l.sport, l.gid); return g && isPre(g); }); }
+function canTail(b) { return b.result === "open" && b.user_id !== S.user.id && (b.legs || []).some(l => { const g = l.gid && findGame(l.sport, l.gid); return g && isPre(g) && (l.k || l.pid); }); }
 function feedItems() {
   const items = [];
   for (const b of S.feedBets || []) {
@@ -2362,7 +2371,7 @@ function feedView() {
   return `${!nFr ? invite : ""}<div class="feed">${items.map(it => { const b = it.b, who = person(b ? b.user_id : it.uid);
     return `<article class="fi ${it.tone || ""}"><button class="fi-av" data-mate="${b ? b.user_id : it.uid}" aria-label="View ${esc(who.display_name)}">${avatarHTML(who, 40)}</button><div class="fi-body"><div class="fi-top"><span>${it.html}</span><time>${ago2(it.t)}</time></div>
       ${b ? `${betTile(b)}
-      <div class="fi-acts">${reactBar(b)}${canTail(b) ? `<button class="btn sm tail" data-tail="${b.id}">Tail this bet</button>` : ""}</div>` : `<div class="fi-meta">${it.sub || ""}</div>`}</div></article>`; }).join("")}</div>${nFr ? invite : ""}`;
+      <div class="fi-acts">${reactBar(b)}${canTail(b) ? `<button class="btn sm tail" data-tail="${b.id}">Copy bet</button>` : ""}</div>` : `<div class="fi-meta">${it.sub || ""}</div>`}</div></article>`; }).join("")}</div>${nFr ? invite : ""}`;
 }
 function boardView() {
   const P = S.profile || {}, meId = S.user.id;
@@ -2371,12 +2380,31 @@ function boardView() {
       return `<button class="lbr ${r.user_id === meId ? "me" : ""}" data-mate="${r.user_id}"><span class="lbn ${i < 3 ? "top" + (i + 1) : ""}">${i + 1}</span>${avatarHTML({ display_name: r.display_name, avatar_url: r.avatar_url }, 38)}<span class="lbw"><b>${esc(r.display_name)}${r.user_id === meId ? " (you)" : ""}${badgesHTML(r, 1)}</b><small>${r.settled} settled · ${r.won} won${ch ? ` · £1K step ${Math.min((ch.rung || 0) + 1, ch.rungs || 10)}` : ""}</small></span><span class="lbp ${+r.profit > 0 ? "pos" : +r.profit < 0 ? "neg" : ""}">${gbp(+r.profit)}<small>${roi == null ? "–" : (roi > 0 ? "+" : "") + roi + "% ROI"}</small></span></button>`; }).join("")}</div>` : `<div class="empty">Settle a bet to get on the board.</div>`}
     <label class="optrow"><input type="checkbox" id="lbOpt" ${P.show_on_leaderboard !== false ? "checked" : ""}> Show me on my friends' leaderboard</label></section>`;
 }
+const needFollowSql = () => `<div class="warn">Top players and following need a quick database update. Ask Claude for the steps.</div>`;
+const personRow = (x, sub) => `<div class="prow"><button class="prow-main" data-mate="${x.id || x.user_id}">${avatarHTML(x, 42)}<span><b>${esc(x.display_name)}${badgesHTML(x, 1)}</b><small>${sub}</small></span></button>${S.user && (x.id || x.user_id) !== S.user.id && S.followReady ? `<button class="btn sm ${S.following.has(x.id || x.user_id) ? "ghost" : ""}" data-follow="${x.id || x.user_id}">${S.following.has(x.id || x.user_id) ? "Following" : "Follow"}</button>` : ""}</div>`;
+function topView() {
+  if (S.followReady === false) return needFollowSql();
+  if (!Array.isArray(S.top)) { if (!S.top) { S.top = "loading"; sb.rpc("top_players", { days: 30 }).then(r => { S.top = r.data || []; for (const x of S.top) S.people[x.user_id] = { ...(S.people[x.user_id] || {}), id: x.user_id, display_name: x.display_name, avatar_url: x.avatar_url, badges: x.badges, plan: x.plan, bets_public: x.bets_public }; render(); }); } return `<div class="loadbox">Loading top players…</div>`; }
+  if (!S.top.length) return `<div class="empty">No one has 3+ settled bets in the last 30 days yet. Settle a few and you could be top.</div>`;
+  return `<section class="section"><p class="sub" style="margin:0">Best profit over the last 30 days, across everyone on Matchday Edge (3+ settled bets). Tap a player to see their bets and copy them.</p>
+    <div class="plist">${S.top.map((r, i) => { const roi = +r.staked ? Math.round(+r.profit / +r.staked * 100) : 0;
+      return `<div class="toprow"><span class="lbn ${i < 3 ? "top" + (i + 1) : ""}">${i + 1}</span>${personRow({ ...r, id: r.user_id }, `<span class="${+r.profit >= 0 ? "pos" : "neg"}">${gbp(+r.profit)}</span> · ${r.won}/${r.settled} won · ${roi > 0 ? "+" : ""}${roi}% return${r.bets_public ? " · bets public" : ""}`)}</div>`; }).join("")}</div></section>`;
+}
+function peopleSection() {
+  if (S.followReady === false) return needFollowSql();
+  const following = [...(S.following || [])].map(id => S.people[id]).filter(Boolean);
+  if (S.searchRes == null && !S.searching) { S.searching = true; sb.rpc("search_people", { q: "" }).then(r => { S.searchRes = r.data || []; S.searching = false; render(); }); }
+  const res = S.searchRes || [];
+  return `<section class="section"><h2>Find people</h2><form class="setrow namerow" id="peopleSearch" style="padding:0"><label for="pq" class="sr">Search by name</label><input id="pq" placeholder="Search by name" autocomplete="off" value="${esc(S.searchQ || "")}"><button class="btn ghost sm" type="submit">Search</button></form>
+    ${res.length ? `<div class="plist">${res.map(x => personRow(x, `${x.followers} follower${x.followers === 1 ? "" : "s"}${x.bets_public ? " · bets public" : ""}`)).join("")}</div>` : S.searching ? `<div class="loadbox">Searching…</div>` : `<div class="empty">No one found${S.searchQ ? ` for "${esc(S.searchQ)}"` : ""}.</div>`}</section>
+    ${following.length ? `<section class="section"><h2>Following · ${following.length}</h2><div class="plist">${following.map(x => personRow(x, `${x.followers} follower${x.followers === 1 ? "" : "s"}${x.bets_public ? " · bets public" : " · bets private"}`)).join("")}</div></section>` : ""}`;
+}
 function friendsView() {
   const P = S.profile || {}, fr = Object.values(S.friends || {});
   return `<section class="section"><div class="invite"><div><b>Your friend code</b><span class="fc-row"><span class="fcode big">${esc(P.friend_code || "…")}</span><button class="fc-btn" data-copycode aria-label="Copy friend code">⧉ Copy</button></span><span>Friends can type this in, or you can send them your invite link.</span></div><button class="btn sm" data-invite>Share invite link</button></div>
     <form class="addrow" id="addFriend"><div class="field"><label for="fcode">Add a friend by their code</label><input id="fcode" maxlength="6" placeholder="e.g. 7F3A9C" autocomplete="off" style="text-transform:uppercase"></div><div class="field" style="flex:0 0 auto;align-self:end"><button class="btn" type="submit">Add friend</button></div></form>
     <h2 style="margin-top:6px">Your friends</h2>
-    ${fr.length ? `<div class="mates">${fr.map(f => `<div class="mate"><button class="mate-main" data-mate="${f.id}">${avatarHTML(f, 44)}<span><b>${esc(f.display_name)}${badgesHTML(f, 1)}</b><small>Tap to see their bets and £1K challenge</small></span></button><button class="x" data-unfriend="${f.id}" aria-label="Remove ${esc(f.display_name)}">✕</button></div>`).join("")}</div>` : `<div class="empty">No friends yet. Share your link or code to get started.</div>`}</section>`;
+    ${fr.length ? `<div class="mates">${fr.map(f => `<div class="mate"><button class="mate-main" data-mate="${f.id}">${avatarHTML(f, 44)}<span><b>${esc(f.display_name)}${badgesHTML(f, 1)}</b><small>Tap to see their bets and £1K challenge</small></span></button><button class="x" data-unfriend="${f.id}" aria-label="Remove ${esc(f.display_name)}">✕</button></div>`).join("")}</div>` : `<div class="empty">No friends yet. Share your link or code to get started.</div>`}</section>${peopleSection()}`;
 }
 function viewMyBets() {
   const bets = S.user ? S.bets || [] : [], track = b => (b.legs || []).some(l => l.pid || l.k);
@@ -2413,7 +2441,8 @@ function profileView() {
   ${walletSection(sw)}
   <section class="section"><h2>Privacy</h2><div class="setcard">
     ${sw("shareOpt", P.share_bets !== false, "Friends can see my bets", "They can react to them and tail them")}
-    ${sw("lbOpt", P.show_on_leaderboard !== false, "Show me on the leaderboard", "Your friends' profit leaderboard")}</div></section>
+    ${sw("lbOpt", P.show_on_leaderboard !== false, "Show me on leaderboards", "Your friends' board and the app-wide Top players")}
+    ${S.followReady ? sw("discOpt", P.discoverable !== false, "Show me in search", "People can find and follow you") + sw("pubOpt", !!P.bets_public, "Make my bets public", "Anyone signed in can see and copy them") : ""}</div></section>
   <section class="section"><h2>Favourite teams</h2><div class="setcard"><div class="setrow favwrap"><div class="favs">${favs.length ? favs.map(f => `<span class="fav">${logo(f.sport, { id: f.id, name: f.name, abbr: f.name.slice(0, 3), color: "#334155" })}${esc(f.name)}<button class="x" data-unfav="${f.sport}|${f.id}" aria-label="Remove">✕</button></span>`).join("") : `<small>None yet. Your teams get starred in fixtures and highlighted in tables.</small>`}</div></div>
   <form class="setrow namerow" id="addFav"><label for="favpick"><small>Add a team</small></label><input id="favpick" list="teamlist" placeholder="Start typing a team"><datalist id="teamlist">${allTeams().map(t => `<option value="${esc(t.name)}${t.sport === "nba" ? " (NBA)" : ""}"></option>`).join("")}</datalist><button class="btn ghost sm" type="submit">Add</button></form></div></section>
   </div>${proCard()}`;
@@ -2428,7 +2457,7 @@ function nextMatchFor(f) {
 }
 function profileShowcase(uid) {
   const me = S.user && uid === S.user.id, p = (me ? S.profile : person(uid)) || {};
-  const bets = me ? (S.bets || []) : (S.feedBets || []).filter(b => b.user_id === uid);
+  const bets = me ? (S.bets || []) : betsOf(uid);
   const done = bets.filter(b => b.result === "won" || b.result === "lost").sort((a, b) => new Date(b.settled_at || b.placed_at) - new Date(a.settled_at || a.placed_at));
   const won = done.filter(b => b.result === "won"), settled = bets.filter(b => b.result !== "open");
   const profit = settled.reduce((a, b) => a + (+b.returns || 0) - +b.stake, 0);
@@ -2451,13 +2480,14 @@ function profileShowcase(uid) {
   </section>`;
 }
 function mateSheet(uid) {
-  const me = uid === S.user.id, p = person(uid), bets = (S.feedBets || []).filter(b => b.user_id === uid), ch = chalPick(me ? S.chalAll : (S.friendChal || {})[uid]);
+  const me = uid === S.user.id, p = person(uid), bets = me ? (S.feedBets || []).filter(b => b.user_id === uid) : betsOf(uid), ch = chalPick(me ? S.chalAll : (S.friendChal || {})[uid]);
   const settled = bets.filter(b => b.result !== "open"), won = settled.filter(b => b.result === "won").length, decided = settled.filter(b => b.result !== "void").length;
   const profit = settled.reduce((a, b) => a + (+b.returns || 0) - +b.stake, 0), staked = settled.reduce((a, b) => a + +b.stake, 0);
-  const shares = me || bets.length || p.share_bets !== false;
+  const isFr = !!(S.friends || {})[uid], shares = me || bets.length || (isFr ? p.share_bets !== false : !!p.bets_public), pc = S.people[uid] || {}, iFollow = S.following && S.following.has(uid);
   const ladders = Object.entries(splitChal(me ? S.chalAll : (S.friendChal || {})[uid])).filter(([k, C]) => k !== "v" && C && ((C.history || []).length || C.active || C.rung || (C.past || []).length));
   return `<div class="scrim top" data-mateclose></div><div class="ijsheet" role="dialog" aria-modal="true" aria-label="${esc(p.display_name)}"><button class="close sm ij-x" data-mateclose aria-label="Close">✕</button>
-    <div class="ij-head">${avatarHTML(p, 64)}<div><h2>${esc(p.display_name)}</h2>${badgesHTML(p) || p.plan === "pro" ? `<div class="bdgrow">${badgesHTML(p)}${p.plan === "pro" ? planChip(p) : ""}</div>` : ""}<span class="ij-team">${me ? "That's you" : "Friend"}${p.created_at ? " · joined " + new Date(p.created_at).toLocaleDateString("en-GB", { month: "short", year: "numeric" }) : ""}${p.friend_code ? ` · code <b class="fcode">${esc(p.friend_code)}</b>` : ""}</span></div></div>
+    <div class="ij-head">${avatarHTML(p, 64)}<div><h2>${esc(p.display_name)}</h2>${badgesHTML(p) || p.plan === "pro" ? `<div class="bdgrow">${badgesHTML(p)}${p.plan === "pro" ? planChip(p) : ""}</div>` : ""}<span class="ij-team">${me ? "That's you" : isFr ? "Friend" : "Player"}${pc.followers != null ? ` · ${pc.followers} follower${pc.followers === 1 ? "" : "s"} · ${pc.following} following` : ""}${p.created_at ? " · joined " + new Date(p.created_at).toLocaleDateString("en-GB", { month: "short", year: "numeric" }) : ""}${p.friend_code ? ` · code <b class="fcode">${esc(p.friend_code)}</b>` : ""}</span></div></div>
+    ${!me && S.followReady ? `<div class="followrow"><button class="btn sm ${iFollow ? "ghost" : ""}" data-follow="${uid}">${iFollow ? "Following ✓" : "+ Follow"}</button>${isFr ? "" : `<small>${p.bets_public ? "Their bets are public: you can copy them" : "Their bets are private"}</small>`}</div>` : ""}
     ${profileShowcase(uid)}
     ${!me && (S.friendWallets || {})[uid] ? `<div class="mchips"><span class="mchip">💷 Balance ${money(+S.friendWallets[uid].amount)}</span></div>` : ""}
     ${ladders.length ? `<div class="mchips">${ladders.map(([sp, C]) => `<span class="mchip"><img src="img/${sp === "nba" ? "icon-basketball" : "icon-football"}.webp" alt="">£1K ${SPN[sp]} · ${C.rung >= C.rungs ? "Done 🏆" : `step ${(C.rung || 0) + 1} · ${money(+C.bank)}`}</span>`).join("")}</div>` : ""}
@@ -2511,6 +2541,7 @@ document.addEventListener("submit", async e => {
     if (r.error) toast("Couldn't save the bet."); else { S.bets.unshift(r.data); walletAdjust(-(+r.data.stake)); S.betFilter = "open"; render(); toast("Bet added"); }
   } else if (f.id === "addFriend") { addFriend(val("fcode")); f.reset();
   } else if (f.id === "walletForm") { const v = parseFloat(val("walamt")); if (!(v >= 0)) { toast("Enter an amount"); return; } S.walletEdit = false; walletSet(Math.round(v * 100) / 100); toast("Balance saved");
+  } else if (f.id === "peopleSearch") { S.searchQ = val("pq").trim(); S.searching = true; S.searchRes = []; render(); const r = await sb.rpc("search_people", { q: S.searchQ }); S.searchRes = r.data || []; S.searching = false; render();
   } else if (f.id === "nameForm") { const nm = val("dn").trim().slice(0, 24); if (nm) { saveProfile({ display_name: nm }); toast("Name saved"); }
   } else if (f.id === "addFav") {
     const name = val("favpick").replace(/ \(NBA\)$/, ""), nba = / \(NBA\)$/.test(val("favpick"));
@@ -2537,7 +2568,11 @@ document.addEventListener("click", async e => {
   else if (d.betfilter) { S.betFilter = d.betfilter; render(); }
   else if (d.acct) { S.acctTab = d.acct; render(); }
   else if (d.ftab) { S.friendTab = d.ftab; render(); loadSocial(); }
-  else if (d.mate) { S.mateOpen = d.mate; render(); }
+  else if (d.mate) { S.mateOpen = d.mate; render(); const uid = d.mate;
+    if (S.user && uid !== S.user.id && !(S.friends || {})[uid] && S.followReady) {
+      sb.rpc("people", { ids: [uid] }).then(r => { if (r.data && r.data[0]) { S.people[uid] = { ...(S.people[uid] || {}), ...r.data[0] }; render(); } });
+      sb.from("bets").select("*").eq("user_id", uid).order("placed_at", { ascending: false }).limit(30).then(r => { S.peopleBets[uid] = r.data || []; render(); });
+    } }
   else if (d.mateclose !== undefined) { S.mateOpen = null; render(); }
   else if (d.unfriend) { const nm = (S.friends[d.unfriend] || {}).display_name; const r = await sb.rpc("remove_friend", { other: d.unfriend }); if (r.error) toast("Couldn't remove them"); else { toast(`Removed ${nm || "mate"}`); loadSocial(); } }
   else if (d.noavatar !== undefined) { await saveProfile({ avatar_url: null }); sb.storage.from("avatars").remove([`${S.user.id}/avatar.webp`, `${S.user.id}/avatar.jpg`]); }
@@ -2556,9 +2591,11 @@ document.addEventListener("click", async e => {
     else { list.push({ bet_id: bid, user_id: me, emoji: k }); render(); const r = await sb.from("reactions").insert({ bet_id: bid, emoji: k }); if (r.error) { toast("Couldn't react"); loadSocial(); } }
   }
   else if (d.tail) {
-    const b = (S.feedBets || []).find(x => x.id === d.tail); if (!b) return; let added = 0;
+    const b = [...(S.feedBets || []), ...Object.values(S.peopleBets).flat()].find(x => x.id === d.tail); if (!b) return; let added = 0;
+    const props = (b.legs || []).filter(l => l.pid && (g => g && isPre(g))(findGame(l.sport, l.gid)));
+    if (props.length) { S.tracked = [{ id: "t" + Date.now(), text: b.label, legs: props, dec: +b.odds_dec, stake: S.stake, at: new Date().toISOString() }, ...(S.tracked || [])]; store.set("tracked", S.tracked); added += props.length; }
     for (const l of b.legs || []) { const g = findGame(l.sport, l.gid), m = g && isPre(g) && mkt(g, l.k); if (!m) continue; const leg = asLegs([{ sport: l.sport, g, m }])[0]; S.slip = S.slip.filter(x => !(x.sport === leg.sport && x.gid === leg.gid && conflicts(x.k, leg.k))); S.slip.push(leg); added++; }
-    save(); S.mateOpen = null; render(); toast(added ? `Tailed ${person(b.user_id).display_name}'s bet: ${added} leg${added > 1 ? "s" : ""} in your slip` : "Those games have already started");
+    save(); S.mateOpen = null; render(); S.betView = null; toast(added ? (props.length ? `Copied ${person(b.user_id).display_name}'s bet. It's tracking live in My Bets` : `Copied ${person(b.user_id).display_name}'s bet: ${added} leg${added > 1 ? "s" : ""} in your slip`) : "Those games have already started");
   }
   else if (d.settle) {
     const [id, res] = d.settle.split("|"), b = S.bets.find(x => x.id === id); if (!b) return;
@@ -2595,7 +2632,7 @@ document.addEventListener("click", async e => {
     if (r.error) toast("Couldn't save the bet."); else { S.bets.unshift(r.data); walletAdjust(-(+r.data.stake)); toast("Saved to My Bets"); }
   }
 });
-document.addEventListener("change", e => { if (e.target.id === "walletPub" && sb && S.user && S.wallet) { S.wallet.is_public = e.target.checked; sb.from("wallets").update({ is_public: e.target.checked }).eq("user_id", S.user.id); toast(e.target.checked ? "Friends can see your balance" : "Your balance is private"); render(); } if (e.target.id === "avatarPick" && sb && S.user) { S._picked = true; uploadAvatar(e.target.files[0]); e.target.value = ""; } if (e.target.id === "shareOpt" && sb && S.user) { saveProfile({ share_bets: e.target.checked }); toast(e.target.checked ? "Friends can see your bets" : "Your bets are now private"); } if (e.target.id === "lbOpt" && sb && S.user) { saveProfile({ show_on_leaderboard: e.target.checked }); sb.rpc("leaderboard").then(x => { if (x.data) { S.board = x.data; render(); } }); } });
+document.addEventListener("change", e => { if ((e.target.id === "discOpt" || e.target.id === "pubOpt") && sb && S.user) { const k = e.target.id === "discOpt" ? "discoverable" : "bets_public"; saveProfile({ [k]: e.target.checked }); toast(k === "discoverable" ? (e.target.checked ? "People can find you" : "Hidden from search") : (e.target.checked ? "Your bets are public" : "Your bets are private again")); } if (e.target.id === "walletPub" && sb && S.user && S.wallet) { S.wallet.is_public = e.target.checked; sb.from("wallets").update({ is_public: e.target.checked }).eq("user_id", S.user.id); toast(e.target.checked ? "Friends can see your balance" : "Your balance is private"); render(); } if (e.target.id === "avatarPick" && sb && S.user) { S._picked = true; uploadAvatar(e.target.files[0]); e.target.value = ""; } if (e.target.id === "shareOpt" && sb && S.user) { saveProfile({ share_bets: e.target.checked }); toast(e.target.checked ? "Friends can see your bets" : "Your bets are now private"); } if (e.target.id === "lbOpt" && sb && S.user) { saveProfile({ show_on_leaderboard: e.target.checked }); sb.rpc("leaderboard").then(x => { if (x.data) { S.board = x.data; render(); } }); } });
 
 /* ---------- iPhone: suggest adding to the home screen (Safari only, once) ---------- */
 const IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
@@ -2805,6 +2842,16 @@ document.addEventListener("click", e => {
   else if (d.betview) { S.betView = d.betview; const b = [...(S.feedBets || []), ...(S.bets || [])].find(x => x.id === d.betview); for (const l of (b && b.legs) || []) { const g = l.gid && findGame(l.sport, l.gid); if (l.pid && g && !isPre(g)) loadDetail(l.sport + ":" + l.gid); } render(); }
   else if (d.betviewx !== undefined) { S.betView = null; render(); }
   else if (d.walletedit !== undefined) { S.walletEdit = true; render(); setTimeout(() => { const i = $("#walamt"); i && i.focus(); }, 50); }
+  else if (d.follow) {
+    const id = d.follow, on = S.following.has(id);
+    if (on) S.following.delete(id); else S.following.add(id);
+    const bump = x => { if (x && x.followers != null) x.followers += on ? -1 : 1; }; bump(S.people[id]); (S.searchRes || []).filter(x => x.id === id).forEach(bump);
+    render();
+    (on ? sb.from("follows").delete().eq("follower", S.user.id).eq("followee", id) : sb.from("follows").insert({ followee: id })).then(r => {
+      if (r.error) { if (on) S.following.add(id); else S.following.delete(id); toast("Couldn't update. Try again"); render(); return; }
+      toast(on ? `Unfollowed ${person(id).display_name}` : `Following ${person(id).display_name}`); loadSocial();
+    });
+  }
   else if (d.iosx !== undefined) { store.set("iosTipX", true); render(); }
   else if (d.impex) { S.importText = d.impex; const t = $("#imptext"); if (t) t.value = d.impex; S.impOddsTyped = false; impRefresh(); }
   else if (d.untrack) { S.tracked = S.tracked.filter(t => t.id !== d.untrack); store.set("tracked", S.tracked); render(); }
