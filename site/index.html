@@ -170,6 +170,16 @@ h3{font-size:15px;font-weight:700}
 .cmp i{display:block;height:100%;border-radius:5px;transition:width .3s}
 .cmp .h{background:var(--blue)}.cmp .a{background:var(--tang)}
 .btiles{display:grid;gap:8px}
+a.prof-bdg{text-decoration:none}
+.pk-hero{display:grid;gap:14px;border-radius:16px;padding:18px;border:1px solid var(--line);background:radial-gradient(90% 160% at 100% 0%,rgba(61,123,255,.22),transparent 60%),var(--surface)}
+.pk-hero.pro{border-color:rgba(255,190,60,.45);background:radial-gradient(90% 160% at 100% 0%,rgba(255,190,60,.28),transparent 60%),radial-gradient(70% 140% at 0% 100%,rgba(255,122,47,.18),transparent 60%),var(--surface)}
+.pk-hero small{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}.pk-hero h1{font-size:40px;margin:2px 0 6px}.pk-hero.pro h1{color:#FFC94A}.pk-hero p{margin:0;color:var(--fg-2);font-size:14px}
+.pk-roles{display:grid;gap:8px}.pk-role{display:flex;align-items:center;gap:10px}.pk-role .bdg{margin:0;flex:none}.pk-role small{text-transform:none;letter-spacing:0;font-weight:500;font-size:13px;color:var(--fg-2)}
+.pk-row{display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:12px;align-items:center;padding:11px 14px;border-top:1px solid var(--line)}.pk-row:first-child{border-top:0}
+.pk-ic{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:var(--surface-3);font-size:17px}.pk-row b{display:block;font-size:14.5px}.pk-row small{display:block;font-size:12.5px;color:var(--muted)}
+.pk-st{font-weight:800;font-size:12px}.pk-row.pk-have .pk-st{color:var(--win);font-size:18px}.pk-row.pk-soon .pk-st{color:var(--amber);background:rgba(255,190,60,.12);padding:3px 8px;border-radius:6px;letter-spacing:.04em;text-transform:uppercase;font-size:11px}
+.pk-cr{display:grid;grid-template-columns:minmax(0,1fr) 64px 64px;gap:8px;padding:10px 14px;border-top:1px solid var(--line);font-size:13.5px;align-items:center}.pk-cr:first-child{border-top:0}
+.pk-cr.hd{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}.pk-cr span:not(:first-child){text-align:center;color:var(--muted);font-weight:700}.pk-cr .y{color:var(--win)!important}.pk-cr .psoon{color:var(--amber)!important;font-size:12px}
 .plist{display:grid;gap:8px}.prow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:8px 10px}
 .prow-main{display:flex;align-items:center;gap:10px;min-width:0;background:none;border:0;color:var(--fg);font:inherit;text-align:left;cursor:pointer;padding:0}.prow-main b{display:block;font-size:14.5px}.prow-main small{display:block;font-size:12.5px;color:var(--muted)}.prow-main .pos{color:var(--win);font-weight:700}.prow-main .neg{color:var(--loss);font-weight:700}
 .toprow{display:grid;grid-template-columns:30px minmax(0,1fr);gap:8px;align-items:center}
@@ -1019,7 +1029,7 @@ const NAV = [["live", "Live", ["live"], "live"], ["games", "Games", ["fixtures",
 const SUBNAME = { fixtures: "Fixtures", tables: "Tables", news: "News", bets: "Tips", acca: "Accas", mybets: "My Bets" };
 const navOf = v => NAV.find(n => n[2].includes(v));
 S.lastSub = store.get("lastSub", {});
-const view = () => { const h = location.hash.slice(1); return h === "account" || VIEWS.some(v => v[0] === h) ? h : "live"; };
+const view = () => { const h = location.hash.slice(1); return h === "account" || h === "perks" || VIEWS.some(v => v[0] === h) ? h : "live"; };
 
 /* ---------- odds ---------- */
 const FR = [[1,20],[1,16],[1,14],[1,12],[1,10],[1,9],[1,8],[1,7],[1,6],[1,5],[2,9],[1,4],[2,7],[3,10],[1,3],[4,11],[2,5],[4,9],[1,2],[8,15],[4,7],[8,13],[4,6],[8,11],[4,5],[5,6],[10,11],[19,20],[20,21],[1,1],[21,20],[11,10],[6,5],[5,4],[11,8],[7,5],[6,4],[8,5],[13,8],[7,4],[9,5],[15,8],[2,1],[85,40],[9,4],[12,5],[5,2],[13,5],[11,4],[3,1],[10,3],[7,2],[4,1],[9,2],[5,1],[11,2],[6,1],[13,2],[7,1],[15,2],[8,1],[17,2],[9,1],[10,1],[11,1],[12,1],[14,1],[16,1],[18,1],[20,1],[22,1],[25,1],[28,1],[33,1],[40,1],[50,1],[66,1],[80,1],[100,1],[125,1],[150,1],[200,1],[250,1],[300,1],[400,1],[500,1],[750,1],[1000,1]];
@@ -1188,7 +1198,7 @@ function renderChrome() {
   $("#updated").innerHTML = S.liveFail >= 2 ? `<span class="dot" style="background:var(--amber);animation:none"></span><span>Reconnecting… last ${S.liveAt ? new Date(S.liveAt).toLocaleTimeString("en-GB", { timeZone: TZ }) : hm(S.data.updated)}</span>` : S.liveAt ? `<span class="dot ${anyLive ? "red" : ""}"></span><span>${anyLive ? "Live" : "Up to date"} · ${new Date(S.liveAt).toLocaleTimeString("en-GB", { timeZone: TZ })}</span>` : `<span class="dot"></span><span>Updated ${hm(S.data.updated)}</span>`;
   $("#updated").title = "Live scores refresh every 10 seconds. Predictions refresh every 20 minutes.";
   const ab = $("#acctBtn"); if (ab) { ab.classList.toggle("in", !!S.user); ab.innerHTML = S.user ? (S.profile && S.profile.avatar_url ? `<img src="${esc(S.profile.avatar_url)}" alt="">` : esc(initials())) : ab.dataset.icon || (ab.dataset.icon = ab.innerHTML); if (!S.user && ab.dataset.icon) ab.innerHTML = ab.dataset.icon; if (v === "account") ab.setAttribute("aria-current", "page"); else ab.removeAttribute("aria-current"); }
-  const fab = $("#fab"); fab.hidden = v === "account" || !S.slip.length; $("#fabc").textContent = S.slip.length;
+  const fab = $("#fab"); fab.hidden = v === "account" || v === "perks" || !S.slip.length; $("#fabc").textContent = S.slip.length;
   $("#fabo").textContent = S.slip.length ? odds(slipCalc().dec) : "";
 }
 
@@ -2250,6 +2260,27 @@ function allTeams() {
   for (const g of S.data.nba) for (const t of [g.home, g.away]) m.set("nba:" + t.id, { sport: "nba", id: t.id, name: t.full || t.name });
   return [...m.values()].sort((a, b) => a.name.localeCompare(b.name));
 }
+// ---------- plan & perks ----------
+function viewPerks() {
+  if (!S.user) return `<div class="hd"><div><h1>Plans</h1><p class="sub">Sign in to see your plan.</p></div></div><a class="btn" href="#account">Sign in</a>`;
+  const P = S.profile || {}, pro = P.plan === "pro", b = P.badges || [];
+  const EVERY = [["📡", "Live scores and stats", "Every game, updating every 10 seconds"], ["🎯", "Tips for every game", "Our model's pick, the chance and a fair price"], ["🧩", "Acca builder", "The safest leg in every game you pick"],
+    ["📈", "Bets that track themselves", "Live progress, settled automatically, full breakdowns"], ["🏆", "£1 → £1K challenges", "A football ladder and an NBA ladder"], ["👥", "Friends, following and Top players", "Feeds, leaderboards and copying bets"], ["💷", "Balance tracking", "Updates as your bets settle"]];
+  const PRO_NOW = [["★", "Gold PRO badge", "Next to your name in feeds, profiles and leaderboards"], ["🚫", "No Pro adverts", "The upgrade cards are hidden for you"], ["⚡", "First to try new features", "Pro members get new tools before everyone else"]];
+  const PRO_SOON = [["💱", "Real UK bookmaker prices", "Sky Bet, Paddy Power, William Hill and Betfair side by side"], ["🔔", "Bet alerts", "A ping when your bet is close or an in-play angle opens"], ["🧠", "Deeper models", "Player shots, cards and points props, half-time markets"], ["📚", "Unlimited saved accas", "Build, save and share accas with friends"]];
+  const row = ([i, t, d], st) => `<div class="pk-row ${st ? "pk-" + st : ""}"><span class="pk-ic">${i}</span><span><b>${t}</b><small>${d}</small></span><span class="pk-st">${st === "have" ? "✓" : st === "soon" ? "Soon" : ""}</span></div>`;
+  const roles = [b.includes("owner") && ["OWNER", "owner", "You run Matchday Edge. Full access to everything."], b.includes("dev") && ["DEV", "dev", "You help build the app and see new features first."], pro && ["PRO", "pro", "Pro member. Pro perks are switched on for you."]].filter(Boolean);
+  const cmp = [["Live scores, tips, accas", "✓", "✓"], ["Self-settling bets and balance", "✓", "✓"], ["Friends, following, Top players", "✓", "✓"], ["£1K challenges", "✓", "✓"], ["PRO badge", "–", "✓"], ["No Pro adverts", "–", "✓"], ["Early access to new features", "–", "✓"], ["Real UK bookmaker prices", "–", "Soon"], ["Bet alerts", "–", "Soon"], ["Deeper models", "–", "Soon"]];
+  return `<section class="pk-hero ${pro ? "pro" : ""}"><div><small>Your plan</small><h1>${pro ? "★ Pro" : "Free"}</h1><p>${pro ? "Thanks for being Pro. Here's everything you get, plus what's on the way." : "You've got all the core features. Pro adds extras on top."}</p></div>
+    ${roles.length ? `<div class="pk-roles">${roles.map(([t, c, d]) => `<div class="pk-role"><span class="bdg ${c}">${t}</span><small>${d}</small></div>`).join("")}</div>` : ""}</section>
+  ${pro ? `<section class="section"><h2>Your Pro perks</h2><div class="setcard">${PRO_NOW.map(x => row(x, "have")).join("")}</div></section>
+  <section class="section"><h2>Coming to Pro</h2><div class="setcard">${PRO_SOON.map(x => row(x, "soon")).join("")}</div></section>` : ""}
+  <section class="section"><h2>${pro ? "Also included" : "Included free"}</h2><div class="setcard">${EVERY.map(x => row(x, "have")).join("")}</div></section>
+  ${pro ? "" : `<section class="section"><h2>What Pro adds</h2><div class="setcard">${PRO_NOW.map(x => row(x, "")).join("")}${PRO_SOON.map(x => row(x, "soon")).join("")}</div></section>`}
+  <section class="section"><h2>Free vs Pro</h2><div class="setcard pk-cmp"><div class="pk-cr hd"><span></span><span>Free</span><span>Pro</span></div>${cmp.map(([f, a, c]) => `<div class="pk-cr"><span>${f}</span><span class="${a === "✓" ? "y" : ""}">${a}</span><span class="${c === "✓" ? "y" : c === "Soon" ? "psoon" : ""}">${c}</span></div>`).join("")}</div></section>
+  ${pro ? "" : proCard()}
+  <div class="signout-row"><a class="btn ghost sm" href="#account">‹ Back to your profile</a></div>`;
+}
 function proCard() {
   if (S.user && S.profile && S.profile.plan === "pro") return "";   // already Pro: no advert
   const feats = [["Real UK bookmaker prices", "Live Sky Bet, Paddy Power, William Hill and Betfair odds side by side, with the best price highlighted."], ["Bet alerts", "A ping when one of your teams has a banker, or an in-play corners or cards angle opens up."], ["Deeper models", "Player shots, cards and points props, plus first-half and second-half markets."], ["Unlimited saved accas", "Build, save and share accas with your friends."]];
@@ -2287,11 +2318,12 @@ function viewAccount(mode = "account") {
   }
 
   return `<section class="prof"><div class="prof-top"><button type="button" class="avwrap" data-pickphoto aria-label="Change profile photo">${avatarHTML(P, 72)}<span class="avcam" aria-hidden="true">📷</span></button>
-    <div class="who"><b>${esc(P.display_name || "")}</b><div class="prof-bdg">${badgesHTML(P)}${planChip(P)}</div><small>Member since ${new Date(P.created_at || S.user.created_at).toLocaleDateString("en-GB", { month: "short", year: "numeric" })}</small></div></div>
+    <div class="who"><b>${esc(P.display_name || "")}</b><a class="prof-bdg" href="#perks" aria-label="Your plan and perks">${badgesHTML(P)}${planChip(P)}</a><small>Member since ${new Date(P.created_at || S.user.created_at).toLocaleDateString("en-GB", { month: "short", year: "numeric" })}</small></div></div>
     ${S.socialReady && P.friend_code ? `<div class="prof-code"><div><small>Friend code</small><b class="fcode">${esc(P.friend_code)}</b></div><div class="prof-acts"><button class="fc-btn" data-copycode aria-label="Copy friend code">⧉ Copy</button><button class="fc-btn" data-invite aria-label="Share invite link">↗ Share</button></div></div>` : ""}</section>
   ${m}
   ${profileShowcase(S.user.id)}
   <div class="setcard links"><a class="setrow" href="#friends">${avatarStack()}<span><b>Friends</b><small>${nFr ? `${nFr} friend${nFr > 1 ? "s" : ""}` : "Invite your friends"}</small></span><span class="rchev" aria-hidden="true">›</span></a>
+  <a class="setrow" href="#perks"><span class="ic-dot">${(S.profile || {}).plan === "pro" ? "★" : "☆"}</span><span><b>Your plan & perks</b><small>${(S.profile || {}).plan === "pro" ? "Pro · see everything you get" : "Free · see what Pro adds"}</small></span><span class="rchev" aria-hidden="true">›</span></a>
   <a class="setrow" href="#mybets"><span class="ic-dot">${ICON.chart}</span><span><b>My Bets</b><small>${S.bets.length ? `${S.bets.length} saved` : "Your bets and profit"}</small></span><span class="rchev" aria-hidden="true">›</span></a></div>
   ${profileView()}
   <div class="signout-row"><button class="btn ghost sm" data-signout>Sign out</button></div>`;
@@ -2753,13 +2785,13 @@ function render() {
   setTimeout(autoSettle, 0);
   const v = view();
   { const g = navOf(v); if (g && g[2].length > 1 && S.lastSub[g[0]] !== v) { S.lastSub[g[0]] = v; store.set("lastSub", S.lastSub); } }
-  const MAIN = $("#main"), html = iosTip() + subnav(v) + (v === "friends" ? viewAccount("friends") : v === "account" ? viewAccount() : v === "tables" ? viewTables() : v === "news" ? viewNews() : v === "fixtures" ? viewFixtures() : v === "bets" ? viewBets() : v === "mybets" ? viewMyBets() : v === "acca" ? viewAcca() : v === "challenge" ? viewChallenge() : viewLive());
+  const MAIN = $("#main"), html = iosTip() + subnav(v) + (v === "friends" ? viewAccount("friends") : v === "account" ? viewAccount() : v === "perks" ? viewPerks() : v === "tables" ? viewTables() : v === "news" ? viewNews() : v === "fixtures" ? viewFixtures() : v === "bets" ? viewBets() : v === "mybets" ? viewMyBets() : v === "acca" ? viewAcca() : v === "challenge" ? viewChallenge() : viewLive());
   if (MAIN._h !== html) {
     const sx = [...MAIN.querySelectorAll(".tw,.chips,.scroller")].map(e => e.scrollLeft);
     MAIN.innerHTML = html; MAIN._h = html;
     [...MAIN.querySelectorAll(".tw,.chips,.scroller")].forEach((e, k) => { if (sx[k]) e.scrollLeft = sx[k]; });
   }
-  const norail = v === "account" || v === "friends"; document.querySelector(".page").classList.toggle("norail", norail);
+  const norail = v === "account" || v === "friends" || v === "perks"; document.querySelector(".page").classList.toggle("norail", norail);
   $("#rail").innerHTML = norail ? "" : slipHTML();
   const L = $("#layer"), prevDr = $(".drawer"), dkey = S.drawer || (S.slipOpen ? "slip" : ""), same = !!(prevDr && dkey && prevDr.dataset.key === dkey), keepTop = same ? prevDr.scrollTop : 0;
   if (S.drawer) { const [sp, id] = S.drawer.split(":"); const g = findGame(sp, id); L.innerHTML = g ? drawerHTML(sp, g) : ""; if (!g) S.drawer = null; }
