@@ -1891,7 +1891,7 @@ function fbMinute(g) {
 function liveMarkets(sport, g) {
   const post = g.status.state === "post", hs = +g.home.score || 0, as = +g.away.score || 0, out = [];
   const pre = Object.fromEntries(g.model.markets.map(m => [m.k, m]));
-  const push = (k, p, state) => { if (!pre[k]) return; out.push({ ...pre[k], pre: pre[k].p, p: Math.max(0, Math.min(1, p)), state: state || (post ? (p >= .5 ? "won" : "lost") : p >= .9995 ? "won" : p <= .0005 ? "lost" : "open") }); };
+  const push = (k, p, state) => { if (!pre[k]) return; out.push({ ...pre[k], pre: pre[k].p, p: Math.max(0, Math.min(1, p)), state: state || (post ? (p >= .5 ? "won" : "lost") : p >= 1 ? "won" : p <= 0 ? "lost" : "open") }); };   /* in play: landed/lost only when it has actually happened, not just very likely */
   if (sport === "football") {
     const mn = fbMinute(g), left = fbLeft(g), played = Math.max(1, 97 - left), rf = post ? 0 : left / 97, lh = g.model.xgH * rf, la = g.model.xgA * rf;
     const st = k => (g.stats || []).find(x => x.k === k);
@@ -2117,7 +2117,7 @@ function slipDrawer() { return `<div class="scrim" data-close></div><aside class
 /* ---------- bet import + live player tracker ---------- */
 const PROPS = {
   nba: [[/points?\s*(?:\+|and|,)\s*rebounds?\s*(?:\+|and|,)\s*assists?|\bpra\b/i, "PRA", "pts+reb+ast"], [/three|3-?pointers?|3pt|3pm/i, "3PM", "threes"], [/rebounds?|\breb\b/i, "REB", "rebounds"], [/assists?|\bast\b/i, "AST", "assists"], [/steals?/i, "STL", "steals"], [/blocks?/i, "BLK", "blocks"], [/points?|\bpts\b/i, "PTS", "points"]],
-  football: [[/shots? on target|\bsot\b/i, "shotsOnTarget", "shots on target"], [/shots?/i, "totalShots", "shots"], [/carded|booked|cards?/i, "cards", "card"], [/fouled|fouls? (won|drawn|suffered)|wins? a (foul|free kick)/i, "foulsSuffered", "times fouled"], [/fouls?/i, "foulsCommitted", "fouls"], [/assist/i, "goalAssists", "assist"], [/scor|goal/i, "totalGoals", "goal"]]
+  football: [[/head(?:ed|er)s?\b.*on target|head(?:ed|er)s? (?:shots? )?on target/i, "headedShotsOnTarget", "headed shots on target"], [/\bhead(?:ed|er)s?\b/i, "headedShots", "headed shots"], [/shots? on target|\bsot\b/i, "shotsOnTarget", "shots on target"], [/shots?/i, "totalShots", "shots"], [/carded|booked|cards?/i, "cards", "card"], [/fouled|fouls? (won|drawn|suffered)|wins? a (foul|free kick)/i, "foulsSuffered", "times fouled"], [/fouls?/i, "foulsCommitted", "fouls"], [/assist/i, "goalAssists", "assist"], [/scor|goal/i, "totalGoals", "goal"]]
 };
 const deLetter = t => String(t || "").replace(/[øØ]/g, "o").replace(/[æÆ]/g, "ae").replace(/ß/g, "ss").replace(/[đĐ]/g, "d").replace(/[łŁ]/g, "l").replace(/ı/g, "i");
 const norm = t => deLetter(t).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z ]/g, " ").replace(/\s+/g, " ").trim();
@@ -2174,7 +2174,7 @@ function marketIn(seg, sp, g) {
   if (ou) { const sel = (t.replace(ou[0], " ").match(/ (over|under) /) || [])[1] || "over"; const who = ou[1] ? (ou[1].trim() === "home" ? hn : an) + " " : "";
     extra.push(`${who}${sel} ${ou[2]} ${ou[3]}`); }
   for (const [al, n] of [[H, hn], [A, an]]) {
-    if (al.some(a => [` ${a} and draw `, ` ${a} or draw `, ` draw or ${a} `, ` draw and ${a} `].some(x => t.includes(x)))) extra.push(`${n} or draw`);
+    if (al.some(a => [` ${a} and draw `, ` ${a} or draw `, ` draw or ${a} `, ` draw and ${a} `].some(x => t.includes(x)) || new RegExp(` ${a} (?:to )?(?:win|winning) or (?:the )?draw `).test(t) || new RegExp(` ${a} (?:to )?(?:not lose|avoid defeat) `).test(t))) extra.push(`${n} or draw`);
 
     if (/ (to score|anytime) /.test(t) && !t.includes("both teams") && has(al)) extra.push(`${n} to score`);
     if (al.some(a => new RegExp(` ${a} (over|under) ([\\d.]+) goals `).test(t))) { const m = t.match(new RegExp(` (?:${al.join("|")}) (over|under) ([\\d.]+) goals `)); if (m) extra.push(`${n} ${m[1]} ${m[2]} goals`); }
@@ -2214,8 +2214,21 @@ function teamStatVals(g, stat) {   // [home, away] so far
 }
 const oddsIn = seg => { const m = String(seg).match(/(?:@|©|®| at )\s*(\d+\.\d{1,2}|\d+\s*\/\s*\d+|evs|evens)/i); return m ? parseOdds(m[1].replace(/\s+/g, "")) : null; };
 // read match bets out of any text: works for one line ("Como v Venezia: Over 7.5 corners @ 1.53") or a whole bet slip
-function matchLegsIn(text) {
-  const txt = String(text).toLowerCase(), G = gamesInText(txt.replace(/[̀-ͯ]/g, "")); if (!G.length) return { legs: [], odds: [] };
+/* a typed line that starts with one team ("Liverpool to win or draw"): that team's live game, else its next one */
+function oneTeamGame(txt) {
+  const now = Date.now(), hits = [];
+  for (const sp of ["football", "nba"]) for (const g of games(sp)) {
+    const t = +new Date(kick(g)); if (!(isLive(g) || (isPre(g) && t - now < 3 * 864e5))) continue;
+    for (const T of [g.home, g.away]) { const f = findAlias(txt, teamAliases(T)); if (f && f.pos <= 1) hits.push({ sp, g, start: f.pos, end: f.end, live: isLive(g), t }); }
+  }
+  hits.sort((x, y) => y.live - x.live || x.t - y.t); return hits.length ? [hits[0]] : [];
+}
+function matchLegsIn(text, single) {
+  const txt = String(text).toLowerCase();
+  let G = gamesInText(txt.replace(/[̀-ͯ]/g, ""));
+  if (!G.length && single) { const one = oneTeamGame(txt.replace(/[̀-ͯ]/g, "").trim())[0], m = one && marketIn(txt, one.sp, one.g);   /* the whole line: "Liverpool to win or draw" */
+    return m ? { legs: [{ sport: one.sp, gid: one.g.id, k: m.k, label: m.label, match: vs(one.sp, one.g), team: "", kick: kick(one.g) }], odds: [oddsIn(txt)] } : { legs: [], odds: [] }; }
+  if (!G.length) return { legs: [], odds: [] };
   const seg = (i, before) => before ? txt.slice(i ? G[i - 1].end : 0, G[i].start) : txt.slice(G[i].end, i + 1 < G.length ? G[i + 1].start : txt.length);
   const beforeLayout = !!marketIn(seg(0, true), G[0].sp, G[0].g);
   const legs = [], odds = [];
@@ -2237,9 +2250,9 @@ function parseBet(text, idx) {
     if (parts.length < 2) return line; const m = parts[0].match(/^(.*?)\s+to\s+/i); if (!m) return line;
     const at = (line.match(/\s*@.*$/) || [""])[0]; return [parts[0].replace(/\s*@.*$/, ""), ...parts.slice(1).map(x => `${m[1]} to ${x.replace(/^to\s+/i, "").replace(/\s*@.*$/, "")}`)].join("\n") + at; }).join("\n");
   for (const l of text.split(/\n|;/).map(x => x.trim()).filter(Boolean)) {
-    const r = matchLegsIn(l); if (r.legs.length) { mLegs.push(...r.legs); mOdds.push(...r.odds.map((o, i) => o || (i === 0 ? oddsIn(l) : null))); continue; }
+    const r = matchLegsIn(l, true); if (r.legs.length) { mLegs.push(...r.legs); mOdds.push(...r.odds.map((o, i) => o || (i === 0 ? oddsIn(l) : null))); continue; }
   }
-  const propText = text.split(/\n|;/).filter(l => !matchLegsIn(l).legs.length).join("\n");
+  const propText = text.split(/\n|;/).filter(l => !matchLegsIn(l, true).legs.length).join("\n");
   for (const l of propText.replace(/@.*$/gm, "").split(/\n|;/).map(x => x.trim()).filter(Boolean)) {
     if (/^(?:\d+\s*\/\s*\d+|\d+\.\d+|evs|evens)$/i.test(l)) { if (!oddsFound) oddsFound = parseOdds(l); continue; }   // a line that's just the odds
     if (lines.length && /^(?:to\b|over\b|-\s|\d+(?:\.\d+)?\s*\+)/i.test(l) && !LEG(lines[lines.length - 1])) lines[lines.length - 1] += " " + l; else lines.push(l);
@@ -2287,9 +2300,11 @@ const halfDone = g => g.status.state === "post" || (+g.status.period || 1) >= 2 
 function halfStat(g, l) {   // a player's count in one half, from the play-by-play
   const n = norm(l.name), last = n.split(" ").pop(), me = w => w === n || (w && w.split(" ").pop() === last && w[0] === n[0]);
   let v = 0;
-  for (const p of g.plays || []) { if (p.per !== l.half) continue; const t = p.t;
+  for (const p of g.plays || []) { if (l.half && p.per !== l.half) continue; const t = p.t;
     const shot = /^Shot|^Goal|Penalty - (Scored|Saved|Missed)/i.test(t) && !/Own Goal/i.test(t), on = /Shot On Target|^Goal|Penalty - (Scored|Saved)/i.test(t) && !/Own Goal/i.test(t);
-    if (l.stat === "shotsOnTarget" && on && me(p.who[0])) v++;
+    if (l.stat === "headedShotsOnTarget" && on && p.head && me(p.who[0])) v++;
+    else if (l.stat === "headedShots" && shot && p.head && me(p.who[0])) v++;
+    else if (l.stat === "shotsOnTarget" && on && me(p.who[0])) v++;
     else if (l.stat === "totalShots" && shot && me(p.who[0])) v++;
     else if (l.stat === "totalGoals" && /^Goal|Penalty - Scored/i.test(t) && !/Own Goal/i.test(t) && me(p.who[0])) v++;
     else if (l.stat === "goalAssists" && /^Goal/i.test(t) && me(p.who[1])) v++;
@@ -2307,11 +2322,12 @@ function legValue(l) {
     const B = (g.box || {})[l.side], P = (B || { players: [] }).players.find(p => String(p.id) === String(l.pid)); if (!P) return { v: null, g, dnp: !!(B && B.players.length) && !isPre(g) };
     const n = k => num(String(P.s[k] ?? "0").split("-")[0]);
     const v = l.stat === "PRA" ? n("PTS") + n("REB") + n("AST") : l.stat === "3PM" ? n("3PT") : n(l.stat);
-    return { v, g, on: P.on, dnp: P.dnp };
+    return { v, g, on: P.on, dnp: P.dnp && (g.status.state === "post" || !/coach/i.test(P.why || "")) };   /* ESPN lists bench players as "coach's decision" until they come on */
   }
   const LU = (g.lineups || {})[l.side], P = (LU || { players: [] }).players.find(p => String(p.id) === String(l.pid)); if (!P) return { v: null, g, dnp: !!(LU && LU.players.length) && !isPre(g) };
-  if (l.half) { if (!g.plays && !isPre(g)) loadDetail("football:" + l.gid); if (l.half === 2 && !halfDone(g)) return { v: 0, g, on: onPitch(P), dnp: false }; return { v: g.plays ? halfStat(g, l) : null, g, on: onPitch(P), dnp: !P.starter && !P.subIn && (l.half === 1 ? halfDone(g) : g.status.state === "post") }; }
-  const v = l.stat === "cards" ? (P.s.yellowCards || 0) + (P.s.redCards || 0) : (P.s[l.stat] || 0);
+  if (l.half || /^headed/.test(l.stat)) { if (!g.plays && !isPre(g)) loadDetail("football:" + l.gid); if (l.half === 2 && !halfDone(g)) return { v: 0, g, on: onPitch(P), dnp: false }; return { v: g.plays ? halfStat(g, l) : null, g, on: onPitch(P), dnp: !P.starter && !P.subIn && (l.half === 1 ? halfDone(g) : g.status.state === "post") }; }
+  const v0 = l.stat === "cards" ? (P.s.yellowCards || 0) + (P.s.redCards || 0) : (P.s[l.stat] || 0);
+  const v = g.plays && /^(shotsOnTarget|totalShots|totalGoals|goalAssists|foulsSuffered|foulsCommitted|cards)$/.test(l.stat) ? Math.max(v0, halfStat(g, { ...l, half: 0 })) : v0;   /* the commentary is often ahead of ESPN's player totals */
   return { v, g, on: onPitch(P), dnp: !P.starter && !P.subIn && g.status.state === "post" };
 }
 /* bets tracked on this phone only: hidden when the same bet is saved (matched by its legs, not just its name) */
@@ -3545,7 +3561,7 @@ function parseLineups(g, s) {
 }
 function applyFb(g, s) {
   parseLineups(g, s);
-  if (s.commentary) { const seen = new Set(); g.plays = s.commentary.map(c => c.play).filter(p => p && !(p.id && seen.has(p.id)) && (seen.add(p.id), true)).map(p => ({ t: (p.type || {}).text || "", per: (p.period || {}).number || 1, who: (p.participants || []).map(q => norm(((q.athlete || {}).displayName) || "")) }));
+  if (s.commentary) { const seen = new Set(); g.plays = s.commentary.filter(c => c.play && !(c.play.id && seen.has(c.play.id)) && (seen.add(c.play.id), true)).map(c => { const p = c.play; return { t: (p.type || {}).text || "", per: (p.period || {}).number || 1, who: (p.participants || []).map(q => norm(((q.athlete || {}).displayName) || "")), head: /\bheader\b/i.test(String(c.text || "").split(/Assisted by/i)[0]) };   /* the shot itself, not "assisted ... with a headed pass" */ });
     g._playsHalfDone = halfDone(g); }
   const b = boxMap(s), hb = b[g.home.id] || {}, ab = b[g.away.id] || {};
   if (Object.keys(hb).length) g.stats = FKEYS.filter(([k]) => k in hb || k in ab).map(([k, label]) => ({ k, label, h: num(hb[k]), a: num(ab[k]) }));

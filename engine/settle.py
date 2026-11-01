@@ -92,7 +92,7 @@ def leg_result(l):
                     val = n("PTS") + n("REB") + n("AST") if l["stat"] == "PRA" else n("3PT") if l["stat"] == "3PM" else n(l["stat"])
                     return ("won" if val >= l["target"] else "lost"), val
             return None, None
-        if l.get("half"):   # first/second-half player bets: count from the play-by-play (each play once)
+        if l.get("half") or str(l.get("stat", "")).startswith("headed"):   # half bets and headers: count from the play-by-play (each play once)
             seen, v, nm = set(), 0, l.get("name", "").lower()
             last = nm.split(" ")[-1]
             me = lambda w: bool(w) and (w.lower() == nm or (w.lower().split(" ")[-1] == last and w.lower()[:1] == nm[:1]))
@@ -100,12 +100,14 @@ def leg_result(l):
                 p = c.get("play") or {}
                 if not p or p.get("id") in seen: continue
                 seen.add(p.get("id"))
-                if (p.get("period") or {}).get("number", 1) != l["half"]: continue
+                if l.get("half") and (p.get("period") or {}).get("number", 1) != l["half"]: continue
+                head = bool(re.search(r"\bheader\b", re.split(r"Assisted by", c.get("text") or "", flags=re.I)[0], re.I))
                 t = (p.get("type") or {}).get("text", ""); who = [(q.get("athlete") or {}).get("displayName", "") for q in p.get("participants", [])] + ["", ""]
                 own = "Own Goal" in t; shot = (t.startswith("Shot") or t.startswith("Goal") or t.startswith("Penalty - S") or t.startswith("Penalty - M")) and not own
                 on = ("Shot On Target" in t or t.startswith("Goal") or t in ("Penalty - Scored", "Penalty - Saved")) and not own
                 st = l["stat"]
-                if (st == "shotsOnTarget" and on and me(who[0])) or (st == "totalShots" and shot and me(who[0])) or \
+                if (st == "headedShotsOnTarget" and on and head and me(who[0])) or (st == "headedShots" and shot and head and me(who[0])) or \
+                   (st == "shotsOnTarget" and on and me(who[0])) or (st == "totalShots" and shot and me(who[0])) or \
                    (st == "totalGoals" and (t.startswith("Goal") or t == "Penalty - Scored") and not own and me(who[0])) or \
                    (st == "goalAssists" and t.startswith("Goal") and me(who[1])) or (st == "foulsSuffered" and t.startswith("Foul") and me(who[1])) or \
                    (st == "foulsCommitted" and t.startswith("Foul") and me(who[0])) or (st == "cards" and ("Yellow Card" in t or "Red Card" in t) and me(who[0])):
