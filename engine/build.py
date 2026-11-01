@@ -279,6 +279,92 @@ def model(m, L, table, mu):
                   "markets": out}
 
 # ---------------------------------------------------------------- NBA
+# ---------- NBA player bets (props) ----------
+PROP_LINES = {"PTS": (10, 15, 20, 25, 30, 35, 40), "REB": (4, 6, 8, 10, 12), "AST": (3, 4, 6, 8, 10),
+              "3PM": (1, 2, 3, 4, 5), "PRA": (20, 25, 30, 35, 40, 45, 50)}
+PROP_WORD = {"PTS": "points", "REB": "rebounds", "AST": "assists", "3PM": "threes", "PRA": "pts+reb+ast"}
+NBA_SEASON = today.year + 1 if today.month >= 9 else today.year
+
+def player_log(pid, season):
+    d = get(f"https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/{pid}/gamelog?season={season}",
+            f"nba_gl_{pid}_{season}", 6 * 3600)
+    labels = d.get("labels") or []
+    if not labels: return []
+    dates = {k: (v or {}).get("gameDate", "") for k, v in (d.get("events") or {}).items()}
+    ix = {l: i for i, l in enumerate(labels)}
+    out, seen = [], set()
+    for stp in d.get("seasonTypes") or []:
+        if "preseason" in (stp.get("displayName") or "").lower(): continue
+        for cat in stp.get("categories") or []:
+            if cat.get("type") not in (None, "event"): continue
+            for ev in cat.get("events") or []:
+                st = ev.get("stats") or []
+                if len(st) < len(labels) or ev.get("eventId") in seen: continue
+                seen.add(ev.get("eventId"))
+                try:
+                    mn = f(st[ix["MIN"]]); pts = f(st[ix["PTS"]]); reb = f(st[ix["REB"]]); ast = f(st[ix["AST"]])
+                    tpm = f(str(st[ix["3PT"]]).split("-")[0])
+                except Exception: continue
+                if mn <= 0: continue
+                out.append({"d": dates.get(ev.get("eventId"), ""), "MIN": mn, "PTS": pts, "REB": reb, "AST": ast, "3PM": tpm, "PRA": pts + reb + ast})
+    out.sort(key=lambda x: x["d"], reverse=True)
+    return out
+
+def player_props(g, s):
+    out_names = set()
+    for t in s.get("injuries", []) or []:
+        for i in t.get("injuries") or []:
+            if (i.get("status") or "").lower() in ("out", "suspended"):
+                out_names.add((i.get("athlete") or {}).get("id") or (i.get("athlete") or {}).get("displayName"))
+    cands = []
+    for side in ("h", "a"):
+        team = g["home"] if side == "h" else g["away"]
+        ro = get(f"{BASE}/basketball/nba/teams/{team['id']}/roster", f"nba_roster_{team['id']}", 6 * 3600)
+        for A in ro.get("athletes") or []:
+            if A.get("id") in out_names or A.get("displayName") in out_names: continue
+            if any((x.get("status") or "").lower() == "out" for x in A.get("injuries") or []): continue
+            cands.append((side, team["name"], A["id"], A.get("displayName") or A.get("fullName")))
+    logs = pmap(lambda c: (player_log(c[2], NBA_SEASON), player_log(c[2], NBA_SEASON - 1)), cands)
+    players = []
+    for (side, tname, pid, name), (cur, prev) in zip(cands, logs):
+        if not cur and not prev: continue
+        base = cur if len(cur) >= 3 else (prev or cur)
+        mins = sum(x["MIN"] for x in base) / len(base)
+        if mins < 22: continue
+        players.append((mins, side, tname, pid, name, cur, prev))
+    # best 4 per team by minutes (about 8 per game)
+    players.sort(key=lambda x: -x[0])
+    keep, cnt = [], {"h": 0, "a": 0}
+    for pl in players:
+        if cnt[pl[1]] < 4: keep.append(pl); cnt[pl[1]] += 1
+    mk = []
+    for mins, side, tname, pid, name, cur, prev in keep:
+        for stat, lines in PROP_LINES.items():
+            n, k = len(cur), 6
+            mc = sum(x[stat] for x in cur) / n if n else 0
+            mp = sum(x[stat] for x in prev) / len(prev) if prev else mc
+            if not prev and not n: continue
+            m = (n * mc + k * mp) / (n + k)
+            if m <= 0.2: continue
+            recent = (cur + prev)[:20]
+            if len(recent) >= 5:
+                mu = sum(x[stat] for x in recent) / len(recent)
+                esd = math.sqrt(sum((x[stat] - mu) ** 2 for x in recent) / (len(recent) - 1))
+            else: esd = 0
+            sd = max(esd, 0.25 * m + 2)
+            opts = []
+            for t in lines:
+                p = p_over(t - 1, m) if stat == "3PM" else 1 - phi((t - 0.5 - m) / sd)
+                if 0.12 <= p <= 0.92:
+                    dist = 0 if 0.5 <= p <= 0.8 else min(abs(p - 0.5), abs(p - 0.8))
+                    opts.append((dist, t, p))
+            for dist, t, p in sorted(opts)[:3]:
+                word = PROP_WORD[stat]; p = round(p, 4)
+                mk.append({"k": f"P:{pid}:{stat}:{t}", "label": f"{name} {t}+ {word}", "p": p, "fair": round(1 / p, 3),
+                           "prop": {"pid": pid, "name": name, "side": side, "team": tname, "stat": stat, "target": t, "label": word}})
+    mk.sort(key=lambda x: (x["prop"]["side"], x["prop"]["pid"], x["prop"]["stat"], x["prop"]["target"]))
+    return mk
+
 def nba():
     nd = [(today + dt.timedelta(days=i)).strftime("%Y%m%d") for i in range(-1, 4)]
     sbs = pmap(lambda d: get(f"{BASE}/basketball/nba/scoreboard?dates={d}", f"nba_sb_{d}", 6), nd)
@@ -406,6 +492,12 @@ def nba():
         g["model"] = {"proj": round(proj, 1), "margin": round(margin, 1),
                       "markets": [dict(k=k, label=l, p=round(max(min(p, .99), .01), 4), fair=round(1 / max(min(p, .99), .01), 3),
                                        **({"dec": d, "edge": round(p * d - 1, 4)} if d else {})) for k, l, p, d in mk_list]}
+        try:
+            hrs = (dt.datetime.fromisoformat(e["date"].replace("Z", "+00:00")) - dt.datetime.now(dt.timezone.utc)).total_seconds() / 3600
+            if g["status"]["state"] == "pre" and hrs < 36:
+                g["model"]["markets"] += player_props(g, s)
+        except Exception as ex:
+            print("props failed", e["id"], ex, file=sys.stderr)
         games.append(g)
     games.sort(key=lambda g: g["start"])
     return games
