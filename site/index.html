@@ -443,12 +443,14 @@ h3{font-size:15px;font-weight:700}
 .close{width:36px;height:36px;border-radius:10px;background:var(--surface-2);display:grid;place-items:center}
 .score-hero{border-radius:16px;padding:20px 16px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;text-align:center;background:radial-gradient(120% 140% at 0% 0%,color-mix(in srgb,var(--hc) 45%,transparent),transparent 55%),radial-gradient(120% 140% at 100% 100%,color-mix(in srgb,var(--ac) 45%,transparent),transparent 55%),var(--surface);border:1px solid var(--line)}
 .score-hero .side{display:grid;justify-items:center;gap:8px;min-width:0}
-.score-hero .side b{font-size:15px;line-height:1.2}
+.score-hero .side b{font-size:15px;line-height:1.2;overflow-wrap:anywhere}.score-hero .fn-s{display:none}
+@media (max-width:520px){.score-hero{gap:6px;padding:18px 10px}.score-hero .big{font-size:44px}.score-hero .side b{font-size:14px}.score-hero .fn-l{display:none}.score-hero .fn-s{display:inline}}
 .score-hero .side small{color:var(--fg-2);font-size:12px}
 .score-hero .big{font-family:var(--display);font-weight:800;font-size:54px;line-height:1;letter-spacing:.02em}
 .score-hero .st{font-size:12px;color:var(--fg-2);margin-top:4px}
-.probbar{display:flex;height:34px;border-radius:9px;overflow:hidden;gap:3px;font-family:var(--display);font-weight:700;font-size:15px}
-.probbar div{display:flex;align-items:center;justify-content:center;min-width:34px;color:#fff}
+.probwrap{display:grid;gap:8px}.problab{display:flex;justify-content:space-between;gap:10px;font-size:13px;color:var(--fg-2);font-weight:600}.problab span{display:inline-flex;align-items:center;gap:6px}.problab b{font-family:var(--display);font-size:20px;color:var(--fg)}.problab i{width:10px;height:10px;border-radius:3px}.problab .ph i{background:var(--blue)}.problab .pd i{background:var(--surface-3)}.problab .pa i{background:var(--tang)}
+.probbar{display:flex;height:12px;border-radius:6px;overflow:hidden;gap:3px}
+.probbar div{min-width:0}
 .probbar .ph{background:var(--blue)}.probbar .pd{background:var(--surface-3);color:var(--fg-2)}.probbar .pa{background:var(--tang)}
 .statrow{display:grid;grid-template-columns:44px minmax(0,1fr) 44px;gap:10px;align-items:center}
 .statrow .v{font-family:var(--display);font-weight:700;font-size:17px;text-align:center;font-variant-numeric:tabular-nums}
@@ -1710,19 +1712,21 @@ function onCourt(g) {
   const L = [[g.away, "a"], [g.home, "h"]];
   return `<div class="oncourt">${L.map(([t, sd]) => { const ps = (g.box[sd] || { players: [] }).players.filter(p => p.on); return `<div class="oc"><div class="oc-hd">${logo("nba", t)}${esc(t.name)}</div><ul>${ps.length ? ps.map(p => `<li><i class="court"></i><b>${esc(p.short)} <small style="color:var(--muted);font-weight:500">${esc(p.pos)}</small></b><span class="ln">${esc(p.s.PTS || 0)} pts · ${esc(p.s.REB || 0)} reb · ${esc(p.s.AST || 0)} ast</span></li>`).join("") : `<li style="color:var(--muted)">Not available</li>`}</ul></div>`; }).join("")}</div>`;
 }
+// names and percentages sit above a slim bar, so a 0% or 100% side never gets squashed
+const probBar = parts => `<div class="probwrap"><div class="problab">${parts.map(([c, name, p]) => `<span class="${c}"><i></i>${esc(name)} <b>${pct(p)}</b></span>`).join("")}</div><div class="probbar">${parts.map(([c, , p]) => `<div class="${c}" style="flex:${Math.max(p, .02)}"></div>`).join("")}</div></div>`;
 function drawerHTML(sport, g) {
   const h = g.home, a = g.away, live = isLive(g), pre = isPre(g);
   const L = sport === "nba" ? a : h, R = sport === "nba" ? h : a;
   const st = pre ? `${whenLabel(kick(g))}` : live ? `<span class="clock" style="justify-content:center"><span class="dot red"></span>${esc(clockLabel(sport, g))}</span>` : esc(g.status.detail);
-  const hero = `<div class="score-hero" style="--hc:${esc(L.color)};--ac:${esc(R.color)}"><div class="side">${logo(sport, L, "lg")}<b>${esc(L.full || L.name)}</b><small>${sport === "nba" ? esc(L.record) : L.pos ? ordinal(L.pos) + " · " + esc(L.form) : esc(L.form)}</small></div>
+  const hero = `<div class="score-hero" style="--hc:${esc(L.color)};--ac:${esc(R.color)}"><div class="side">${logo(sport, L, "lg")}<b><span class="fn-l">${esc(L.full || L.name)}</span><span class="fn-s">${esc(L.name)}</span></b><small>${sport === "nba" ? esc(L.record) : L.pos ? ordinal(L.pos) + " · " + esc(L.form) : esc(L.form)}</small></div>
     <div>${pre ? `<div class="big" style="font-size:34px">${sport === "nba" ? "@" : "V"}</div>` : `<div class="big">${esc(L.score)}–${esc(R.score)}</div>`}<div class="st">${st}</div></div>
-    <div class="side">${logo(sport, R, "lg")}<b>${esc(R.full || R.name)}</b><small>${sport === "nba" ? esc(R.record) : R.pos ? ordinal(R.pos) + " · " + esc(R.form) : esc(R.form)}</small></div></div>`;
+    <div class="side">${logo(sport, R, "lg")}<b><span class="fn-l">${esc(R.full || R.name)}</span><span class="fn-s">${esc(R.name)}</span></b><small>${sport === "nba" ? esc(R.record) : R.pos ? ordinal(R.pos) + " · " + esc(R.form) : esc(R.form)}</small></div></div>`;
   let body = "";
   const sec = {};
   if (sport === "football") {
     const LM = pre ? null : Object.fromEntries(liveMarkets("football", g).map(m => [m.k, m.p]));
     const pH = LM ? LM["1"] : mkt(g, "1").p, pD = LM ? LM["X"] : mkt(g, "X").p, pA = LM ? LM["2"] : mkt(g, "2").p;
-    sec.win = (sec.win || "") + `<section class="section"><h2>${pre ? "Match odds" : g.status.state === "post" ? "Result" : "Win chances now"}</h2><div class="probbar"><div class="ph" style="flex:${pH}">${pct(pH)}</div><div class="pd" style="flex:${pD}">${pct(pD)}</div><div class="pa" style="flex:${pA}">${pct(pA)}</div></div>
+    sec.win = (sec.win || "") + `<section class="section"><h2>${pre ? "Match odds" : g.status.state === "post" ? "Result" : "Win chances now"}</h2>${probBar([["ph", h.abbr || h.name, pH], ["pd", "Draw", pD], ["pa", a.abbr || a.name, pA]])}
       <div class="trend"><div class="tbox"><div class="k">Expected goals</div><div class="v">${g.model.xgH.toFixed(1)}–${g.model.xgA.toFixed(1)}</div></div>${g.model.corners ? `<div class="tbox"><div class="k">Expected corners</div><div class="v">${g.model.corners.toFixed(1)}</div></div>` : ""}${g.model.cards ? `<div class="tbox"><div class="k">Expected cards</div><div class="v">${g.model.cards.toFixed(1)}</div></div>` : ""}<div class="tbox"><div class="k">Over 2.5 last 5</div><div class="v">${g.model.trend.h.o25[0]}<small>/${g.model.trend.h.o25[1]}</small> · ${g.model.trend.a.o25[0]}<small>/${g.model.trend.a.o25[1]}</small></div></div></div></section>`;
     if (g.stats) sec.stats = (sec.stats || "") + `<section class="section"><h2>${live ? "Live stats" : "Match stats"}${asOf(g)}</h2>${g.stats.map(statRow).join("")}</section>`;
     if (g.lineups) {
@@ -1735,7 +1739,7 @@ function drawerHTML(sport, g) {
     sec.form = (sec.form || "") + `<section class="section"><h2>Recent form</h2>${last5Table(h)}${last5Table(a)}</section>`;
   } else {
     const pH = pre ? mkt(g, "ML1").p : (liveMarkets("nba", g).find(m => m.k === "ML1") || mkt(g, "ML1")).p;
-    sec.win = (sec.win || "") + `<section class="section"><h2>${pre ? "Win chance" : g.status.state === "post" ? "Result" : "Win chance now"}</h2><div class="probbar"><div class="ph" style="flex:${1 - pH}">${esc(a.abbr)} ${pct(1 - pH)}</div><div class="pa" style="flex:${pH}">${esc(h.abbr)} ${pct(pH)}</div></div>
+    sec.win = (sec.win || "") + `<section class="section"><h2>${pre ? "Win chance" : g.status.state === "post" ? "Result" : "Win chance now"}</h2>${probBar([["ph", a.abbr, 1 - pH], ["pa", h.abbr, pH]])}
     <div class="trend"><div class="tbox"><div class="k">Projected total</div><div class="v">${g.model.proj}</div></div>${g.odds && g.odds.total ? `<div class="tbox"><div class="k">Market total</div><div class="v">${g.odds.total}</div></div>` : ""}<div class="tbox"><div class="k">${esc(a.abbr)} pts / allowed</div><div class="v">${a.ppg}<small>/ ${a.oppg}</small></div></div><div class="tbox"><div class="k">${esc(h.abbr)} pts / allowed</div><div class="v">${h.ppg}<small>/ ${h.oppg}</small></div></div></div></section>`;
     if (!pre && (h.lines || []).length) {
       const n = Math.max(h.lines.length, a.lines.length, 4);
