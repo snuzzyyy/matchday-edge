@@ -708,6 +708,15 @@ h3{font-size:15px;font-weight:700}
 .rb-odds small{font-size:11px;color:var(--muted)}
 .rb-sum{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;color:var(--fg-2)}
 .rb-sum b{font-family:var(--display);font-size:22px;color:var(--win)}
+.helpsteps{margin:0;padding-left:20px;display:grid;gap:14px;font-size:14px;color:var(--fg-2)}.helpsteps li > *:last-child{display:flex;width:max-content}
+.pnlrow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 4px}
+.pnlrow > div{display:grid;gap:2px;justify-items:center;text-align:center;border-left:1px solid var(--line)}.pnlrow > div:first-child{border-left:0}
+.pnlrow small{font-size:11px;color:var(--muted);font-weight:600}.pnlrow b{font-family:var(--display);font-size:20px;font-weight:700}.pnlrow b.pos{color:var(--win)}.pnlrow b.neg{color:var(--loss)}
+.handadd{background:var(--surface);border:1px solid var(--line);border-radius:14px}
+.handadd summary{list-style:none;display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;align-items:center;padding:10px 14px;cursor:pointer}.handadd summary::-webkit-details-marker{display:none}
+.handadd summary b{display:block;font-size:14.5px}.handadd summary small{display:block;font-size:12.5px;color:var(--muted)}.handadd .ic-dot{width:34px;height:34px;font-size:18px;color:var(--blue-2)}
+.handadd[open] summary{border-bottom:1px solid var(--line)}
+.handform{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:12px 14px 14px}.handform .hf-bet,.handform .hf-go{grid-column:1 / -1}
 .ownbet summary{cursor:pointer;color:var(--blue-2);font-weight:600;font-size:13px;padding:6px 0}
 .ownbet[open] summary{margin-bottom:8px}
 .pastlist{display:grid;gap:8px}
@@ -2009,11 +2018,11 @@ if (sb) {
     if ((S.user && S.user.id) !== was || ev === "USER_UPDATED") setTimeout(loadAccount, 0);
   });
 }
-function statBlock() {
-  const settled = S.bets.filter(b => b.result !== "open"), won = settled.filter(b => b.result === "won").length;
-  const staked = settled.reduce((a, b) => a + +b.stake, 0), profit = settled.reduce((a, b) => a + (+b.returns || 0) - +b.stake, 0);
-  const decided = settled.filter(b => b.result !== "void").length;
-  return `<div class="tiles"><div class="tile"><small>Bets logged</small><b>${S.bets.length}</b></div><div class="tile"><small>Win rate</small><b>${decided ? Math.round(won / decided * 100) + "%" : "–"}</b></div><div class="tile"><small>Profit / loss</small><b class="${profit > 0 ? "pos" : profit < 0 ? "neg" : ""}">${settled.length ? gbp(profit) : "–"}</b></div><div class="tile"><small>Return on stakes</small><b class="${profit > 0 ? "pos" : profit < 0 ? "neg" : ""}">${staked ? (profit / staked * 100 > 0 ? "+" : "") + Math.round(profit / staked * 100) + "%" : "–"}</b></div></div>`;
+function statBlock() {   // one compact row; only once something has settled
+  const settled = S.bets.filter(b => b.result !== "open"); if (!settled.length) return "";
+  const won = settled.filter(b => b.result === "won").length, decided = settled.filter(b => b.result !== "void").length;
+  const staked = settled.reduce((a, b) => a + +b.stake, 0), profit = settled.reduce((a, b) => a + (+b.returns || 0) - +b.stake, 0), tone = profit > 0 ? "pos" : profit < 0 ? "neg" : "";
+  return `<div class="pnlrow"><div><small>Settled</small><b>${settled.length}</b></div><div><small>Win rate</small><b>${decided ? Math.round(won / decided * 100) + "%" : "–"}</b></div><div><small>Profit</small><b class="${tone}">${gbp(profit)}</b></div><div><small>Return</small><b class="${tone}">${staked ? (profit > 0 ? "+" : "") + Math.round(profit / staked * 100) + "%" : "–"}</b></div></div>`;
 }
 function betRow(b) {
   const pl = b.result === "won" ? `<span style="color:var(--win)">+${gbp(+b.returns - +b.stake)}</span>` : b.result === "lost" ? `<span style="color:var(--loss)">${gbp(-b.stake)}</span>` : b.result === "void" ? "stake back" : `returns ${gbp(+b.stake * +b.odds_dec)}`;
@@ -2179,7 +2188,10 @@ function viewMyBets() {
     ${!cards.length && !hand.length ? `<div class="empty art"><img src="img/empty-bets.webp" alt="" loading="lazy"><b>No open bets</b><span>Import a bet, or save one from your bet slip.</span></div>` : ""}
     ${bets.length ? statBlock() : ""}
     ${settled.length ? `<section class="section"><h2>Settled</h2><div style="display:grid;gap:8px">${settled.slice(0, S.showAllSettled ? 500 : 8).map(b => betRow(b)).join("")}</div>${settled.length > 8 && !S.showAllSettled ? `<button class="linkbtn" data-allsettled>Show all ${settled.length}</button>` : ""}</section>` : ""}
-    <details class="ownbet"><summary>Add a bet by hand</summary><form class="addrow" id="addBet"><div class="field"><label for="ab-label">Bet</label><input id="ab-label" placeholder="e.g. Liverpool to win" required></div><div class="field" style="flex:0 1 110px"><label for="ab-odds">Odds</label><input id="ab-odds" placeholder="5/2 or 3.5" required></div><div class="field" style="flex:0 1 100px"><label for="ab-stake">Stake £</label><input id="ab-stake" type="number" inputmode="decimal" min="0" step="0.5" value="${S.stake}" required></div><div class="field" style="flex:0 0 auto;align-self:end"><button class="btn" type="submit">Add</button></div></form></details>`;
+    <details class="handadd"><summary><span class="ic-dot">＋</span><span><b>Add a bet by hand</b><small>For bets you can't import. You'll mark these won or lost yourself.</small></span></summary>
+      <form id="addBet" class="handform"><div class="field hf-bet"><label for="ab-label">Bet</label><input id="ab-label" placeholder="e.g. Liverpool to win" required></div>
+      <div class="field"><label for="ab-odds">Odds</label><input id="ab-odds" placeholder="5/2" required></div><div class="field"><label for="ab-stake">Stake £</label><input id="ab-stake" type="number" inputmode="decimal" min="0" step="0.5" value="${S.stake}" required></div>
+      <button class="btn hf-go" type="submit">Add bet</button></form></details>`;
 }
 function myBetsView(inTab) {
   return `${statBlock()}<section class="section"><div class="hd"><h2>${inTab ? "Saved bets" : "My bets"}</h2>${inTab ? "" : `<button class="btn ghost sm" data-import>+ Import a player bet</button>`}<div class="chips">${[["open", "Open"], ["settled", "Settled"], ["all", "All"]].map(([k, l]) => `<button class="chip" data-betfilter="${k}" aria-pressed="${S.betFilter === k}">${l}</button>`).join("")}</div></div>
@@ -2328,7 +2340,7 @@ document.addEventListener("click", async e => {
     if (r.error) toast("Couldn't save the bet."); else { S.bets.unshift(r.data); toast("Saved to My Bets"); }
   }
 });
-document.addEventListener("change", e => { if (e.target.id === "avatarPick" && sb && S.user) { uploadAvatar(e.target.files[0]); e.target.value = ""; } if (e.target.id === "shareOpt" && sb && S.user) { saveProfile({ share_bets: e.target.checked }); toast(e.target.checked ? "Friends can see your bets" : "Your bets are now private"); } if (e.target.id === "lbOpt" && sb && S.user) { saveProfile({ show_on_leaderboard: e.target.checked }); sb.rpc("leaderboard").then(x => { if (x.data) { S.board = x.data; render(); } }); } });
+document.addEventListener("change", e => { if (e.target.id === "avatarPick" && sb && S.user) { S._picked = true; uploadAvatar(e.target.files[0]); e.target.value = ""; } if (e.target.id === "shareOpt" && sb && S.user) { saveProfile({ share_bets: e.target.checked }); toast(e.target.checked ? "Friends can see your bets" : "Your bets are now private"); } if (e.target.id === "lbOpt" && sb && S.user) { saveProfile({ show_on_leaderboard: e.target.checked }); sb.rpc("leaderboard").then(x => { if (x.data) { S.board = x.data; render(); } }); } });
 
 /* ---------- iPhone: suggest adding to the home screen (Safari only, once) ---------- */
 const IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
@@ -2427,6 +2439,10 @@ function render() {
   if (S.injOpen) L.insertAdjacentHTML("beforeend", injuryCard(S.injOpen));
   if (S.mateOpen && S.user) L.insertAdjacentHTML("beforeend", mateSheet(S.mateOpen));
   if (S.shareOpen && S.user) L.insertAdjacentHTML("beforeend", shareSheet());
+  if (S.photoHelp) L.insertAdjacentHTML("beforeend", `<div class="scrim top" data-photohelpx></div><div class="ijsheet" role="dialog" aria-modal="true" aria-label="Profile photo"><button class="close sm ij-x" data-photohelpx aria-label="Close">✕</button>
+    <div><h2>Your photos didn't open</h2><p class="sub" style="margin:4px 0 0">The Matchday Edge app on your phone is an older version that can't open your gallery. Two easy fixes:</p></div>
+    <ol class="helpsteps"><li><b>Quickest:</b> open the website in Chrome, sign in and set your photo there. It shows in the app straight away.<button class="btn sm" data-copysite style="margin-top:8px">Copy the website link</button></li>
+    <li><b>Or update the app:</b> uninstall Matchday Edge, then install the latest version from the download page.<a class="btn ghost sm" href="https://snuzzyyy.github.io/matchday-edge/app.html" style="margin-top:8px">Open the download page</a></li></ol></div>`);
   const CL = $("#cashlayer"); if (!(S.cashOpen && S.user)) { if (CL.firstChild) CL.innerHTML = ""; } else if (!$("#cashamt")) CL.innerHTML = cashSheet();
   const IL = $("#implayer");
   if (!S.importOpen) { if (IL.firstChild) IL.innerHTML = ""; }
@@ -2478,7 +2494,16 @@ document.addEventListener("click", e => {
   else if (d.rung) { S.rungSel = +d.rung; render(); }
   else if (d.inj) { S.injOpen = d.inj; render(); }
   else if (d.import !== undefined) { if (!(S.importText || "").trim()) { S.impOddsTyped = false; S.impOdds = ""; S.impStake = null; } S.importOpen = true; saveImpDraft(); S.slipOpen = false; render(); setTimeout(() => { const t = $("#imptext"); t && t.focus(); }, 50); }
-  else if (d.pickphoto !== undefined) { const f = $("#avatarPick"); f.value = ""; f.click(); }
+  else if (d.pickphoto !== undefined) {
+    const f = $("#avatarPick"); f.value = ""; S._picked = false;
+    // older Android app versions can't open the gallery: if nothing opens, explain the fix
+    let opened = false; const mark = () => { opened = true; };
+    addEventListener("blur", mark, { once: true }); document.addEventListener("visibilitychange", mark, { once: true });
+    f.click();
+    setTimeout(() => { removeEventListener("blur", mark); document.removeEventListener("visibilitychange", mark); if (!opened && !S._picked && /MatchdayEdgeApp/.test(navigator.userAgent)) { S.photoHelp = true; render(); } }, 1600);
+  }
+  else if (d.photohelpx !== undefined) { S.photoHelp = false; render(); }
+  else if (d.copysite !== undefined) { S.photoHelp = false; render(); copyText("https://snuzzyyy.github.io/matchday-edge/#account", "Link copied. Paste it into Chrome"); }
   else if (d.cashopen) { S.cashOpen = d.cashopen; render(); setTimeout(() => { const i = $("#cashamt"); i && i.focus(); }, 60); }
   else if (d.cashclose !== undefined) { S.cashOpen = null; render(); }
   else if (d.cashpart) { const i = $("#cashamt"); if (i) i.value = (Math.floor(chalNow().bank * +d.cashpart * 100) / 100).toFixed(2); }
