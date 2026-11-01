@@ -30,8 +30,10 @@ li b{color:#fff}
 <div class="top"><img src="icon-192.png" alt=""><div><h1>Matchday <b>Edge</b></h1><p class="sub">For Android and iPhone · free · updates itself</p></div></div>
 <div id="oswrap">
 <section class="os" id="android"><h2>Android</h2>
-<a class="dl" href="MatchdayEdge.apk" download="MatchdayEdge.apk">Download the Android app</a>
+<a class="dl" href="https://github.com/snuzzyyy/matchday-edge/releases/download/app/MatchdayEdge.apk">Download the Android app</a>
+<p class="note" id="inapp" hidden>You're inside the Matchday Edge app, so the download opens in Chrome.</p>
 <ol>
+<li>Already have Matchday Edge? <b>Uninstall it first</b>: press and hold its icon, then tap <b>Uninstall</b>. Your account, bets and friends are safe; you just sign in again.</li>
 <li>Tap <b>Download the Android app</b>. If Chrome asks whether to keep the file, tap <b>Download anyway</b>.</li>
 <li>Open the downloaded file from the notification or your <b>Files</b> app.</li>
 <li>If asked, allow your browser to <b>install unknown apps</b>, then go back.</li>
@@ -51,5 +53,6 @@ li b{color:#fff}
 <p class="note">Nothing to download from the App Store. It updates itself, just like the Android app.</p>
 </section>
 </div>
-<script>if (/iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)) document.getElementById("oswrap").classList.add("ios-first");</script>
+<script>if (/MatchdayEdgeApp/.test(navigator.userAgent)) document.getElementById("inapp").hidden = false;
+if (/iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)) document.getElementById("oswrap").classList.add("ios-first");</script>
 </main></body></html>
