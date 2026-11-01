@@ -232,12 +232,54 @@ def settle_ladder(C, uid):
     return True
 
 
+def ladder_total(C):
+    return round(float(C.get("bank") or 0) + sum(float(b.get("stake") or 0) for b in C.get("bets") or []), 2)
+
+
+def ladder_rung(C):
+    """The step you're on: each doubling of the ladder (a win at just under evens counts), same as the app."""
+    st, n, t = float(C.get("start") or 1), int(C.get("rungs") or 10), ladder_total(C)
+    if t >= float(C.get("target") or 1000) * st - 1e-9: return n
+    r = 0
+    for i in range(1, n):
+        if t >= st * 2 ** i * 0.95 - 1e-9: r = i
+    return r
+
+
+def settle_ladder3(C, uid):
+    """One ladder for football and NBA with up to 3 bets running (data v3)."""
+    changed, d = False, datetime.now(timezone.utc)
+    for b in list(C.get("bets") or []):
+        res, _ = outcome(b.get("legs"))
+        if not res: continue
+        stake, dec = float(b.get("stake") or 0), float(b.get("dec") or 1)
+        ret = round(stake * dec, 2) if res == "won" else 0
+        C["history"] = [{"at": now(), "date": f"{d.day} {d:%b}", "bet": b.get("label", ""), "match": b.get("match", ""), "odds": f"{dec:.2f}", "stake": stake,
+                         "result": "W" if res == "won" else "L", "ret": ret, "sport": b.get("sport")}] + (C.get("history") or [])
+        C["bets"] = [x for x in C.get("bets") or [] if x.get("id") != b.get("id")]
+        C["bank"] = round(float(C.get("bank") or 0) + ret, 2)
+        if ret: credit_wallet(uid, ret)   # £1K winnings land in the bookie balance too
+        changed = True
+    if not changed: return False
+    C["peak"] = max(float(C.get("peak") or 0), ladder_total(C)); C["rung"] = ladder_rung(C)
+    if ladder_total(C) < 0.01:   # nothing left on the ladder: that attempt is over
+        rets = [h.get("ret", 0) for h in C["history"] if h.get("result") in ("W", "C")]
+        today = f"{d.day} {d:%b %Y}"
+        C["past"] = [{"n": C.get("attempts") or 1, "started": C.get("started", ""), "ended": today, "outcome": "lost", "reached": C.get("rung", 0),
+                      "peak": max([C.get("start", 1), C.get("peak", 0)] + rets), "taken": C.get("taken", 0), "added": C.get("added", 0), "history": C["history"]}] + (C.get("past") or [])
+        C.update({"rung": 0, "bank": C.get("start", 1), "attempts": (C.get("attempts") or 1) + 1, "started": today, "history": [], "bets": [], "taken": 0, "added": 0, "peak": 0})
+    return True
+
+
 def settle_challenges():
     n = 0
     for row in http("GET", "challenges?select=user_id,data") or []:
         D, changed = row.get("data") or {}, False
-        for C in ([D.get("football"), D.get("nba")] if D.get("v") == 2 else [D]):
-            if C and settle_ladder(C, row["user_id"]): changed = True
+        if D.get("v") == 3:
+            if D.get("ladder") and settle_ladder3(D["ladder"], row["user_id"]): changed = True
+        else:
+            for C in ([D.get("football"), D.get("nba")] if D.get("v") == 2 else [D]):
+                if C and settle_ladder(C, row["user_id"]): changed = True
         if changed:
             http("PATCH", f"challenges?user_id=eq.{row['user_id']}", {"data": D, "updated_at": now()}); n += 1
     return n
