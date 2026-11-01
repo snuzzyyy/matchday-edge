@@ -170,6 +170,21 @@ h3{font-size:15px;font-weight:700}
 .cmp i{display:block;height:100%;border-radius:5px;transition:width .3s}
 .cmp .h{background:var(--blue)}.cmp .a{background:var(--tang)}
 .btiles{display:grid;gap:8px}
+.showcase{display:grid;gap:10px}
+.sc-card{display:grid;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;color:var(--fg);font:inherit;text-align:left;width:100%}
+.ijsheet .sc-card{background:var(--bg-2)}
+.sc-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px}.sc-head b{font-size:14.5px}.sc-head small{font-size:12.5px;color:var(--muted);font-weight:600}
+.formdots{display:flex;gap:6px;flex-wrap:wrap}.fdot{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;font-family:var(--display);font-weight:700;font-size:14px}
+.fdot.w{background:rgba(34,216,143,.16);color:var(--win)}.fdot.l{background:rgba(255,83,112,.14);color:var(--loss)}
+.bigwin{cursor:pointer;background:radial-gradient(90% 160% at 100% 0%,rgba(34,216,143,.16),transparent 60%),var(--surface)}
+.bw-main{display:flex;align-items:baseline;gap:10px;min-width:0}.bw-amt{font-family:var(--display);font-size:28px;font-weight:700;color:var(--win)}.bw-lab{font-size:13.5px;color:var(--fg-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.achs{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.ach{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;background:var(--bg-2);border:1px dashed var(--line-2);opacity:.55}
+.ach.on{opacity:1;border-style:solid;border-color:rgba(255,190,60,.45);background:radial-gradient(120% 160% at 0% 0%,rgba(255,190,60,.14),transparent 60%),var(--bg-2)}
+.ach i{font-style:normal;font-size:20px}.ach b{display:block;font-size:13px}.ach small{display:block;font-size:11px;color:var(--muted)}
+.tn-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;width:100%;background:none;border:0;border-top:1px solid var(--line);padding:9px 0 0;color:var(--fg);font:inherit;text-align:left;cursor:pointer}
+.sc-head + .tn-row{border-top:0;padding-top:0}.tn-row .logo,.tn-row .mono{width:26px;height:26px}.tn-row b{display:block;font-size:14px}.tn-row small{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted)}.tn-row small.live{color:var(--live);font-weight:700}.tn-row > span:last-child{color:var(--muted);font-size:18px}
+.sc-empty b{font-size:14.5px}.sc-empty small{color:var(--muted);font-size:13px}
 /* ---- tidy-up: no repeated page titles under the Games/Bets switcher, and use the width on bigger screens ---- */
 .subnav + .hd h1{display:none}.subnav + .hd .sub{margin-top:0}.subnav + .hd{align-items:center}
 .setgrid{display:grid;gap:24px}
@@ -2271,6 +2286,7 @@ function viewAccount(mode = "account") {
     <div class="who"><b>${esc(P.display_name || "")}</b><div class="prof-bdg">${badgesHTML(P)}${planChip(P)}</div><small>Member since ${new Date(P.created_at || S.user.created_at).toLocaleDateString("en-GB", { month: "short", year: "numeric" })}</small></div></div>
     ${S.socialReady && P.friend_code ? `<div class="prof-code"><div><small>Friend code</small><b class="fcode">${esc(P.friend_code)}</b></div><div class="prof-acts"><button class="fc-btn" data-copycode aria-label="Copy friend code">⧉ Copy</button><button class="fc-btn" data-invite aria-label="Share invite link">↗ Share</button></div></div>` : ""}</section>
   ${m}
+  ${profileShowcase(S.user.id)}
   <div class="setcard links"><a class="setrow" href="#friends">${avatarStack()}<span><b>Friends</b><small>${nFr ? `${nFr} friend${nFr > 1 ? "s" : ""}` : "Invite your friends"}</small></span><span class="rchev" aria-hidden="true">›</span></a>
   <a class="setrow" href="#mybets"><span class="ic-dot">${ICON.chart}</span><span><b>My Bets</b><small>${S.bets.length ? `${S.bets.length} saved` : "Your bets and profit"}</small></span><span class="rchev" aria-hidden="true">›</span></a></div>
   ${profileView()}
@@ -2402,6 +2418,38 @@ function profileView() {
   <form class="setrow namerow" id="addFav"><label for="favpick"><small>Add a team</small></label><input id="favpick" list="teamlist" placeholder="Start typing a team"><datalist id="teamlist">${allTeams().map(t => `<option value="${esc(t.name)}${t.sport === "nba" ? " (NBA)" : ""}"></option>`).join("")}</datalist><button class="btn ghost sm" type="submit">Add</button></form></div></section>
   </div>${proCard()}`;
 }
+// ---------- profile showcase: stats, form, best win, badges and teams ----------
+function nextMatchFor(f) {
+  const id = String(f.id), gs = games(f.sport).filter(g => String(g.home.id) === id || String(g.away.id) === id);
+  const live = gs.find(isLive); if (live) return { live: true, txt: `Live now · ${clockLabel(f.sport, live)}`, g: live };
+  const nx = gs.filter(isPre).sort((a, b) => new Date(kick(a)) - new Date(kick(b)))[0]; if (!nx) return null;
+  const opp = String(nx.home.id) === id ? nx.away : nx.home, home = String(nx.home.id) === id;
+  return { live: false, txt: `${whenLabel(kick(nx))} · ${home ? "v" : "at"} ${opp.name}`, g: nx };
+}
+function profileShowcase(uid) {
+  const me = S.user && uid === S.user.id, p = (me ? S.profile : person(uid)) || {};
+  const bets = me ? (S.bets || []) : (S.feedBets || []).filter(b => b.user_id === uid);
+  const done = bets.filter(b => b.result === "won" || b.result === "lost").sort((a, b) => new Date(b.settled_at || b.placed_at) - new Date(a.settled_at || a.placed_at));
+  const won = done.filter(b => b.result === "won"), settled = bets.filter(b => b.result !== "open");
+  const profit = settled.reduce((a, b) => a + (+b.returns || 0) - +b.stake, 0);
+  let streak = 0; for (const b of done) { if (b.result === "won") streak++; else break; }
+  const bestOdds = won.reduce((m, b) => Math.max(m, +b.odds_dec), 0), big = [...won].sort((a, b) => (+b.returns - +b.stake) - (+a.returns - +a.stake))[0];
+  const ch = splitChal(me ? S.chalAll : (S.friendChal || {})[uid]), topStep = Math.max(0, ...["football", "nba"].map(k => ch[k] ? Math.max(ch[k].rung || 0, ...(ch[k].past || []).map(x => x.reached || 0)) : 0));
+  const A = [["🎯", "First win", "Win a bet", won.length > 0], ["🔥", "Hot streak", "Win 3 in a row", streak >= 3 || done.some((b, i) => done.slice(i, i + 3).length === 3 && done.slice(i, i + 3).every(x => x.result === "won"))],
+    ["🧩", "Acca hero", "Win a 3+ leg bet", won.some(b => (b.legs || []).length >= 3)], ["🚀", "Long shot", "Win at 3/1 or bigger", bestOdds >= 4],
+    ["📈", "In profit", "Be up after 5+ bets", settled.length >= 5 && profit > 0], ["🪜", "Climber", "Reach step 3 of the £1K", topStep >= 2], ["🗓️", "Regular", "Save 10 bets", bets.length >= 10]];
+  const got = A.filter(a => a[3]), locked = A.filter(a => !a[3]).slice(0, Math.max(0, 4 - got.length));
+  const teams = (p.fav_teams || []).map(f => ({ f, n: nextMatchFor(f) }));
+  const empty = !bets.length;
+  return `<section class="showcase">
+    ${bets.length ? `<div class="pnlrow"><div><small>Bets</small><b>${bets.length}</b></div><div><small>Win rate</small><b>${done.length ? Math.round(won.length / done.length * 100) + "%" : "–"}</b></div><div><small>Profit</small><b class="${profit > 0 ? "pos" : profit < 0 ? "neg" : ""}">${settled.length ? gbp(profit) : "–"}</b></div><div><small>Best odds won</small><b>${bestOdds ? odds(bestOdds) : "–"}</b></div></div>` : ""}
+    ${done.length ? `<div class="sc-card"><div class="sc-head"><b>Form</b><small>${streak >= 2 ? `🔥 ${streak} wins in a row` : `Last ${Math.min(10, done.length)} results`}</small></div><div class="formdots">${done.slice(0, 10).map(b => `<span class="fdot ${b.result === "won" ? "w" : "l"}" title="${esc(b.label)}">${b.result === "won" ? "W" : "L"}</span>`).join("")}</div></div>` : ""}
+    ${big ? `<button class="sc-card bigwin" data-betview="${big.id}"><div class="sc-head"><b>Biggest win</b><small>${odds(+big.odds_dec)}</small></div><div class="bw-main"><span class="bw-amt">+${money(+big.returns - +big.stake)}</span><span class="bw-lab">${esc(betTitle(big.legs, big.label))}</span></div></button>` : ""}
+    <div class="sc-card"><div class="sc-head"><b>Badges</b><small>${got.length} of ${A.length} earned</small></div><div class="achs">${got.map(a => `<span class="ach on"><i>${a[0]}</i><span><b>${a[1]}</b><small>${a[2]}</small></span></span>`).join("")}${locked.map(a => `<span class="ach"><i>${a[0]}</i><span><b>${a[1]}</b><small>${a[2]}</small></span></span>`).join("")}</div></div>
+    ${teams.length ? `<div class="sc-card"><div class="sc-head"><b>${me ? "Your teams" : "Their teams"}</b></div>${teams.map(({ f, n }) => n ? `<button class="tn-row" data-open="${f.sport}:${n.g.id}">${logo(f.sport, { id: f.id, name: f.name, abbr: f.name.slice(0, 3), color: "#334155" })}<span><b>${esc(f.name)}</b><small class="${n.live ? "live" : ""}">${n.live ? '<span class="dot red"></span>' : ""}${esc(n.txt)}</small></span><span aria-hidden="true">›</span></button>` : `<div class="tn-row">${logo(f.sport, { id: f.id, name: f.name, abbr: f.name.slice(0, 3), color: "#334155" })}<span><b>${esc(f.name)}</b><small>No game in the next few days</small></span><span></span></div>`).join("")}</div>` : ""}
+    ${empty && me ? `<div class="sc-card sc-empty"><b>Your profile fills up as you bet</b><small>Save or import a bet and your form, best wins and badges appear here.</small></div>` : ""}
+  </section>`;
+}
 function mateSheet(uid) {
   const me = uid === S.user.id, p = person(uid), bets = (S.feedBets || []).filter(b => b.user_id === uid), ch = chalPick(me ? S.chalAll : (S.friendChal || {})[uid]);
   const settled = bets.filter(b => b.result !== "open"), won = settled.filter(b => b.result === "won").length, decided = settled.filter(b => b.result !== "void").length;
@@ -2410,10 +2458,10 @@ function mateSheet(uid) {
   const ladders = Object.entries(splitChal(me ? S.chalAll : (S.friendChal || {})[uid])).filter(([k, C]) => k !== "v" && C && ((C.history || []).length || C.active || C.rung || (C.past || []).length));
   return `<div class="scrim top" data-mateclose></div><div class="ijsheet" role="dialog" aria-modal="true" aria-label="${esc(p.display_name)}"><button class="close sm ij-x" data-mateclose aria-label="Close">✕</button>
     <div class="ij-head">${avatarHTML(p, 64)}<div><h2>${esc(p.display_name)}</h2>${badgesHTML(p) || p.plan === "pro" ? `<div class="bdgrow">${badgesHTML(p)}${p.plan === "pro" ? planChip(p) : ""}</div>` : ""}<span class="ij-team">${me ? "That's you" : "Friend"}${p.created_at ? " · joined " + new Date(p.created_at).toLocaleDateString("en-GB", { month: "short", year: "numeric" }) : ""}${p.friend_code ? ` · code <b class="fcode">${esc(p.friend_code)}</b>` : ""}</span></div></div>
-    ${settled.length ? `<div class="pnlrow"><div><small>Profit</small><b class="${profit > 0 ? "pos" : profit < 0 ? "neg" : ""}">${gbp(profit)}</b></div><div><small>Win rate</small><b>${decided ? Math.round(won / decided * 100) + "%" : "–"}</b></div><div><small>Return</small><b>${staked ? (profit > 0 ? "+" : "") + Math.round(profit / staked * 100) + "%" : "–"}</b></div><div><small>Settled</small><b>${settled.length}</b></div></div>` : ""}
+    ${profileShowcase(uid)}
     ${!me && (S.friendWallets || {})[uid] ? `<div class="mchips"><span class="mchip">💷 Balance ${money(+S.friendWallets[uid].amount)}</span></div>` : ""}
     ${ladders.length ? `<div class="mchips">${ladders.map(([sp, C]) => `<span class="mchip"><img src="img/${sp === "nba" ? "icon-basketball" : "icon-football"}.webp" alt="">£1K ${SPN[sp]} · ${C.rung >= C.rungs ? "Done 🏆" : `step ${(C.rung || 0) + 1} · ${money(+C.bank)}`}</span>`).join("")}</div>` : ""}
-    ${(p.fav_teams || []).length ? `<h3 class="bv-h">Favourite teams</h3><div class="favs">${p.fav_teams.map(f => `<span class="fav">${logo(f.sport, { id: f.id, name: f.name, abbr: f.name.slice(0, 3), color: "#334155" })}${esc(f.name)}</span>`).join("")}</div>` : ""}
+
     ${bets.length ? `<h3 class="bv-h">Recent bets</h3><div class="btiles">${bets.slice(0, 10).map(betTile).join("")}</div>`
       : `<div class="empty art mate-empty"><img src="img/empty-bets.webp" alt="" loading="lazy"><b>${shares ? "No bets yet" : "Bets kept private"}</b><span>${shares ? `When ${esc(me ? "you save" : p.display_name + " saves")} a bet, it shows here and in your feed.` : `${esc(p.display_name)} has chosen to keep their bets private.`}</span></div>`}</div>`;
 }
@@ -2517,7 +2565,15 @@ document.addEventListener("click", async e => {
     if (res === "open") { const k = store.get("noAuto", []); if (!k.includes(id)) store.set("noAuto", [...k, id].slice(-200)); }   // reopened by hand: leave it alone
     settleBet(b, res);
   }
-  else if (d.delbet) { S.betView = null; const db = S.bets.find(x => x.id === d.delbet); if (db && S.wallet) walletAdjust((new Date(db.placed_at) >= new Date(S.wallet.set_at) ? +db.stake : 0) - credit(db)); S.bets = S.bets.filter(x => x.id !== d.delbet); render(); await sb.from("bets").delete().eq("id", d.delbet); }
+  else if (d.delbet) {
+    if (t.dataset.armed !== "1") { t.dataset.armed = "1"; t.textContent = "Tap again to delete"; setTimeout(() => { if (t.isConnected) { t.dataset.armed = ""; t.textContent = t.classList.contains("x") ? "✕" : "Delete this bet"; } }, 3000); return; }
+    const id = d.delbet, db = S.bets.find(x => x.id === id), fb = (S.feedBets || []).find(x => x.id === id);
+    S.betView = null; S.bets = S.bets.filter(x => x.id !== id); S.feedBets = (S.feedBets || []).filter(x => x.id !== id); render();
+    const r = await sb.from("bets").delete().eq("id", id);
+    if (r.error) { if (db) S.bets.unshift(db); if (fb) S.feedBets.unshift(fb); render(); toast("Couldn't delete that bet. Try again"); return; }
+    if (db && S.wallet) walletAdjust((new Date(db.placed_at) >= new Date(S.wallet.set_at) ? +db.stake : 0) - credit(db));
+    toast("Bet deleted"); loadSocial();
+  }
   else if (d.unfav) { const [sp, id] = d.unfav.split("|"); saveProfile({ fav_teams: (S.profile.fav_teams || []).filter(x => !(x.sport === sp && x.id === id)) }); }
   else if (d.waitlist !== undefined) { const r = await sb.from("pro_waitlist").upsert({ user_id: S.user.id }); if (r.error) toast("Couldn't join. Try again."); else { S.waitlisted = true; render(); toast("You're on the Pro waitlist"); } }
   else if (d.chalreset !== undefined) { const C = JSON.parse(JSON.stringify(chalNow())); if (C.history.length || C.rung) archiveAttempt(C, C.rung >= C.rungs ? "completed" : "stopped"); else Object.assign(C, { active: null }); S.rungSel = null; saveChal(C); toast("New ladder started"); }
