@@ -4,7 +4,13 @@ import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Color;
 import android.net.Uri;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.ClipData;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
@@ -31,7 +37,7 @@ public class MainActivity extends Activity {
         s.setDomStorageEnabled(true);
         s.setDatabaseEnabled(true);
         s.setCacheMode(WebSettings.LOAD_DEFAULT);
-        s.setUserAgentString(s.getUserAgentString() + " MatchdayEdgeApp/1.3");
+        s.setUserAgentString(s.getUserAgentString() + " MatchdayEdgeApp/1.4");
         // Lets the site open the phone's own share menu (WhatsApp, Messages, Snapchat...)
         web.addJavascriptInterface(new Object() {
             @JavascriptInterface
@@ -40,6 +46,19 @@ public class MainActivity extends Activity {
                 send.setType("text/plain");
                 send.putExtra(Intent.EXTRA_TEXT, text);
                 runOnUiThread(() -> { try { startActivity(Intent.createChooser(send, "Share")); } catch (Exception ignored) { } });
+            }
+            // Bet alerts: the site calls these to show a phone notification
+            @JavascriptInterface
+            public boolean canNotify() {
+                return Build.VERSION.SDK_INT < 33 || checkSelfPermission("android.permission.POST_NOTIFICATIONS") == PackageManager.PERMISSION_GRANTED;
+            }
+            @JavascriptInterface
+            public void askNotify() {
+                if (Build.VERSION.SDK_INT >= 33) runOnUiThread(() -> requestPermissions(new String[] { "android.permission.POST_NOTIFICATIONS" }, 7));
+            }
+            @JavascriptInterface
+            public void notify(String title, String body, String tag) {
+                showAlert(title, body, tag);
             }
         }, "MDEApp");
         // Downloads (like a new version of the app) go to the phone's browser
@@ -75,6 +94,31 @@ public class MainActivity extends Activity {
         setContentView(web);
         if (state != null) web.restoreState(state);
         else web.loadUrl(HOME);
+    }
+
+    private void showAlert(String title, String body, String tag) {
+        NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        if (nm == null) return;
+        if (Build.VERSION.SDK_INT >= 26 && nm.getNotificationChannel("bets") == null) {
+            NotificationChannel ch = new NotificationChannel("bets", "Bet alerts", NotificationManager.IMPORTANCE_HIGH);
+            ch.setDescription("When a leg lands, a player is close, or a bet settles");
+            nm.createNotificationChannel(ch);
+        }
+        Intent open = new Intent(this, MainActivity.class);
+        open.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        open.putExtra("hash", "#mybets");
+        PendingIntent pi = PendingIntent.getActivity(this, 0, open, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+        Notification.Builder b = Build.VERSION.SDK_INT >= 26 ? new Notification.Builder(this, "bets") : new Notification.Builder(this);
+        b.setSmallIcon(R.drawable.ic_notify).setContentTitle(title).setContentText(body)
+         .setStyle(new Notification.BigTextStyle().bigText(body)).setAutoCancel(true).setContentIntent(pi).setColor(Color.parseColor("#FF7A2F"));
+        try { nm.notify(tag == null ? (int) System.currentTimeMillis() : tag.hashCode(), b.build()); } catch (Exception ignored) { }
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        String h = intent.getStringExtra("hash");
+        if (h != null && web != null) web.evaluateJavascript("location.hash='" + h.replace("'", "") + "'", null);
     }
 
     @Override

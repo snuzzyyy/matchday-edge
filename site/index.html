@@ -2727,6 +2727,7 @@ function profileView() {
     <form class="setrow namerow" id="nameForm"><label for="dn"><small>Display name</small></label><input id="dn" maxlength="24" value="${esc(P.display_name || "")}" autocomplete="nickname"><button class="btn ghost sm" type="submit">Save</button></form>
     <div class="setrow"><span>${avatarHTML(P, 40)}</span><span><b>Profile photo</b><small>Or tap your picture at the top</small></span><span class="rowbtns"><button type="button" class="btn ghost sm" data-pickphoto>${P.avatar_url ? "Change" : "Add"}</button>${P.avatar_url ? `<button class="btn ghost sm" data-noavatar>Remove</button>` : ""}</span></div></div></section>
   ${walletSection(sw)}
+  <section class="section"><h2>Alerts</h2><div class="setcard">${sw("alertOpt", alertsOn(), "Bet alerts", ALERT_APP() ? "A notification when a leg lands, a player is one away, or a bet settles" : IOS && !STANDALONE ? "Add the app to your Home Screen to get notifications" : "A notification when a leg lands, a player is one away, or a bet settles")}</div></section>
   <section class="section"><h2>Privacy</h2><div class="setcard">
     ${sw("shareOpt", P.share_bets !== false, "Friends can see my bets", "They can react to them and tail them")}
     ${sw("lbOpt", P.show_on_leaderboard !== false, "Show me on leaderboards", "Your friends' board and the app-wide Top players")}
@@ -2920,6 +2921,7 @@ document.addEventListener("click", async e => {
     if (r.error) toast("Couldn't save the bet."); else { S.bets.unshift(r.data); walletAdjust(-(+r.data.stake)); toast("Saved to My Bets"); }
   }
 });
+document.addEventListener("change", async e => { if (e.target.id === "alertOpt") { if (e.target.checked) { const ok = await askAlerts(); store.set("alerts", true); store.set("alertKnown", []); toast(ok ? "Bet alerts on" : "Bet alerts on inside the app"); alertTick(); sendAlert("Bet alerts are on", "You'll hear when your legs land", "test"); } else { store.set("alerts", false); toast("Bet alerts off"); } } });
 document.addEventListener("change", e => { if ((e.target.id === "discOpt" || e.target.id === "pubOpt") && sb && S.user) { const k = e.target.id === "discOpt" ? "discoverable" : "bets_public"; saveProfile({ [k]: e.target.checked }); toast(k === "discoverable" ? (e.target.checked ? "People can find you" : "Hidden from search") : (e.target.checked ? "Your bets are public" : "Your bets are private again")); } if (e.target.id === "walletPub" && sb && S.user && S.wallet) { S.wallet.is_public = e.target.checked; sb.from("wallets").update({ is_public: e.target.checked }).eq("user_id", S.user.id); toast(e.target.checked ? "Friends can see your balance" : "Your balance is private"); render(); } if (e.target.id === "avatarPick" && sb && S.user) { S._picked = true; uploadAvatar(e.target.files[0]); e.target.value = ""; } if (e.target.id === "shareOpt" && sb && S.user) { saveProfile({ share_bets: e.target.checked }); toast(e.target.checked ? "Friends can see your bets" : "Your bets are now private"); } if (e.target.id === "lbOpt" && sb && S.user) { saveProfile({ show_on_leaderboard: e.target.checked }); sb.rpc("leaderboard").then(x => { if (x.data) { S.board = x.data; render(); } }); } });
 
 /* ---------- iPhone: suggest adding to the home screen (Safari only, once) ---------- */
@@ -3019,6 +3021,46 @@ function betOutcome(legs) {   // "won" / "lost" once it's certain, otherwise nul
   }
   return lost ? "lost" : all ? "won" : null;
 }
+// ---------- bet alerts: a leg lands, a player is one away, a bet settles ----------
+const ALERT_APP = () => window.MDEApp && MDEApp.notify;
+const alertsOn = () => store.get("alerts", false);
+const notifyAllowed = () => ALERT_APP() ? (MDEApp.canNotify ? MDEApp.canNotify() : true) : "Notification" in window && Notification.permission === "granted";
+let swReg = null; if ("serviceWorker" in navigator && !ALERT_APP()) navigator.serviceWorker.register("sw.js").then(r => { swReg = r; }).catch(() => {});
+async function askAlerts() {
+  if (ALERT_APP()) { if (MDEApp.askNotify) MDEApp.askNotify(); return true; }
+  if (!("Notification" in window)) { toast(IOS ? "Add Matchday Edge to your Home Screen first, then switch alerts on there" : "This browser can't show notifications"); return false; }
+  const r = await Notification.requestPermission(); if (r !== "granted") toast("Notifications are blocked. Allow them in your browser settings"); return r === "granted";
+}
+function sendAlert(title, body, tag) {
+  if (document.visibilityState === "visible") toast(`${title}${body ? " · " + body : ""}`);
+  if (!notifyAllowed() || (document.visibilityState === "visible" && !ALERT_APP())) return;
+  try { if (ALERT_APP()) MDEApp.notify(title, body || "", tag || title);
+    else if (swReg) swReg.showNotification(title, { body, tag, icon: "icon-192.png", badge: "icon-192.png" });
+    else new Notification(title, { body, tag, icon: "icon-192.png" }); } catch {}
+}
+function alertTick() {
+  if (!alertsOn() || !S.data) return;
+  const seen = new Set(store.get("alerted", [])), known = new Set(store.get("alertKnown", [])), fresh = [], first = [];
+  const saved = (S.user ? S.bets || [] : []), local = (S.tracked || []).filter(t => !saved.some(b => b.label === t.text));
+  const items = [...local.map(t => ({ id: "t" + t.id, title: betTitle(t.legs, t.text), legs: t.legs, result: null })), ...saved.filter(b => b.result === "open" || +new Date(b.settled_at || 0) > Date.now() - 6 * 3600e3).map(b => ({ id: "b" + b.id, title: betTitle(b.legs, b.label), legs: b.legs || [], result: b.result, ret: +b.returns }))];
+  for (const it of items) {
+    const isNew = !known.has(it.id), add = (k, title, body) => { const key = it.id + ":" + k; if (seen.has(key)) return; seen.add(key); if (!isNew) fresh.push([title, body, key]); };
+    const L = it.legs.filter(l => (l.pid || l.k) && l.gid && findGame(l.sport, l.gid)), info = L.map(l => ({ l, i: legInfo0(l) })), hit = info.filter(x => x.i.st === "hit").length;
+    for (const { l, i } of info) {
+      const lk = l.pid ? `p${l.pid}${l.stat}${l.target}` : `k${l.gid}${l.k}`, nm = l.pid ? `${l.name} ${l.target}+ ${l.label}` : l.label;
+      if (i.st === "hit") add(lk + ":hit", `✓ ${nm}`, L.length > 1 ? `${hit} of ${L.length} landed · ${it.title}` : "Landed");
+      if (l.pid && i.st === "live") { const r = legValue(l), need = r.v == null ? null : l.target - r.v; if (need != null && need > 0 && need <= (l.stat === "PTS" || l.stat === "PRA" ? 2 : 1)) add(lk + ":close", `🔥 ${l.name} needs ${need} more ${need === 1 ? l.label.replace(/s$/, "") : l.label}`, `${l.target}+ ${l.label} · ${it.title}`); }
+      if (i.st === "miss") add(lk + ":miss", `✗ ${nm} missed`, it.title);
+    }
+    if (it.result === "won") add("won", `🎉 Winner! ${it.title}`, `Returned ${money(it.ret)}`);
+    if (it.result === "lost") add("lost", `Bet lost: ${it.title}`, "Better luck next time");
+    if (it.result == null && L.length && hit === L.length) add("won", `🎉 All legs landed: ${it.title}`, "Check your bookie for the payout");
+    if (isNew) first.push(it.id);
+  }
+  store.set("alerted", [...seen].slice(-600)); store.set("alertKnown", [...known, ...first].slice(-300));
+  for (const [t, b, k] of fresh.slice(0, 4)) sendAlert(t, b, k);
+}
+setInterval(alertTick, 15e3);
 let autoAt = 0;
 function autoSettle() {
   if (!sb || !S.user || !S.data || Date.now() - autoAt < 15e3) return; autoAt = Date.now();
@@ -3273,7 +3315,7 @@ async function loadDetail(key) {
 }
 let ticking = false;
 async function liveTick() {
-  if (ticking || !S.data || document.visibilityState === "hidden") return; ticking = true;
+  if (ticking || !S.data || (document.visibilityState === "hidden" && !(alertsOn() && liveBetCount()))) return; ticking = true;
   try {
     const now = Date.now(), due = g => g.status.state === "in" || g._fin || (g.status.state === "pre" && +new Date(kick(g)) <= now + 60e3 && now - +new Date(kick(g)) < 4 * 3600e3);
     const paths = new Set([...S.data.football.filter(due).map(g => "soccer/" + g.league), ...(S.data.nba.some(due) ? ["basketball/nba"] : [])]);
