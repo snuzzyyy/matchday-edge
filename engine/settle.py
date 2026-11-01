@@ -212,8 +212,8 @@ def settle_ladder(C, uid):
         rets = [h.get("ret", 0) for h in C["history"] if h.get("result") in ("W", "C")]
         today = f"{d.day} {d:%b %Y}"
         C["past"] = [{"n": C.get("attempts") or 1, "started": C.get("started", ""), "ended": today, "outcome": "lost", "reached": C.get("rung", 0),
-                      "peak": max([C.get("start", 1)] + rets), "taken": C.get("taken", 0), "history": C["history"]}] + (C.get("past") or [])
-        C.update({"rung": 0, "bank": C.get("start", 1), "attempts": (C.get("attempts") or 1) + 1, "started": today, "history": [], "active": None, "taken": 0})
+                      "peak": max([C.get("start", 1)] + rets), "taken": C.get("taken", 0), "added": C.get("added", 0), "history": C["history"]}] + (C.get("past") or [])
+        C.update({"rung": 0, "bank": C.get("start", 1), "attempts": (C.get("attempts") or 1) + 1, "started": today, "history": [], "active": None, "taken": 0, "added": 0})
     return True
 
 

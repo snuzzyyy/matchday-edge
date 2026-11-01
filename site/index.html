@@ -823,7 +823,7 @@ a.prof-bdg{text-decoration:none}
 .rb-odds{display:grid;justify-items:end;gap:3px}
 .rb-odds .oddin{width:84px;font-size:20px;padding:6px 8px}
 .rb-odds small{font-size:11px;color:var(--muted)}
-.rb-sum{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;color:var(--fg-2)}
+.rb-sum{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;color:var(--fg-2)}.rb-stake{display:grid;grid-template-columns:auto 84px;gap:2px 8px;align-items:center}.rb-stake input{width:84px;text-align:right}.rb-stake small{grid-column:2;text-align:right;color:var(--muted);font-size:11px}
 .rb-sum b{font-family:var(--display);font-size:22px;color:var(--win)}
 .helpsteps{margin:0;padding-left:20px;display:grid;gap:14px;font-size:14px;color:var(--fg-2)}.helpsteps li > *:last-child{display:flex;width:max-content}
 .pnlrow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 4px}
@@ -1780,7 +1780,8 @@ function chalTotals(C) {   // money in and out of one ladder, across every attem
   const begun = (C.history || []).length || C.active || C.rung;
   const started = (C.past || []).length + (begun ? 1 : 0);
   const taken = (C.past || []).reduce((a, p) => a + (+p.taken || 0) + (p.outcome === "completed" ? +p.peak || 0 : 0), 0) + (+C.taken || 0);
-  return { started, putIn: started * (C.start || 1), taken, riding: begun ? +C.bank || 0 : 0 };
+  const added = (C.past || []).reduce((a, p) => a + (+p.added || 0), 0) + (+C.added || 0);
+  return { started, putIn: started * (C.start || 1) + added, taken, riding: begun ? +C.bank || 0 : 0 };
 }
 function chalSummary() {
   const one = sp => { const C = chalNow(sp), T = chalTotals(C), done = C.rung >= C.rungs;
@@ -1802,7 +1803,7 @@ function viewChallenge() {
   const running = A ? `<section class="runbet"><div class="rb-top"><span class="tag evens">Step ${C.rung + 1} bet</span><button class="linkbtn" data-chalclear>Change bet</button></div>
       <div class="rb-main"><div><div class="sel" style="font-size:16px">${esc(A.label)}</div><div class="mt">${esc(A.match)} · ${A.legs.filter(l => l.kick).map(l => whenLabel(l.kick)).filter((x, i, a) => a.indexOf(x) === i).join(", ")}</div></div>
       <div class="rb-odds"><label for="rbodds" class="sr">Odds</label><input id="rbodds" class="oddin ${A.custom ? "mine" : ""}" data-chalodds value="${odds(A.dec)}" autocomplete="off"><small>${A.custom ? "your price" : "tap to change"}</small></div></div>
-      <div class="rb-sum"><span>£${C.bank} stake</span><b>Returns ${money(C.bank * A.dec)}</b></div>
+      <div class="rb-sum">${mine ? `<label class="rb-stake"><span>Stake £</span><input class="oddin" data-chalstake value="${(+C.bank).toFixed(2).replace(/\.00$/, "")}" inputmode="decimal" autocomplete="off" aria-label="Your stake in pounds. Tap to change"><small>tap to change</small></label>` : `<span>£${C.bank} stake</span>`}<b>Returns ${money(C.bank * A.dec)}</b></div>
       ${linked ? `<div class="rb-legs">${A.legs.map(l => legInfo(l).html).join("")}</div>` : ""}
       ${linked ? `<div class="rb-foot"><span class="rb-note">${auto ? (auto === "W" ? "Final score's in: settling as a win…" : "Final score's in: settling as lost…") : "Settles itself at full time."}</span>${mine ? `<button class="linkbtn" data-cashopen="bet">Cash out</button>` : ""}</div>`
         : mine ? `<div class="addrow"><button class="btn win" data-chalres="W">It won</button><button class="btn lose" data-chalres="L">It lost</button><button class="btn ghost" data-cashopen="bet">Cash out</button></div>` : ""}</section>` : "";
@@ -1856,8 +1857,8 @@ function chalSettle(res, bet, match, dec, sport = S.sport) {
 }
 function archiveAttempt(C, outcome) {
   const peak = Math.max(C.start, ...C.history.filter(h => h.result === "W" || h.result === "C").map(h => +h.ret));
-  C.past.unshift({ n: C.attempts || 1, started: C.started || "", ended: today(), outcome, reached: C.rung, peak, taken: C.taken || 0, history: C.history });
-  Object.assign(C, { rung: 0, bank: C.start, attempts: (C.attempts || 1) + 1, started: today(), history: [], active: null, taken: 0 });
+  C.past.unshift({ n: C.attempts || 1, started: C.started || "", ended: today(), outcome, reached: C.rung, peak, taken: C.taken || 0, added: C.added || 0, history: C.history });
+  Object.assign(C, { rung: 0, bank: C.start, attempts: (C.attempts || 1) + 1, started: today(), history: [], active: null, taken: 0, added: 0 });
 }
 
 /* ---------- match drawer ---------- */
@@ -3455,7 +3456,11 @@ function setLegOdds(id, raw) {
   save(); render(); toast(l.custom ? "Price updated to " + odds(l.dec) : "Back to the app's price");
 }
 document.addEventListener("change", e => { const t = e.target;
-  if (t.dataset && (t.dataset.accaxadd || t.dataset.accalxadd) && t.value) { const live = !!t.dataset.accalxadd, gid = live ? t.dataset.accalxadd : t.dataset.accaxadd, st = live ? (S.accaLiveX = S.accaLiveX || {}) : (S.accaX = S.accaX || {}); st[gid] = [...(st[gid] || []), t.value]; (S.addOpen = S.addOpen || {})[(live ? "data-accalxadd-" : "data-accaxadd-") + gid] = false; render(); return; } if (t.id === "shotPick" && t.files && t.files[0]) { S.impShotMsg = ""; readShot(t.files[0]); } if (t.dataset && t.dataset.accalivealt) { const gid = t.dataset.accalivealt; if ((S._accaLiveLegs || []).some(x => x.g.id === gid)) pinGame(true, gid, ks => [t.value, ...ks.slice(1)]); else (S.accaLivePick = S.accaLivePick || {})[gid] = t.value; render(); } if (t.dataset && (t.dataset.accaxswap || t.dataset.accalxswap) && t.value) { const live = !!t.dataset.accalxswap, [gid, old] = (live ? t.dataset.accalxswap : t.dataset.accaxswap).split("|"); pinGame(live, gid, ks => ks.map(x => x === old ? t.value : x)); render(); return; } if (t.dataset && t.dataset.legodds) setLegOdds(t.dataset.legodds, t.value); if (t.dataset && t.dataset.chalodds !== undefined && S.user) { const o = parseOdds(t.value); if (!o) { toast("Use odds like 5/2, EVS or 3.5"); $("#main")._h = null; render(); } else { const C = JSON.parse(JSON.stringify(chalNow())); if (C.active) { C.active.custom = true; C.active.dec = Math.round(o * 1000) / 1000; saveChal(C); } } } if (t.dataset && t.dataset.accaalt) { const gid = t.dataset.accaalt; if ((S._accaLegs || []).some(x => x.g.id === gid)) pinGame(false, gid, ks => [t.value, ...ks.slice(1)]); else { S.accaPick = S.accaPick || {}; S.accaPick[gid] = t.value; } render(); } });
+  if (t.dataset && (t.dataset.accaxadd || t.dataset.accalxadd) && t.value) { const live = !!t.dataset.accalxadd, gid = live ? t.dataset.accalxadd : t.dataset.accaxadd, st = live ? (S.accaLiveX = S.accaLiveX || {}) : (S.accaX = S.accaX || {}); st[gid] = [...(st[gid] || []), t.value]; (S.addOpen = S.addOpen || {})[(live ? "data-accalxadd-" : "data-accaxadd-") + gid] = false; render(); return; } if (t.id === "shotPick" && t.files && t.files[0]) { S.impShotMsg = ""; readShot(t.files[0]); } if (t.dataset && t.dataset.accalivealt) { const gid = t.dataset.accalivealt; if ((S._accaLiveLegs || []).some(x => x.g.id === gid)) pinGame(true, gid, ks => [t.value, ...ks.slice(1)]); else (S.accaLivePick = S.accaLivePick || {})[gid] = t.value; render(); } if (t.dataset && (t.dataset.accaxswap || t.dataset.accalxswap) && t.value) { const live = !!t.dataset.accalxswap, [gid, old] = (live ? t.dataset.accalxswap : t.dataset.accaxswap).split("|"); pinGame(live, gid, ks => ks.map(x => x === old ? t.value : x)); render(); return; } if (t.dataset && t.dataset.legodds) setLegOdds(t.dataset.legodds, t.value); if (t.dataset && t.dataset.chalstake !== undefined && S.user) { const v = Math.round(parseFloat(String(t.value).replace(/[£\s,]/g, "")) * 100) / 100, C0 = chalNow();
+    if (!(v > 0) || !C0.active) { toast("Type a stake like 0.50 or 2"); $("#main")._h = null; render(); }
+    else { const C = JSON.parse(JSON.stringify(C0)), diff = Math.round((v - (+C.bank || 0)) * 100) / 100;
+      if (diff) { if (diff < 0) C.taken = Math.round(((+C.taken || 0) - diff) * 100) / 100; else C.added = Math.round(((+C.added || 0) + diff) * 100) / 100; C.bank = v; saveChal(C); walletAdjust(-diff); toast(`Stake set to ${money(v)}. Returns ${money(v * C.active.dec)}`); } } }
+  if (t.dataset && t.dataset.chalodds !== undefined && S.user) { const o = parseOdds(t.value); if (!o) { toast("Use odds like 5/2, EVS or 3.5"); $("#main")._h = null; render(); } else { const C = JSON.parse(JSON.stringify(chalNow())); if (C.active) { C.active.custom = true; C.active.dec = Math.round(o * 1000) / 1000; saveChal(C); } } } if (t.dataset && t.dataset.accaalt) { const gid = t.dataset.accaalt; if ((S._accaLegs || []).some(x => x.g.id === gid)) pinGame(false, gid, ks => [t.value, ...ks.slice(1)]); else { S.accaPick = S.accaPick || {}; S.accaPick[gid] = t.value; } render(); } });
 document.addEventListener("keydown", e => { const t = e.target; if (e.key === "Enter" && t.dataset && t.dataset.legodds) t.blur(); });
 document.addEventListener("focusin", e => { const t = e.target; if (t.dataset && t.dataset.legodds) setTimeout(() => t.select(), 0); });
 document.addEventListener("toggle", e => { const d = e.target; if (d && d.dataset && d.dataset.ap) (S.addOpen = S.addOpen || {})[d.dataset.ap] = d.open; }, true);
