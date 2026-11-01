@@ -265,7 +265,7 @@ h3{font-size:15px;font-weight:700}
 .tbl td.team img,.tbl td.team .mono{width:20px;height:20px;font-size:8px}
 .tbl td.pts{color:var(--fg);font-weight:800}
 @media (max-width:480px){.tbl .nx{display:none}.tbl td.team{min-width:0;max-width:150px;overflow:hidden;text-overflow:ellipsis}.tbl td,.tbl th{padding-left:4px;padding-right:4px}}
-.tbl tr.fav td{background:rgba(255,194,61,.07)}
+.tbl tr.favrow td{background:rgba(255,194,61,.09)}.tbl tr.favrow td.pos{color:var(--amber)}
 .tbl tr.play td.team::after{content:"PLAYING";font-size:9px;font-weight:800;letter-spacing:.06em;color:var(--live);margin-left:6px}
 .zones{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--muted)}
 .zones span{display:flex;align-items:center;gap:6px}.zones i{width:10px;height:10px;border-radius:3px}
@@ -1900,12 +1900,12 @@ function viewTables() {
     const f = feed(`${API2}/basketball/nba/standings`);
     const body = !f.data ? `<div class="loadbox">${f.err ? "Couldn't load the standings. Pull down to try again." : "Loading standings…"}</div>` : (f.data.children || []).map(conf => {
       const rows = [...conf.standings.entries].sort((a, b) => (+statMap(a).playoffSeed?.value || 99) - (+statMap(b).playoffSeed?.value || 99));
-      return `<section class="section"><h2>${esc(conf.name)}</h2><div class="tw" style="padding:0"><table class="tbl"><thead><tr><th>#</th><th class="l">Team</th><th>W</th><th>L</th><th>PCT</th><th>GB</th><th>L10</th><th>Strk</th><th>Home</th><th>Away</th></tr></thead><tbody>
+      return `<section class="section"><h2>${esc(conf.name)}</h2><div class="tw" style="padding:0"><table class="tbl"><thead><tr><th>#</th><th class="l">Team</th><th>W</th><th>L</th><th>PCT</th><th>GB</th><th class="nx">L10</th><th>Strk</th><th class="nx">Home</th><th class="nx">Away</th></tr></thead><tbody>
       ${rows.map(e => { const m = statMap(e), seed = +(m.playoffSeed || {}).value || 0, zc = seed && seed <= 6 ? "var(--win)" : seed && seed <= 10 ? "var(--amber)" : "transparent";
-        return `<tr class="${isFav("nba", e.team) ? "fav" : ""} ${playingSoon("nba", e.team.id) ? "play" : ""}"><td class="pos" style="--zc:${zc}">${seed || ""}</td><td class="team l"><span>${espnLogo(e.team, "nba")}${esc(e.team.shortDisplayName || e.team.displayName)}</span></td><td>${(m.wins || {}).displayValue ?? ""}</td><td>${(m.losses || {}).displayValue ?? ""}</td><td>${(m.winPercent || {}).displayValue ?? ""}</td><td>${(m.gamesBehind || {}).displayValue ?? ""}</td><td>${(m["Last Ten Games"] || m.lasttengames || {}).displayValue ?? ""}</td><td>${(m.streak || {}).displayValue ?? ""}</td><td>${(m.Home || m.home || {}).displayValue ?? ""}</td><td>${(m.Road || m.road || {}).displayValue ?? ""}</td></tr>`; }).join("")}
+        return `<tr class="${isFav("nba", e.team) ? "favrow" : ""} ${playingSoon("nba", e.team.id) ? "play" : ""}"><td class="pos" style="--zc:${zc}">${seed || ""}</td><td class="team l"><span>${espnLogo(e.team, "nba")}${esc(e.team.shortDisplayName || e.team.displayName)}</span></td><td>${(m.wins || {}).displayValue ?? ""}</td><td>${(m.losses || {}).displayValue ?? ""}</td><td>${(m.winPercent || {}).displayValue ?? ""}</td><td>${(m.gamesBehind || {}).displayValue ?? ""}</td><td class="nx">${(m["Last Ten Games"] || m.lasttengames || {}).displayValue ?? ""}</td><td>${(m.streak || {}).displayValue ?? ""}</td><td class="nx">${(m.Home || m.home || {}).displayValue ?? ""}</td><td class="nx">${(m.Road || m.road || {}).displayValue ?? ""}</td></tr>`; }).join("")}
       </tbody></table></div></section>`;
     }).join("") + `<div class="zones"><span><i style="background:var(--win)"></i>Playoff places (1–6)</span><span><i style="background:var(--amber)"></i>Play-in (7–10)</span><span><b style="color:var(--live);font-size:10px">PLAYING</b> has a game in the next 24 hours</span></div>`;
-    return `<div class="hd"><div><h1>NBA standings</h1><p class="sub">Swipe sideways for home and away records.</p></div></div>${body}`;
+    return `<div class="hd"><div><h1>NBA standings</h1><p class="sub">Your favourite teams are highlighted.</p></div></div>${body}`;
   }
   const L = S.tblLeague || "eng.1", f = feed(`${API2}/soccer/${L}/standings`);
   const chips = `<div class="chips scroll">${S.data.leagues.map(l => `<button class="chip" data-tbl="${l.id}" aria-pressed="${L === l.id}">${esc(l.name)}</button>`).join("")}</div>`;
@@ -1918,7 +1918,7 @@ function viewTables() {
       return `${groups.length > 1 ? `<h2>${esc(gp.name)}</h2>` : ""}<div class="tw" style="padding:0"><table class="tbl"><thead><tr><th>#</th><th class="l">Team</th><th>P</th><th>W</th><th>D</th><th>L</th><th class="nx">GF</th><th class="nx">GA</th><th>GD</th><th>Pts</th></tr></thead><tbody>
       ${rows.map(e => { const m = statMap(e), n = e.note, zc = n && n.color ? "#" + String(n.color).replace("#", "") : "transparent"; if (n && n.description) notes.set(n.description, zc);
         const v = k => (m[k] || {}).displayValue ?? "";
-        return `<tr class="${isFav("football", e.team) ? "fav" : ""} ${playingSoon("football", e.team.id) ? "play" : ""}"><td class="pos" style="--zc:${zc}">${v("rank")}</td><td class="team l"><span>${espnLogo(e.team, "football")}${esc(e.team.shortDisplayName || e.team.displayName)}</span></td><td>${v("gamesPlayed")}</td><td>${v("wins")}</td><td>${v("ties")}</td><td>${v("losses")}</td><td class="nx">${v("pointsFor")}</td><td class="nx">${v("pointsAgainst")}</td><td>${v("pointDifferential")}</td><td class="pts">${v("points")}</td></tr>`; }).join("")}
+        return `<tr class="${isFav("football", e.team) ? "favrow" : ""} ${playingSoon("football", e.team.id) ? "play" : ""}"><td class="pos" style="--zc:${zc}">${v("rank")}</td><td class="team l"><span>${espnLogo(e.team, "football")}${esc(e.team.shortDisplayName || e.team.displayName)}</span></td><td>${v("gamesPlayed")}</td><td>${v("wins")}</td><td>${v("ties")}</td><td>${v("losses")}</td><td class="nx">${v("pointsFor")}</td><td class="nx">${v("pointsAgainst")}</td><td>${v("pointDifferential")}</td><td class="pts">${v("points")}</td></tr>`; }).join("")}
       </tbody></table></div>`;
     }).join("") + `<div class="zones">${[...notes].map(([d, c]) => `<span><i style="background:${c}"></i>${esc(d)}</span>`).join("")}<span><b style="color:var(--live);font-size:10px">PLAYING</b> has a game in the next 24 hours</span></div>`;
   }
@@ -2412,7 +2412,12 @@ function render() {
   setTimeout(autoSettle, 0);
   const v = view();
   { const g = navOf(v); if (g && g[2].length > 1 && S.lastSub[g[0]] !== v) { S.lastSub[g[0]] = v; store.set("lastSub", S.lastSub); } }
-  $("#main").innerHTML = iosTip() + subnav(v) + (v === "friends" ? viewAccount("friends") : v === "account" ? viewAccount() : v === "tables" ? viewTables() : v === "news" ? viewNews() : v === "fixtures" ? viewFixtures() : v === "bets" ? viewBets() : v === "mybets" ? viewMyBets() : v === "acca" ? viewAcca() : v === "challenge" ? viewChallenge() : viewLive());
+  const MAIN = $("#main"), html = iosTip() + subnav(v) + (v === "friends" ? viewAccount("friends") : v === "account" ? viewAccount() : v === "tables" ? viewTables() : v === "news" ? viewNews() : v === "fixtures" ? viewFixtures() : v === "bets" ? viewBets() : v === "mybets" ? viewMyBets() : v === "acca" ? viewAcca() : v === "challenge" ? viewChallenge() : viewLive());
+  if (MAIN._h !== html) {
+    const sx = [...MAIN.querySelectorAll(".tw,.chips,.scroller")].map(e => e.scrollLeft);
+    MAIN.innerHTML = html; MAIN._h = html;
+    [...MAIN.querySelectorAll(".tw,.chips,.scroller")].forEach((e, k) => { if (sx[k]) e.scrollLeft = sx[k]; });
+  }
   const norail = v === "account" || v === "friends"; document.querySelector(".page").classList.toggle("norail", norail);
   $("#rail").innerHTML = norail ? "" : slipHTML();
   const L = $("#layer"), prevDr = $(".drawer"), dkey = S.drawer || (S.slipOpen ? "slip" : ""), same = !!(prevDr && dkey && prevDr.dataset.key === dkey), keepTop = same ? prevDr.scrollTop : 0;
@@ -2503,12 +2508,12 @@ document.addEventListener("click", e => {
 function setLegOdds(id, raw) {
   const l = S.slip.find(x => x.id === id); if (!l) return;
   const d = parseOdds(raw);
-  if (!d) { toast("Use odds like 5/2, EVS or 3.5"); render(); return; }
+  if (!d) { toast("Use odds like 5/2, EVS or 3.5"); $("#main")._h = null; render(); return; }
   if (l.orig == null) l.orig = l.dec;
   l.dec = Math.round(d * 1000) / 1000; l.custom = Math.abs(l.dec - l.orig) > 0.0005; l.est = l.custom ? false : l.estOrig ?? l.est;
   save(); render(); toast(l.custom ? "Price updated to " + odds(l.dec) : "Back to the app's price");
 }
-document.addEventListener("change", e => { const t = e.target; if (t.dataset && t.dataset.legodds) setLegOdds(t.dataset.legodds, t.value); if (t.dataset && t.dataset.chalodds !== undefined && S.user) { const o = parseOdds(t.value); if (!o) { toast("Use odds like 5/2, EVS or 3.5"); render(); } else { const C = JSON.parse(JSON.stringify(chalNow())); if (C.active) { C.active.custom = true; C.active.dec = Math.round(o * 1000) / 1000; saveChal(C); } } } if (t.dataset && t.dataset.accaalt) { S.accaPick = S.accaPick || {}; S.accaPick[t.dataset.accaalt] = t.value; render(); } });
+document.addEventListener("change", e => { const t = e.target; if (t.dataset && t.dataset.legodds) setLegOdds(t.dataset.legodds, t.value); if (t.dataset && t.dataset.chalodds !== undefined && S.user) { const o = parseOdds(t.value); if (!o) { toast("Use odds like 5/2, EVS or 3.5"); $("#main")._h = null; render(); } else { const C = JSON.parse(JSON.stringify(chalNow())); if (C.active) { C.active.custom = true; C.active.dec = Math.round(o * 1000) / 1000; saveChal(C); } } } if (t.dataset && t.dataset.accaalt) { S.accaPick = S.accaPick || {}; S.accaPick[t.dataset.accaalt] = t.value; render(); } });
 document.addEventListener("keydown", e => { const t = e.target; if (e.key === "Enter" && t.dataset && t.dataset.legodds) t.blur(); });
 document.addEventListener("focusin", e => { const t = e.target; if (t.dataset && t.dataset.legodds) setTimeout(() => t.select(), 0); });
 document.addEventListener("click", e => { const b = e.target.closest("[data-legreset]"); if (!b) return; const l = S.slip.find(x => x.id === b.dataset.legreset); if (l && l.orig != null) { l.dec = l.orig; l.custom = false; if (l.estOrig != null) l.est = l.estOrig; save(); render(); toast("Back to the app's price"); } });
