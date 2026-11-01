@@ -2063,9 +2063,10 @@ function slipDrawer() { return `<div class="scrim" data-close></div><aside class
 /* ---------- bet import + live player tracker ---------- */
 const PROPS = {
   nba: [[/points?\s*(?:\+|and|,)\s*rebounds?\s*(?:\+|and|,)\s*assists?|\bpra\b/i, "PRA", "pts+reb+ast"], [/three|3-?pointers?|3pt|3pm/i, "3PM", "threes"], [/rebounds?|\breb\b/i, "REB", "rebounds"], [/assists?|\bast\b/i, "AST", "assists"], [/steals?/i, "STL", "steals"], [/blocks?/i, "BLK", "blocks"], [/points?|\bpts\b/i, "PTS", "points"]],
-  football: [[/shots? on target|\bsot\b/i, "shotsOnTarget", "shots on target"], [/shots?/i, "totalShots", "shots"], [/carded|booked|cards?/i, "cards", "card"], [/fouls?/i, "foulsCommitted", "fouls"], [/assist/i, "goalAssists", "assist"], [/scor|goal/i, "totalGoals", "goal"]]
+  football: [[/shots? on target|\bsot\b/i, "shotsOnTarget", "shots on target"], [/shots?/i, "totalShots", "shots"], [/carded|booked|cards?/i, "cards", "card"], [/fouled|fouls? (won|drawn|suffered)|wins? a (foul|free kick)/i, "foulsSuffered", "times fouled"], [/fouls?/i, "foulsCommitted", "fouls"], [/assist/i, "goalAssists", "assist"], [/scor|goal/i, "totalGoals", "goal"]]
 };
-const norm = t => String(t || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z ]/g, " ").replace(/\s+/g, " ").trim();
+const deLetter = t => String(t || "").replace(/[øØ]/g, "o").replace(/[æÆ]/g, "ae").replace(/ß/g, "ss").replace(/[đĐ]/g, "d").replace(/[łŁ]/g, "l").replace(/ı/g, "i");
+const norm = t => deLetter(t).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z ]/g, " ").replace(/\s+/g, " ").trim();
 S.tracked = store.get("tracked", []);
 function playerIndex() {
   const now = Date.now(), soon = g => isLive(g) || (isPre(g) && +new Date(kick(g)) - now < 1.5 * 864e5) || (g.status.state === "post" && now - +new Date(kick(g)) < 864e5);
@@ -2088,7 +2089,7 @@ function findPlayer(idx, q) {
     || (qw.length > 1 && idx.find(p => p.n.startsWith(first + " ") && p.n.split(" ").some(w => w.length > 3 && last.length > 3 && (w.startsWith(last.slice(0, 4)) || last.startsWith(w.slice(0, 4))))))
     || idx.find(p => qw.length > 1 && p.n.endsWith(" " + last));
 }
-const normT = t => String(t || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9.\/+ ]/g, " ").replace(/\s+/g, " ").trim();
+const normT = t => deLetter(t).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9.\/+ ]/g, " ").replace(/\s+/g, " ").trim();
 const GENERIC = new Set(["united", "city", "real", "club", "athletic", "atletico", "sporting", "town", "rovers", "county", "olympique", "inter", "milan"]);
 function teamAliases(t) {
   const out = new Set([normT(t.name), normT(t.full || t.name)].filter(x => x.length >= 3));
@@ -2155,6 +2156,9 @@ function parseBet(text, idx) {
   // bookie slips often put the player on one line and "To Record 4+ Rebounds" on the next: join them back up
   const lines = [];
   const mLegs = [], mOdds = [];
+  text = text.split("\n").map(line => { const parts = line.split(/\s+(?:&|and)\s+(?=(?:to\s+)?(?:be|have|get|make|commit|win|score|record|receive|register|hit|draw)\b)/i);
+    if (parts.length < 2) return line; const m = parts[0].match(/^(.*?)\s+to\s+/i); if (!m) return line;
+    const at = (line.match(/\s*@.*$/) || [""])[0]; return [parts[0].replace(/\s*@.*$/, ""), ...parts.slice(1).map(x => `${m[1]} to ${x.replace(/^to\s+/i, "").replace(/\s*@.*$/, "")}`)].join("\n") + at; }).join("\n");
   for (const l of text.split(/\n|;/).map(x => x.trim()).filter(Boolean)) {
     const r = matchLegsIn(l); if (r.legs.length) { mLegs.push(...r.legs); mOdds.push(...r.odds.map((o, i) => o || (i === 0 ? oddsIn(l) : null))); continue; }
   }
@@ -2165,7 +2169,8 @@ function parseBet(text, idx) {
   }
   for (let line of lines) {
     const targets = (line.match(/\d+(?:\.\d+)?\s*\+|over\s*\d/gi) || []).length;
-    if (targets < 2) { const m = LEG(line); if (m) groups.push({ names: m[1].split(/\s*(?:&|,|\band\b|\+)\s*/i), rest: m[2] }); continue; }
+    const ownLegs = line.split(/\s*(?:&|,|\band\b|\s\+\s)\s*/i).filter(x => LEG(x)).length;   // "A 1+ shots & B to be fouled" = two separate bets
+    if (targets < 2 && ownLegs < 2) { const m = LEG(line); if (m) groups.push({ names: m[1].split(/\s*(?:&|,|\band\b|\+)\s*/i), rest: m[2] }); continue; }
     const statOnly = x => Object.values(PROPS).some(L => L.some(([re]) => re.test(x)));
     let pend = [];
     for (const part of line.split(/\s*(?:&|,|\band\b|\s\+\s)\s*/i).map(x => x.trim()).filter(Boolean)) {
@@ -2182,13 +2187,29 @@ function parseBet(text, idx) {
       const p = findPlayer(idx, nm); if (!p) { missing.push(nm); continue; }
       const st = (PROPS[p.sport].find(([re]) => re.test(rest)) || PROPS[p.sport][p.sport === "nba" ? 6 : 5]);
       const target = tgt ? Math.ceil(+tgt) : ov ? Math.floor(+ov) + 1 : 1;
-      legs.push({ sport: p.sport, gid: p.gid, side: p.side, pid: p.pid, name: p.name, team: p.team, stat: st[1], label: st[2], target });
+      const half = p.sport === "football" && /\b(1st|first) half\b/i.test(rest) ? 1 : p.sport === "football" && /\b(2nd|second) half\b/i.test(rest) ? 2 : 0;
+      legs.push({ sport: p.sport, gid: p.gid, side: p.side, pid: p.pid, name: p.name, team: p.team, stat: st[1], label: st[2] + (half ? ` (${half === 1 ? "1st" : "2nd"} half)` : ""), target, ...(half ? { half } : {}) });
     }
   }
   legs.unshift(...mLegs);
   const ats = (text.match(/@\s*([0-9]+(?:\.[0-9]+)?(?:\s*\/\s*[0-9]+)?|evs|evens)/gi) || []).map(x => parseOdds(x.replace(/^@\s*/, "").replace(/\s+/g, ""))).filter(Boolean);
   const dec = ats.length >= 2 && ats.length === legs.length ? Math.round(ats.reduce((a, b) => a * b, 1) * 1000) / 1000 : om ? parseOdds(om[1]) : oddsFound;
   return { legs, missing, dec };
+}
+const halfDone = g => g.status.state === "post" || (+g.status.period || 1) >= 2 || /HT|Half/i.test(String(g.status.detail || ""));
+function halfStat(g, l) {   // a player's count in one half, from the play-by-play
+  const n = norm(l.name), last = n.split(" ").pop(), me = w => w === n || (w && w.split(" ").pop() === last && w[0] === n[0]);
+  let v = 0;
+  for (const p of g.plays || []) { if (p.per !== l.half) continue; const t = p.t;
+    const shot = /^Shot|^Goal|Penalty - (Scored|Saved|Missed)/i.test(t) && !/Own Goal/i.test(t), on = /Shot On Target|^Goal|Penalty - (Scored|Saved)/i.test(t) && !/Own Goal/i.test(t);
+    if (l.stat === "shotsOnTarget" && on && me(p.who[0])) v++;
+    else if (l.stat === "totalShots" && shot && me(p.who[0])) v++;
+    else if (l.stat === "totalGoals" && /^Goal|Penalty - Scored/i.test(t) && !/Own Goal/i.test(t) && me(p.who[0])) v++;
+    else if (l.stat === "goalAssists" && /^Goal/i.test(t) && me(p.who[1])) v++;
+    else if (l.stat === "foulsSuffered" && /^Foul/i.test(t) && me(p.who[1])) v++;
+    else if (l.stat === "foulsCommitted" && /^Foul/i.test(t) && me(p.who[0])) v++;
+    else if (l.stat === "cards" && /Yellow Card|Red Card/i.test(t) && me(p.who[0])) v++; }
+  return v;
 }
 function legValue(l) {
   const g = findGame(l.sport, l.gid); if (!g) return { v: null, g };
@@ -2199,6 +2220,7 @@ function legValue(l) {
     return { v, g, on: P.on, dnp: P.dnp };
   }
   const LU = (g.lineups || {})[l.side], P = (LU || { players: [] }).players.find(p => String(p.id) === String(l.pid)); if (!P) return { v: null, g, dnp: !!(LU && LU.players.length) && !isPre(g) };
+  if (l.half) { if (!g.plays && !isPre(g)) loadDetail("football:" + l.gid); if (l.half === 2 && !halfDone(g)) return { v: 0, g, on: onPitch(P), dnp: false }; return { v: g.plays ? halfStat(g, l) : null, g, on: onPitch(P), dnp: !P.starter && !P.subIn && (l.half === 1 ? halfDone(g) : g.status.state === "post") }; }
   const v = l.stat === "cards" ? (P.s.yellowCards || 0) + (P.s.redCards || 0) : (P.s[l.stat] || 0);
   return { v, g, on: onPitch(P), dnp: !P.starter && !P.subIn && g.status.state === "post" };
 }
@@ -2231,7 +2253,7 @@ function legInfo0(l) {   // -> { html, st: "pre" | "live" | "hit" | "miss" | "vo
   }
   const g = findGame(l.sport, l.gid), tip = l.sport === "nba" ? "Tip-off" : "Kick-off";
   if (l.pid) {
-    const r = legValue(l), done = r.v != null && r.v >= l.target, post = g && g.status.state === "post";
+    const r = legValue(l), done = r.v != null && r.v >= l.target, post = g && (l.half === 1 ? halfDone(g) && g._playsHalfDone : g.status.state === "post");
     const pctv = r.v == null ? 0 : Math.min(1, r.v / l.target), state = !g ? "Game not found" : clockLabel(l.sport, g);
     const st = done ? "hit" : r.dnp ? "void" : post ? "miss" : g && !isPre(g) ? "live" : "pre";
     return { st, html: `<div class="tl-leg ${done ? "hit" : r.dnp ? "void" : post ? "miss" : ""}"><div class="tl-top"><b>${esc(l.name)}</b><span>${esc(l.team)} · ${esc(state)}${r.on && g && isLive(g) ? ` · <span class="court-inline">on ${l.sport === "nba" ? "court" : "pitch"}</span>` : ""}</span></div>
@@ -3091,6 +3113,7 @@ function betOutcome(legs) {   // "won" / "lost" once it's certain, otherwise nul
       if (!isPre(g) && !(l.sport === "nba" ? g.box : g.lineups)) loadDetail(l.sport + ":" + l.gid);
       const r = legValue(l);
       if (r.v != null && r.v >= l.target) continue;                 // landed: stats only go up
+      if (l.half === 1) { if (!halfDone(g) || r.dnp || !g._playsHalfDone) { all = false; continue; } lost = true; continue; }   // first-half bet: decided at half time
       if (g.status.state !== "post" || r.dnp) { all = false; continue; }   // still playing, or a void leg (leave those to you)
       if (!g._postDetail) { g._luAt = 0; loadDetail(l.sport + ":" + l.gid); all = false; continue; }   // wait for the final box score
       if (r.v == null) { all = false; continue; }
@@ -3366,6 +3389,8 @@ function parseLineups(g, s) {
 }
 function applyFb(g, s) {
   parseLineups(g, s);
+  if (s.commentary) { const seen = new Set(); g.plays = s.commentary.map(c => c.play).filter(p => p && !(p.id && seen.has(p.id)) && (seen.add(p.id), true)).map(p => ({ t: (p.type || {}).text || "", per: (p.period || {}).number || 1, who: (p.participants || []).map(q => norm(((q.athlete || {}).displayName) || "")) }));
+    g._playsHalfDone = halfDone(g); }
   const b = boxMap(s), hb = b[g.home.id] || {}, ab = b[g.away.id] || {};
   if (Object.keys(hb).length) g.stats = FKEYS.filter(([k]) => k in hb || k in ab).map(([k, label]) => ({ k, label, h: num(hb[k]), a: num(ab[k]) }));
   g.events = (s.keyEvents || []).filter(k => { const t = (k.type || {}).text || ""; return /Goal|Card|Penalty|Substitution/.test(t) && !/Delay/.test(t); }).map(k => {
