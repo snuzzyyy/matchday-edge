@@ -746,7 +746,7 @@ a.prof-bdg{text-decoration:none}
 .leg2 .lm{font-size:12.5px;color:var(--muted);margin-top:2px}
 .leg2 .lcap{font-size:11.5px;color:var(--muted);margin-top:4px}
 .leg2 .rs{color:var(--blue-2);font-size:11.5px;font-weight:700;text-decoration:underline;padding:0}
-.leg2 .oddin{width:78px;font-size:19px;padding:6px 8px}
+.leg2 .oddin{width:78px;font-size:19px;padding:6px 8px}.slip-tot{display:grid;gap:3px;justify-items:start}.slip-tot .oddin{width:92px;font-size:20px;text-align:left;padding:4px 8px}.slip-tot .rs{font-size:11px}.acc-odds{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--bg-2);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:2px 0 10px}.acc-odds label{display:grid;gap:2px;font-size:13px}.acc-odds small{color:var(--muted);font-size:11.5px;line-height:1.35}.acc-odds .oddin{width:92px;flex:none;font-size:20px;padding:6px 8px}
 .oddhint2{margin:0;padding:10px 14px;font-size:12px;color:var(--muted)}
 .sum3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .sum3 div{display:grid;gap:1px}
@@ -1043,7 +1043,7 @@ const store = { get(k, d) { try { const v = localStorage.getItem("mde:" + k); re
                 set(k, v) { try { localStorage.setItem("mde:" + k, JSON.stringify(v)); } catch {} } };
 
 const S = { data: null, logos: {}, sport: store.get("sport", "football"), fmt: store.get("fmt", "frac"), slip: store.get("slip", []),
-            stake: store.get("stake", 5), chalOdds: store.get("chalOdds", "over"), boxSide: {}, league: "all", win: "today", drawer: null, slipOpen: false };
+            stake: store.get("stake", 5), slipTot: store.get("slipTot", null), chalOdds: store.get("chalOdds", "over"), boxSide: {}, league: "all", win: "today", drawer: null, slipOpen: false };
 const VIEWS = [["live", "Live", "Live"], ["fixtures", "Fixtures", "Games"], ["acca", "Accas", "Accas"], ["bets", "Best Bets", "Tips"], ["mybets", "My Bets", "My Bets"], ["friends", "Friends", "Friends"], ["tables", "Tables", "Tables"], ["news", "News", "News"], ["challenge", "£1K Challenge", "£1K"]];
 const TAB_ICONS = (() => { const svg = p => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`; return {
   live: svg('<circle cx="12" cy="12" r="2.2"/><path d="M7.8 7.8a6 6 0 000 8.4M16.2 7.8a6 6 0 010 8.4M5 5a10 10 0 000 14M19 5a10 10 0 010 14"/>'),
@@ -1133,11 +1133,20 @@ function toggleLeg(sport, gid, k) {
   save(); render();
 }
 function conflicts(a, b) { const grp = k => /^P:/.test(k) ? k.split(":").slice(0, 3).join(":") : /^(1|X|2|1X|X2|12|DNB1|DNB2|ML1|ML2)$/.test(k) ? "res" : /^(O|U)\d|^U35|^O35/.test(k) ? "goals" : /^BTTS/.test(k) ? "btts" : /^SP/.test(k) ? "sp" : /^T[OU]$/.test(k) ? "tot" : k; return grp(a) === grp(b); }
-function save() { store.set("slip", S.slip); store.set("stake", S.stake); }
+function save() { store.set("slip", S.slip); store.set("stake", S.stake); store.set("slipTot", S.slipTot); }
+const slipSig = (legs = S.slip) => legs.map(l => l.id).join("|");
+/* the whole slip's odds: the bets multiplied together, unless you've typed your bookie's total (e.g. a bet builder price) */
 function slipCalc(legs = S.slip) {
-  const dec = legs.reduce((a, l) => a * l.dec, 1), p = legs.reduce((a, l) => a * l.p, 1);
+  const prod = legs.reduce((a, l) => a * l.dec, 1), p = legs.reduce((a, l) => a * l.p, 1);
   const sameMatch = new Set(legs.map(l => l.gid)).size < legs.length;
-  return { dec, p, est: legs.some(l => l.est), sameMatch };
+  const mine = legs === S.slip && S.slipTot && S.slipTot.sig === slipSig() && legs.length ? +S.slipTot.dec : null;
+  return { dec: mine || prod, prod, mine: !!mine, p, est: !mine && legs.some(l => l.est), sameMatch };
+}
+function setSlipOdds(raw) {
+  const d = parseOdds(raw), c = slipCalc();
+  if (!raw.trim() || (d && Math.abs(d - c.prod) < 0.005)) { S.slipTot = null; save(); render(); toast("Back to the odds worked out from each bet"); return; }
+  if (!d) { toast("Use odds like 5/2, EVS or 3.5"); $("#main")._h = null; render(); return; }
+  S.slipTot = { dec: Math.round(d * 1000) / 1000, sig: slipSig() }; save(); render(); toast("Total odds set to " + odds(S.slipTot.dec));
 }
 function copyText(txt, msg) {
   const ok = () => toast(msg), fb = () => { const ta = document.createElement("textarea"); ta.value = txt; ta.style.position = "fixed"; ta.style.opacity = "0"; document.body.appendChild(ta); ta.select(); try { document.execCommand("copy"); ok(); } catch { toast(txt); } ta.remove(); };
@@ -1607,6 +1616,8 @@ function accaLiveLegs(sp, ids) {
   const J = jointPick(its, bundlePrice(lp)); return its.flatMap(it => expandPick(it.g, J.get(it.id), { o: it.o }));
 }
 const accaModeSeg = () => `<div class="seg3 two acmode" role="group" aria-label="Pre-match or in-play"><button data-accamode="pre" aria-pressed="${S.accaMode !== "live"}">Pre-match</button><button data-accamode="live" aria-pressed="${S.accaMode === "live"}">${games(S.sport).some(isLive) ? '<span class="dot red"></span> ' : ""}In-play</button></div>`;
+const accOdds = (live, dec, sig) => { const T = (S.accaTyped || {})[live ? "live" : "pre"], mine = T && T.sig === sig ? T.dec : null;
+  return { mine, html: `<div class="acc-odds"><label for="acco-${live ? "l" : "p"}"><b>Your bookie's odds</b><small>Bet builders are priced differently. Type Sky's total to check the returns.</small></label><input id="acco-${live ? "l" : "p"}" class="oddin ${mine ? "mine" : ""}" data-accaodds="${live ? "live" : "pre"}" value="${mine ? odds(mine) : ""}" placeholder="${odds(dec)}" autocomplete="off" inputmode="text"></div>` }; };
 function viewAccaLive() {
   const sp = S.sport, risk = S.accaRisk || "safe", live = games(sp).filter(isLive);
   S.accaLiveSel = S.accaLiveSel || {}; const sel = (S.accaLiveSel[sp] || []).filter(id => live.some(g => g.id === id)); S.accaLiveSel[sp] = sel;
@@ -1615,14 +1626,15 @@ function viewAccaLive() {
   if (!live.length) { const nx = games(sp).filter(isPre).sort((a, b) => new Date(kick(a)) - new Date(kick(b)))[0];
     return `${head}<div class="empty art"><img src="${art("empty-live.webp")}" alt="" loading="lazy"><b>Nothing in play right now</b><span>${nx ? `Next up: <b>${esc(vs(sp, nx))}</b> ${whenLabel(kick(nx))}. Come back when it kicks off.` : "Check back when games kick off."}</span></div>`; }
   S._accaN = Math.max(2, sel.length); const legs0 = accaLiveLegs(sp, sel), LX = (S.accaLiveX = S.accaLiveX || {}), legs = withExtras(legs0, LX, (g, k) => liveMarkets(sp, g).find(m => m.k === k && m.state === "open"), m => livePrice(m.p)); S._accaLiveLegs = legs;
-  const dec = legs.reduce((a, x) => a * livePrice(x.m.p), 1), p = legs.reduce((a, x) => a * x.m.p, 1);
+  const dec0 = legs.reduce((a, x) => a * livePrice(x.m.p), 1), p = legs.reduce((a, x) => a * x.m.p, 1);
+  const AO = accOdds(true, dec0, legs.map(x => x.g.id + ":" + x.m.k).join("|")), dec = AO.mine || dec0; S._accaSigLive = legs.map(x => x.g.id + ":" + x.m.k).join("|");
   const type = legs.length === 1 ? "Single" : legs.length === 2 ? "Double" : legs.length === 3 ? "Treble" : legs.length + "-fold acca";
   const sc = g => { const L = sp === "nba" ? g.away : g.home, R = sp === "nba" ? g.home : g.away; return `${esc(L.name)} ${esc(L.score)}–${esc(R.score)} ${esc(R.name)}`; };
   const summary = legs.length ? `<section class="accabox"><div class="ab-hd"><h2>Your in-play acca</h2><button class="more" data-accaliveclear>Clear</button></div>
     <div class="ab-legs">${legs.map(({ g, m, o, extra }, i) => extra ? extraRow(legs[i], x => livePrice(x.p), "data-accalxrm", o, legs.filter(y => y.g === g).map(y => y.m.k), "data-accalxswap", " now") + (legs[i + 1] && legs[i + 1].g === g ? "" : addMoreSel(g, legs.filter(y => y.g === g).map(y => y.m.k), o, x => livePrice(x.p), "data-accalxadd")) : `<div class="ab-leg"><div class="abl-main"><div class="abl-match"><span class="dot red"></span> ${sc(g)} · ${esc(clockLabel(sp, g))}</div>
       <label class="sr" for="lalt-${g.id}">Bet for ${esc(vs(sp, g))}</label><select id="lalt-${g.id}" data-accalivealt="${g.id}">${optsHTML(o, m.k, x => livePrice(x.p), " now")}</select></div>
       <div class="abl-p"><b>${odds(livePrice(m.p))}</b><small>${pct(m.p)}</small></div><button class="x" data-accalive="${g.id}" aria-label="Remove ${esc(vs(sp, g))}">✕</button></div>${legs[i + 1] && legs[i + 1].g === g ? "" : addMoreSel(g, [m.k], o, x => livePrice(x.p), "data-accalxadd")}`).join("")}</div>${sameGameNote(legs)}
-    <div class="sum3"><div><small>${type.replace(" acca", "")} est. odds</small><b>${odds(dec)}</b></div><div><small>Chance it lands</small><b>${pct(p)}</b></div><div><small>£${S.stake} returns</small><b class="ret">${money(S.stake * dec)}</b></div></div>
+    ${AO.html}<div class="sum3"><div><small>${type.replace(" acca", "")} ${AO.mine ? "· your odds" : "est. odds"}</small><b>${odds(dec)}</b></div><div><small>Chance it lands</small><b>${pct(p)}</b></div><div><small>£${S.stake} returns</small><b class="ret">${money(S.stake * dec)}</b></div></div>
     <div class="meter"><i style="width:${Math.max(p * 100, 2)}%"></i></div>${legs.length >= 2 ? bandNote(dec) : ""}
     <div class="warn">In-play prices move every minute. These are our estimate of a bookie's price: check the live odds before you bet.</div>
     <button class="btn" data-accaliveslip>Add in-play ${type.toLowerCase()} to bet slip</button></section>` : "";
@@ -1639,13 +1651,14 @@ function viewAcca() {
   S.accaSel[sp] = sel;
   const risk = S.accaRisk || "safe";
   S._accaN = Math.max(2, sel.length); const legs0 = accaPreLegs(sp, sel), AX = (S.accaX = S.accaX || {}), legs = withExtras(legs0, AX, (g, k) => mkt(g, k), priceOf); S._accaLegs = legs;
-  const dec = legs.reduce((a, x) => a * priceOf(x.m), 1), p = legs.reduce((a, x) => a * x.m.p, 1), est = legs.some(x => !x.m.dec);
+  const dec0 = legs.reduce((a, x) => a * priceOf(x.m), 1), p = legs.reduce((a, x) => a * x.m.p, 1);
+  const AO = accOdds(false, dec0, legs.map(x => x.g.id + ":" + x.m.k).join("|")), dec = AO.mine || dec0, est = !AO.mine && legs.some(x => !x.m.dec); S._accaSigPre = legs.map(x => x.g.id + ":" + x.m.k).join("|");
   const type = legs.length === 1 ? "Single" : legs.length === 2 ? "Double" : legs.length === 3 ? "Treble" : legs.length + "-fold acca";
   const summary = legs.length ? `<section class="accabox"><div class="ab-hd"><h2>Your acca</h2><button class="more" data-accaclear>Clear</button></div>
     <div class="ab-legs">${legs.map(({ g, m, extra }, i) => extra ? extraRow(legs[i], priceOf, "data-accaxrm", legOptions(sp, g).map(y => y.m), legs.filter(y => y.g === g).map(y => y.m.k), "data-accaxswap") + (legs[i + 1] && legs[i + 1].g === g ? "" : addMoreSel(g, legs.filter(y => y.g === g).map(y => y.m.k), legOptions(sp, g).map(y => y.m), priceOf, "data-accaxadd")) : `<div class="ab-leg"><div class="abl-main"><div class="abl-match">${esc(vs(sp, g))} · ${whenLabel(kick(g))}</div>
       <label class="sr" for="alt-${g.id}">Bet for ${esc(vs(sp, g))}</label><select id="alt-${g.id}" data-accaalt="${g.id}">${optsHTML(legOptions(sp, g).map(x => x.m), m.k, priceOf)}</select></div>
       <div class="abl-p"><b>${odds(priceOf(m))}</b><small>${pct(m.p)}</small></div><button class="x" data-accag="${g.id}" aria-label="Remove ${esc(vs(sp, g))}">✕</button></div>${legs[i + 1] && legs[i + 1].g === g ? "" : addMoreSel(g, [m.k], legOptions(sp, g).map(y => y.m), priceOf, "data-accaxadd")}`).join("")}</div>${sameGameNote(legs)}
-    <div class="sum3"><div><small>${type.replace(" acca", "")} odds${est ? " · est." : ""}</small><b>${odds(dec)}</b></div><div><small>Chance it lands</small><b>${pct(p)}</b></div><div><small>£${S.stake} returns</small><b class="ret">${money(S.stake * dec)}</b></div></div>
+    ${AO.html}<div class="sum3"><div><small>${type.replace(" acca", "")} ${AO.mine ? "· your odds" : "odds" + (est ? " · est." : "")}</small><b>${odds(dec)}</b></div><div><small>Chance it lands</small><b>${pct(p)}</b></div><div><small>£${S.stake} returns</small><b class="ret">${money(S.stake * dec)}</b></div></div>
     <div class="meter"><i style="width:${Math.max(p * 100, 2)}%"></i></div>${legs.length >= 2 ? bandNote(dec) : ""}
     ${legs.length >= 2 && p < .25 && risk !== "bigger" ? `<div class="warn">Every leg has to win, so the chance drops with each game you add. Fewer games or "Safest" gives a better chance.</div>` : ""}
     <button class="btn" data-accaslip>Add ${type.toLowerCase()} to bet slip</button></section>` : "";
@@ -1691,9 +1704,9 @@ function slipHTML(mode = "rail") {
   const sports = new Set(S.slip.map(l => l.sport)), bb = sports.size === 1 && sports.has("nba");
   const books = [["Sky Bet", `https://m.skybet.com/${bb ? "basketball" : "football"}`], ["Paddy Power", `https://www.paddypower.com/${bb ? "basketball" : "football"}`], ["William Hill", `https://sports.williamhill.com/betting/en-gb/${bb ? "basketball" : "football"}`], ["Betfair", `https://www.betfair.com/sport/${bb ? "basketball" : "football"}`]].map(([t, u]) => `<a href="${u}" target="_blank" rel="noopener">${t} ↗</a>`).join("");
   return `<div class="slip ${mode}">${head}
-  <div class="slip-legs">${legs}<p class="oddhint2">Price different at your bookie? Tap it and type theirs.</p></div>
+  <div class="slip-legs">${legs}<p class="oddhint2">Price different at your bookie? Tap any price, or the total below, and type theirs.</p></div>
   <div class="slip-ft">
-    <div class="sum3"><div><small>${type} odds${c.est ? " · est." : ""}</small><b>${odds(c.dec)}</b></div><div><small>Chance it lands</small><b>${pct(c.p)}</b></div><div><small>Returns</small><b class="ret" id="ret">${money(ret)}</b></div></div>
+    <div class="sum3"><div class="slip-tot"><small>${type} odds${c.mine ? " · yours" : c.est ? " · est." : ""}</small><input class="oddin ${c.mine ? "mine" : ""}" data-slipodds value="${odds(c.dec)}" autocomplete="off" spellcheck="false" aria-label="Total odds. Type your bookie's price">${c.mine ? `<button class="rs" data-sliptotreset>reset to ${odds(c.prod)}</button>` : ""}</div><div><small>Chance it lands</small><b>${pct(c.p)}</b></div><div><small>Returns</small><b class="ret" id="ret">${money(ret)}</b></div></div>
     <div class="meter"><i style="width:${Math.max(c.p * 100, 2)}%"></i></div>
     <div class="stake2"><label for="stake">Stake</label><span class="in">£<input id="stake" type="number" inputmode="decimal" min="0" step="0.5" value="${S.stake}"></span><div class="qss">${stakes}</div></div>
     ${c.sameMatch ? `<div class="warn">Some legs are from the same game. Place this as a Bet Builder at Sky Bet or Paddy Power.</div>` : ""}
@@ -3400,7 +3413,8 @@ document.addEventListener("click", e => {
   else if (d.open) { S.drawer = d.open; S.slipOpen = false; S.betView = null; S.mateOpen = null; render(); const dr = $(".drawer"); dr && dr.scrollTo(0, 0); loadDetail(d.open); }
   else if (d.close !== undefined) { S.drawer = null; S.slipOpen = false; render(); }
   else if (d.rm) { S.slip = S.slip.filter(l => l.id !== d.rm); save(); render(); }
-  else if (d.clear !== undefined) { S.slip = []; save(); render(); }
+  else if (d.clear !== undefined) { S.slip = []; S.slipTot = null; save(); render(); }
+  else if (d.sliptotreset !== undefined) { S.slipTot = null; save(); render(); toast("Back to the odds worked out from each bet"); }
   else if (d.accag) { const a = accaSel(), i = a.indexOf(d.accag); if (i >= 0) a.splice(i, 1); else a.push(d.accag); render(); }
   else if (d.accarisk) { S.accaRisk = d.accarisk; S.accaPick = {}; render(); }
   else if (d.accaclear !== undefined) { S.accaSel[S.sport] = []; S.accaPick = {}; render(); }
@@ -3413,7 +3427,8 @@ document.addEventListener("click", e => {
   }
   else if (d.accaslip !== undefined) {
     S._accaN = Math.max(2, accaSel().length); const shown = (S._accaLegs || []).filter(x => accaSel().includes(x.g.id)), legs = (shown.length ? shown : withExtras(accaPreLegs(S.sport, accaSel()), S.accaX || {}, (g, k) => mkt(g, k), priceOf)).map(x => ({ sport: S.sport, g: x.g, m: x.m }));
-    S.slip = asLegs(legs); save(); S.slipOpen = innerWidth <= 1100; render(); toast("Acca added to your bet slip");
+    S.slip = asLegs(legs); const T = (S.accaTyped || {}).pre; S.slipTot = T && T.sig === S._accaSigPre ? { dec: T.dec, sig: slipSig() } : null;
+    save(); S.slipOpen = innerWidth <= 1100; render(); toast(S.slipTot ? `Acca added at your odds of ${odds(S.slipTot.dec)}` : "Acca added to your bet slip");
   }
   else if (d.copyslip !== undefined) {
     const c = slipCalc(), type = S.slip.length === 1 ? "Single" : S.slip.length === 2 ? "Double" : S.slip.length === 3 ? "Treble" : S.slip.length + "-fold acca";
@@ -3461,7 +3476,8 @@ document.addEventListener("click", e => {
   else if (d.accaliveslip !== undefined) {
     const sp = S.sport, gs = ((S.accaLiveSel || {})[sp] || []).map(id => findGame(sp, id)).filter(g => g && isLive(g)); let n = 0;
     S._accaN = Math.max(2, gs.length); const shown = (S._accaLiveLegs || []).filter(x => gs.some(g => g.id === x.g.id)); for (const { g, m } of (shown.length ? shown : withExtras(accaLiveLegs(sp, gs.map(g => g.id)), S.accaLiveX || {}, (g, k) => liveMarkets(sp, g).find(m => m.k === k && m.state === "open"), m => livePrice(m.p)))) { if (m) { pushLiveLeg(sp, g, m); n++; } }
-    save(); S.slipOpen = innerWidth <= 1100; render(); toast(n ? "In-play acca added to your slip. Check your bookie's live prices" : "Those games have finished");
+    const T = (S.accaTyped || {}).live; S.slipTot = T && T.sig === S._accaSigLive && S.slip.length === n ? { dec: T.dec, sig: slipSig() } : null;
+    save(); S.slipOpen = innerWidth <= 1100; render(); toast(!n ? "Those games have finished" : S.slipTot ? `In-play acca added at your odds of ${odds(S.slipTot.dec)}` : "In-play acca added to your slip. Check your bookie's live prices");
   }
   else if (d.shotpick !== undefined) { const f = $("#shotPick"); f.value = ""; f.click(); }
   else if (d.statrange) { S.statRange = d.statrange; render(); }
@@ -3498,10 +3514,14 @@ function setLegOdds(id, raw) {
   if (!d) { toast("Use odds like 5/2, EVS or 3.5"); $("#main")._h = null; render(); return; }
   if (l.orig == null) l.orig = l.dec;
   l.dec = Math.round(d * 1000) / 1000; l.custom = Math.abs(l.dec - l.orig) > 0.0005; l.est = l.custom ? false : l.estOrig ?? l.est;
+  S.slipTot = null;
   save(); render(); toast(l.custom ? "Price updated to " + odds(l.dec) : "Back to the app's price");
 }
 document.addEventListener("change", e => { const t = e.target;
-  if (t.dataset && (t.dataset.accaxadd || t.dataset.accalxadd) && t.value) { const live = !!t.dataset.accalxadd, gid = live ? t.dataset.accalxadd : t.dataset.accaxadd, st = live ? (S.accaLiveX = S.accaLiveX || {}) : (S.accaX = S.accaX || {}); st[gid] = [...(st[gid] || []), t.value]; (S.addOpen = S.addOpen || {})[(live ? "data-accalxadd-" : "data-accaxadd-") + gid] = false; render(); return; } if (t.id === "shotPick" && t.files && t.files[0]) { S.impShotMsg = ""; readShot(t.files[0]); } if (t.dataset && t.dataset.accalivealt) { const gid = t.dataset.accalivealt; if ((S._accaLiveLegs || []).some(x => x.g.id === gid)) pinGame(true, gid, ks => [t.value, ...ks.slice(1)]); else (S.accaLivePick = S.accaLivePick || {})[gid] = t.value; render(); } if (t.dataset && (t.dataset.accaxswap || t.dataset.accalxswap) && t.value) { const live = !!t.dataset.accalxswap, [gid, old] = (live ? t.dataset.accalxswap : t.dataset.accaxswap).split("|"); pinGame(live, gid, ks => ks.map(x => x === old ? t.value : x)); render(); return; } if (t.dataset && t.dataset.legodds) setLegOdds(t.dataset.legodds, t.value); if (t.dataset && t.dataset.chalstake !== undefined && S.user) { const v = Math.round(parseFloat(String(t.value).replace(/[£\s,]/g, "")) * 100) / 100, C0 = chalNow();
+  if (t.dataset && (t.dataset.accaxadd || t.dataset.accalxadd) && t.value) { const live = !!t.dataset.accalxadd, gid = live ? t.dataset.accalxadd : t.dataset.accaxadd, st = live ? (S.accaLiveX = S.accaLiveX || {}) : (S.accaX = S.accaX || {}); st[gid] = [...(st[gid] || []), t.value]; (S.addOpen = S.addOpen || {})[(live ? "data-accalxadd-" : "data-accaxadd-") + gid] = false; render(); return; } if (t.id === "shotPick" && t.files && t.files[0]) { S.impShotMsg = ""; readShot(t.files[0]); } if (t.dataset && t.dataset.accalivealt) { const gid = t.dataset.accalivealt; if ((S._accaLiveLegs || []).some(x => x.g.id === gid)) pinGame(true, gid, ks => [t.value, ...ks.slice(1)]); else (S.accaLivePick = S.accaLivePick || {})[gid] = t.value; render(); } if (t.dataset && (t.dataset.accaxswap || t.dataset.accalxswap) && t.value) { const live = !!t.dataset.accalxswap, [gid, old] = (live ? t.dataset.accalxswap : t.dataset.accaxswap).split("|"); pinGame(live, gid, ks => ks.map(x => x === old ? t.value : x)); render(); return; } if (t.dataset && t.dataset.legodds) setLegOdds(t.dataset.legodds, t.value); if (t.dataset && t.dataset.slipodds !== undefined) setSlipOdds(t.value);
+  if (t.dataset && t.dataset.accaodds) { const live = t.dataset.accaodds === "live", d = parseOdds(t.value), sig = live ? S._accaSigLive : S._accaSigPre; S.accaTyped = S.accaTyped || {};
+    if (!t.value.trim()) S.accaTyped[live ? "live" : "pre"] = null; else if (!d) toast("Use odds like 9/2, EVS or 5.5"); else S.accaTyped[live ? "live" : "pre"] = { dec: Math.round(d * 1000) / 1000, sig };
+    $("#main")._h = null; render(); } if (t.dataset && t.dataset.chalstake !== undefined && S.user) { const v = Math.round(parseFloat(String(t.value).replace(/[£\s,]/g, "")) * 100) / 100, C0 = chalNow();
     if (!(v > 0) || !C0.active) { toast("Type a stake like 0.50 or 2"); $("#main")._h = null; render(); }
     else { const C = JSON.parse(JSON.stringify(C0)), diff = Math.round((v - (+C.bank || 0)) * 100) / 100;
       if (diff) { if (diff < 0) C.taken = Math.round(((+C.taken || 0) - diff) * 100) / 100; else C.added = Math.round(((+C.added || 0) + diff) * 100) / 100; C.bank = v; saveChal(C); walletAdjust(-diff); toast(`Stake set to ${money(v)}. Returns ${money(v * C.active.dec)}`); } } }
