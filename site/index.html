@@ -2133,7 +2133,30 @@ function marketIn(seg, sp, g) {
   if (/ (match result|full time result|match odds|1x2) /.test(t) && / draw /.test(t) && !has(H) && !has(A)) extra.push("draw");
   const ms = g.model.markets.filter(m => !SKIP.has(m.k)).map(m => ({ m, l: normT(m.label) }));
   for (const src of [...extra.map(x => " " + normT(x) + " "), t]) { const hit = ms.filter(x => src.includes(" " + x.l + " ")).sort((a, b) => b.l.length - a.l.length)[0]; if (hit) return hit.m; }
-  return null;
+  return sp === "football" ? teamStatIn(t, g, H, A) : null;
+}
+const TSTAT = { cards: "cards", card: "cards", bookings: "cards", corners: "corners", corner: "corners", "shots on target": "sot", "shot on target": "sot", goals: "goals", goal: "goals", shots: "shots", fouls: "fouls" };
+const TSTAT_WORD = { cards: "cards", corners: "corners", sot: "shots on target", goals: "goals", shots: "shots", fouls: "fouls" };
+function teamStatIn(t, g, H, A) {   // returns a market-like leg the app can track from team stats
+  const unit = "(cards?|bookings|corners?|shots? on target|goals?|shots|fouls)";
+  let m = t.match(new RegExp(` (\\d+)\\+? ${unit} (?:for |by |to )?(?:each|both) teams? `)) || t.match(new RegExp(` (?:each|both) teams? (?:to )?(?:have |get |receive |win |take |score )?(\\d+)\\+? ${unit} `));
+  let who = m ? "each" : null, n = m ? +m[1] : 0, st = m ? m[2] : null;
+  if (!m) { m = t.match(new RegExp(` (?:over|o) (\\d+(?:\\.5)?) ${unit} (?:for |by )?(?:each|both) teams? `)); if (m) { who = "each"; n = Math.floor(+m[1]) + 1; st = m[2]; } }
+  if (!m) for (const [al, side] of [[H, "home"], [A, "away"]]) for (const a of al) {
+    const r = t.match(new RegExp(` ${a} (?:to )?(?:have |get |receive |win |take )?(?:over (\\d+(?:\\.5)?)|(\\d+)\\+) ${unit} `)) || t.match(new RegExp(` (\\d+)\\+ ${unit} (?:for|by) ${a} `));
+    if (r) { who = side; if (r.length === 4) { n = r[1] ? Math.floor(+r[1]) + 1 : +r[2]; st = r[3]; } else { n = +r[1]; st = r[2]; } break; }
+    if (who) break;
+  }
+  if (!who || !st || !n) return null;
+  const stat = TSTAT[st.replace(/s$/, "") in TSTAT ? st.replace(/s$/, "") : st] || TSTAT[st]; if (!stat) return null;
+  const nm = who === "each" ? "each team" : (who === "home" ? g.home.name : g.away.name);
+  return { k: `T:${stat}:${who}:${n}`, label: who === "each" ? `${n}+ ${TSTAT_WORD[stat]} for each team` : `${nm} ${n}+ ${TSTAT_WORD[stat]}`, p: null, custom: true };
+}
+function teamStatVals(g, stat) {   // [home, away] so far
+  const st = k => (g.stats || []).find(x => x.k === k);
+  if (stat === "goals") return [+g.home.score || 0, +g.away.score || 0];
+  if (stat === "cards") { const y = st("yellowCards"), r = st("redCards"); return y || r ? [(y ? y.h : 0) + (r ? r.h : 0), (y ? y.a : 0) + (r ? r.a : 0)] : null; }
+  const x = st({ corners: "wonCorners", sot: "shotsOnTarget", shots: "totalShots", fouls: "foulsCommitted" }[stat]); return x ? [x.h, x.a] : null;
 }
 const oddsIn = seg => { const m = String(seg).match(/(?:@|©|®| at )\s*(\d+\.\d{1,2}|\d+\s*\/\s*\d+|evs|evens)/i); return m ? parseOdds(m[1].replace(/\s+/g, "")) : null; };
 // read match bets out of any text: works for one line ("Como v Venezia: Over 7.5 corners @ 1.53") or a whole bet slip
@@ -2263,6 +2286,13 @@ function legInfo0(l) {   // -> { html, st: "pre" | "live" | "hit" | "miss" | "vo
   if (!g) return { st: "pre", html: `<div class="tl-leg"><div class="tl-top"><b>${name}</b><span>${esc(l.match || "")}</span></div><div class="tl-num"><span>This game has dropped out of the feed</span><span></span></div></div>` };
   const H = g.home, A = g.away, Lt = l.sport === "nba" ? A : H, Rt = l.sport === "nba" ? H : A;
   if (isPre(g)) return { st: "pre", html: `<div class="tl-leg"><div class="tl-top"><b>${name}</b><span>${esc(vs(l.sport, g))}</span></div><div class="tl-num"><span>${tip} ${whenLabel(kick(g))}</span><span></span></div></div>` };
+  if (/^T:/.test(l.k || "")) {   // team stat bet, e.g. 2+ cards for each team
+    const [, stat, who, n0] = l.k.split(":"), n = +n0, v = teamStatVals(g, stat), post = g.status.state === "post";
+    if (!v && !g._luDone) loadDetail(l.sport + ":" + l.gid);
+    const cur = !v ? null : who === "each" ? Math.min(v[0], v[1]) : who === "home" ? v[0] : v[1], hit = cur != null && cur >= n, miss = !hit && post && v;
+    const detail = !v ? "Waiting for stats…" : who === "each" ? `${esc(H.name)} <b>${v[0]}</b> · ${esc(A.name)} <b>${v[1]}</b> (need ${n} each)` : `<b>${cur}</b> / ${n} ${TSTAT_WORD[stat]}`;
+    return { st: hit ? "hit" : miss ? "miss" : "live", html: `<div class="tl-leg ${hit ? "hit" : miss ? "miss" : ""}"><div class="tl-top"><b>${name}</b><span>${esc(Lt.name)} ${esc(Lt.score)}–${esc(Rt.score)} ${esc(Rt.name)} · ${esc(clockLabel(l.sport, g))}</span></div><div class="tl-bar"><i style="width:${cur == null ? 0 : Math.min(1, cur / n) * 100}%"></i></div><div class="tl-num"><span>${detail}</span><span>${hit ? "✓ Landed" : miss ? "✗ Lost" : cur != null ? `${n - cur} to go` : ""}</span></div></div>` };
+  }
   const m = liveMarkets(l.sport, g).find(x => x.k === l.k);
   if (!m && !g._luDone) loadDetail(l.sport + ":" + l.gid);   // finished before the app opened: fetch its final stats
   const mm = ((m && m.label) || l.label || "").match(/^(Over|Under) ([\d.]+) (points|goals|corners|cards)/i), stt = k => (g.stats || []).find(x => x.k === k);
@@ -2526,7 +2556,8 @@ async function loadAccount() {
   ]);
   const wl = await sb.from("wallets").select("*").eq("user_id", uid).maybeSingle(); S.walletReady = !wl.error; S.wallet = wl.data || null;
   S.profile = p.data || { id: uid, display_name: (S.user.user_metadata || {}).display_name || S.user.email.split("@")[0], fav_teams: [], plan: "free", show_on_leaderboard: true, created_at: S.user.created_at };
-  S.bets = (b.data || []).filter(x => x.user_id === uid);   // only your own bets (friends' bets are readable for the feed) S.chalAll = splitChal(c.data ? c.data.data : null); S.waitlisted = !!w.data; S.board = lb.data || [];
+  S.bets = (b.data || []).filter(x => x.user_id === uid);   /* only your own bets: friends' bets are readable for the feed */
+  if (!c.error) { S.chalAll = splitChal(c.data ? c.data.data : null); S.chalLoaded = true; } S.waitlisted = !!w.data; S.board = lb.data || [];
   render(); loadSocial();
 }
 if (sb) {
@@ -2898,7 +2929,8 @@ async function uploadAvatar(file) {
     await saveProfile({ avatar_url: url }); toast("Looking good");
   } catch (err) { toast("Couldn't upload that photo"); }
 }
-async function saveChal(C, sport = S.sport) { S.chalAll = { ...(S.chalAll || {}), v: 2, [sport]: C }; render(); const r = await sb.from("challenges").upsert({ user_id: S.user.id, data: S.chalAll, updated_at: new Date().toISOString() }); if (r.error) toast("Couldn't save. Check your connection."); }
+async function saveChal(C, sport = S.sport) { if (!S.chalLoaded) { toast("Your £1K ladders haven't loaded yet. Try again in a moment"); loadAccount(); return; }   // never save over ladders we haven't read
+  S.chalAll = { ...(S.chalAll || {}), v: 2, [sport]: C }; render(); const r = await sb.from("challenges").upsert({ user_id: S.user.id, data: S.chalAll, updated_at: new Date().toISOString() }); if (r.error) toast("Couldn't save. Check your connection."); }
 async function saveProfile(patch) { Object.assign(S.profile, patch); render(); const r = await sb.from("profiles").update(patch).eq("id", S.user.id); if (r.error) toast("Couldn't save. Check your connection."); }
 
 document.addEventListener("submit", async e => {
@@ -3119,6 +3151,7 @@ function betOutcome(legs) {   // "won" / "lost" once it's certain, otherwise nul
       if (r.v == null) { all = false; continue; }
       lost = true; continue;
     }
+    if (/^T:/.test(l.k || "")) { const st = legInfo0(l).st; if (st === "hit") continue; if (st === "miss" && g._postDetail) { lost = true; continue; } if (st === "miss") { g._luAt = 0; loadDetail(l.sport + ":" + l.gid); } all = false; continue; }
     if (!l.k || g.status.state !== "post") { all = false; continue; }
     const m = liveMarkets(l.sport, g).find(x => x.k === l.k); if (!m) { if (!g._luDone) loadDetail(l.sport + ":" + l.gid); all = false; continue; }
     if (m.state === "lost") lost = true; else if (m.state !== "won") all = false;

@@ -113,6 +113,16 @@ def leg_result(l):
                 return ("won" if val >= l["target"] else "lost"), val
         return None, None
     k, tot = str(l.get("k", "")), hs + as_
+    if k.startswith("T:") and sp == "football":   # team stat bets, e.g. 2+ cards for each team
+        _, stat, who, n = k.split(":"); n = int(n)
+        if stat == "goals": v = (hs, as_)
+        elif stat == "cards": v = (H.get("yellowCards", 0) + H.get("redCards", 0), A.get("yellowCards", 0) + A.get("redCards", 0))
+        else:
+            key = {"corners": "wonCorners", "sot": "shotsOnTarget", "shots": "totalShots", "fouls": "foulsCommitted"}.get(stat)
+            if not key or H.get(key) is None: return None, None
+            v = (H.get(key, 0), A.get(key, 0))
+        cur = min(v) if who == "each" else v[0] if who == "home" else v[1]
+        return ("won" if cur >= n else "lost"), cur
     W = lambda c: "won" if c else "lost"
     if sp == "nba":
         if k == "ML1": return W(hs > as_), None
