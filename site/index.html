@@ -1443,21 +1443,45 @@ function presetsHTML() {
 `;
 }
 /* ---------- acca builder: pick games, it picks the safest leg in each ---------- */
-const RISK = { safe: { name: "Safest", min: 1.10, pmin: .60, desc: "The most likely bet in each game." }, balanced: { name: "Balanced", min: 1.25, pmin: .58, desc: "Still likely, at better prices." }, bigger: { name: "Bigger odds", min: 1.5, pmin: .48, desc: "Riskier legs for a bigger payout." } };
+// each level aims the WHOLE acca at a total-odds range; legs are chosen so the total lands in it
+const RISK = { safe: { name: "Safest", lo: 1.01, hi: 2.5, target: 2.0, desc: "Whole acca under 2.5 (6/4). The most likely bets." },
+  balanced: { name: "Balanced", lo: 2.5, hi: 4, target: 3.2, desc: "Whole acca 2.5 to 4.0 (6/4 to 3/1)." },
+  bigger: { name: "Bigger odds", lo: 5, hi: 1e9, target: 7, desc: "Whole acca 5.0+ (4/1 or bigger)." } };
+// pick the market whose price is closest to this leg's share of the target total
+function pickForTarget(list, price, n) {
+  const r = RISK[S.accaRisk || "safe"], t = Math.pow(r.target, 1 / Math.max(1, n));
+  const ok = list.filter(m => m.p >= .15 && price(m) >= 1.04); if (!ok.length) return list[0];
+  return ok.reduce((best, m) => { const sc = Math.abs(Math.log(price(m)) - Math.log(t)) - .08 * m.p, bs = Math.abs(Math.log(price(best)) - Math.log(t)) - .08 * best.p; return sc < bs ? m : best; });
+}
+function jointPick(items, price) {   // items: [{ id, opts, fixed }] -> Map id -> market
+  const r = RISK[S.accaRisk || "safe"], tgt = Math.log(r.target), pick = new Map();
+  const cost = () => { let lt = 0, lp = 0; for (const [, m] of pick) { lt += Math.log(price(m)); lp += Math.log(m.p); } const miss = lt < Math.log(r.lo) ? Math.log(r.lo) - lt : lt > Math.log(Math.min(r.hi, 1e6)) ? lt - Math.log(r.hi) : 0; return 4 * miss + .6 * Math.abs(lt - tgt) - .5 * lp; };
+  for (const it of items) pick.set(it.id, it.fixed || pickForTarget(it.opts, price, items.length));
+  for (let pass = 0; pass < 3; pass++) for (const it of items) { if (it.fixed) continue; let best = pick.get(it.id), bc = cost();
+    for (const m of it.opts.filter(m => m.p >= .15 && price(m) >= 1.04).slice(0, 14)) { pick.set(it.id, m); const c = cost(); if (c < bc) { bc = c; best = m; } } pick.set(it.id, best); }
+  return pick;
+}
+const bandNote = dec => { const r = RISK[S.accaRisk || "safe"]; if (dec >= r.lo && dec <= r.hi) return `<div class="msg ok">✓ Total ${dec.toFixed(2)}: in your ${r.name} range.</div>`;
+  return `<div class="note">Total ${dec.toFixed(2)} is ${dec < r.lo ? "below" : "above"} the ${r.name} range (${r.hi > 1e8 ? r.lo.toFixed(1) + "+" : r.lo.toFixed(1) + " to " + r.hi.toFixed(1)}). ${dec < r.lo ? "Add another game or swap a leg for a bigger price." : "Remove a game or switch to a safer level."}</div>`; };
 const accaSel = () => (S.accaSel = S.accaSel || { football: [], nba: [] })[S.sport];
 function legOptions(sport, g) {
   const r = RISK[S.accaRisk || "safe"];
-  return g.model.markets.filter(m => m.k !== "12" && m.p <= .96 && priceOf(m) >= 1.05).sort((a, b) => b.p - a.p).map(m => ({ m, ok: priceOf(m) >= r.min && m.p >= r.pmin }));
+  return g.model.markets.filter(m => m.k !== "12" && m.p <= .96 && priceOf(m) >= 1.05).sort((a, b) => b.p - a.p).map(m => ({ m, ok: true }));
 }
-function legFor(sport, g) {
+function accaPreLegs(sp, ids) {
+  const gs = ids.map(id => findGame(sp, id)).filter(Boolean);
+  const J = jointPick(gs.map(g => { const o = legOptions(sp, g).map(x => x.m), k = (S.accaPick || {})[g.id]; return { id: g.id, opts: o, fixed: k && o.find(m => m.k === k) }; }), priceOf);
+  return gs.map(g => ({ g, m: J.get(g.id) })).filter(x => x.m);
+}
+function legFor(sport, g, n = S._accaN || 3) {
   const o = legOptions(sport, g), pick = (S.accaPick || {})[g.id];
   const chosen = pick && o.find(x => x.m.k === pick);
   if (chosen) return chosen.m;
-  const ok = o.filter(x => x.ok); return (ok[0] || o[0] || {}).m;
+  return pickForTarget(o.map(x => x.m), priceOf, n);
 }
 function accaGames() { const w = S.accaWin && upcoming(S.sport, S.accaWin).length ? S.accaWin : firstWin(S.sport); return { w, list: upcoming(S.sport, w) }; }
 function pushLiveLeg(sp, g, m) {
-  const id = `${sp}:${g.id}:${m.k}:live`, dec = Math.round(100 / m.p) / 100;
+  const id = `${sp}:${g.id}:${m.k}:live`, dec = Math.round(livePrice(m.p) * 100) / 100;
   S.slip = S.slip.filter(l => l.id !== id && !(l.sport === sp && l.gid === g.id && conflicts(l.k, m.k)));
   S.slip.push({ id, sport: sp, gid: g.id, k: m.k, label: m.label + " (in-play)", match: vs(sp, g), p: m.p, dec, orig: dec, est: true, estOrig: true, kick: kick(g), live: true });
 }
@@ -1466,7 +1490,12 @@ function liveAccaLeg(sp, g) {
   const r = RISK[S.accaRisk || "safe"], pick = (S.accaLivePick || {})[g.id];
   const o = liveMarkets(sp, g).filter(m => m.state === "open" && !SKIP.has(m.k) && m.p <= .95 && 1 / m.p >= 1.05).sort((a, b) => b.p - a.p);
   if (pick) { const c = o.find(m => m.k === pick); if (c) return { m: c, o }; }
-  return { m: o.find(m => 1 / m.p >= r.min && m.p >= r.pmin) || o[0], o };
+  return { m: pickForTarget(o, m => livePrice(m.p), S._accaN || 3), o };
+}
+function accaLiveLegs(sp, ids) {
+  const gs = ids.map(id => findGame(sp, id)).filter(g => g && isLive(g));
+  const its = gs.map(g => { const { o } = liveAccaLeg(sp, g), k = (S.accaLivePick || {})[g.id]; return { g, o, id: g.id, opts: o, fixed: k && o.find(m => m.k === k) }; });
+  const J = jointPick(its, m => livePrice(m.p)); return its.map(it => ({ g: it.g, m: J.get(it.id), o: it.o })).filter(x => x.m);
 }
 const accaModeSeg = () => `<div class="seg3 two acmode" role="group" aria-label="Pre-match or in-play"><button data-accamode="pre" aria-pressed="${S.accaMode !== "live"}">Pre-match</button><button data-accamode="live" aria-pressed="${S.accaMode === "live"}">${games(S.sport).some(isLive) ? '<span class="dot red"></span> ' : ""}In-play</button></div>`;
 function viewAccaLive() {
@@ -1476,19 +1505,19 @@ function viewAccaLive() {
     <div class="acca-ctrl"><div class="seg3" role="group" aria-label="Safety level">${Object.entries(RISK).map(([k, r]) => `<button data-accarisk="${k}" aria-pressed="${risk === k}">${r.name}</button>`).join("")}</div><p class="risk-desc">${RISK[risk].desc}</p></div>`;
   if (!live.length) { const nx = games(sp).filter(isPre).sort((a, b) => new Date(kick(a)) - new Date(kick(b)))[0];
     return `${head}<div class="empty art"><img src="img/empty-live.webp" alt="" loading="lazy"><b>Nothing in play right now</b><span>${nx ? `Next up: <b>${esc(vs(sp, nx))}</b> ${whenLabel(kick(nx))}. Come back when it kicks off.` : "Check back when games kick off."}</span></div>`; }
-  const legs = sel.map(id => findGame(sp, id)).filter(Boolean).map(g => ({ g, ...liveAccaLeg(sp, g) })).filter(x => x.m);
-  const dec = legs.reduce((a, x) => a * (1 / x.m.p), 1), p = legs.reduce((a, x) => a * x.m.p, 1);
+  S._accaN = Math.max(2, sel.length); const legs = accaLiveLegs(sp, sel);
+  const dec = legs.reduce((a, x) => a * livePrice(x.m.p), 1), p = legs.reduce((a, x) => a * x.m.p, 1);
   const type = legs.length === 1 ? "Single" : legs.length === 2 ? "Double" : legs.length === 3 ? "Treble" : legs.length + "-fold acca";
   const sc = g => { const L = sp === "nba" ? g.away : g.home, R = sp === "nba" ? g.home : g.away; return `${esc(L.name)} ${esc(L.score)}–${esc(R.score)} ${esc(R.name)}`; };
   const summary = legs.length ? `<section class="accabox"><div class="ab-hd"><h2>Your in-play acca</h2><button class="more" data-accaliveclear>Clear</button></div>
     <div class="ab-legs">${legs.map(({ g, m, o }) => `<div class="ab-leg"><div class="abl-main"><div class="abl-match"><span class="dot red"></span> ${sc(g)} · ${esc(clockLabel(sp, g))}</div>
-      <label class="sr" for="lalt-${g.id}">Bet for ${esc(vs(sp, g))}</label><select id="lalt-${g.id}" data-accalivealt="${g.id}">${o.slice(0, 12).map(x => `<option value="${x.k}" ${x.k === m.k ? "selected" : ""}>${esc(x.label)} · ${pct(x.p)} now · ${odds(1 / x.p)}</option>`).join("")}</select></div>
-      <div class="abl-p"><b>${odds(1 / m.p)}</b><small>${pct(m.p)}</small></div><button class="x" data-accalive="${g.id}" aria-label="Remove ${esc(vs(sp, g))}">✕</button></div>`).join("")}</div>
-    <div class="sum3"><div><small>${type} fair odds</small><b>${odds(dec)}</b></div><div><small>Chance it lands</small><b>${pct(p)}</b></div><div><small>£${S.stake} returns</small><b class="ret">${money(S.stake * dec)}</b></div></div>
-    <div class="meter"><i style="width:${Math.max(p * 100, 2)}%"></i></div>
-    <div class="warn">In-play prices move every minute. These are our fair prices: check your bookie's live odds before you bet.</div>
+      <label class="sr" for="lalt-${g.id}">Bet for ${esc(vs(sp, g))}</label><select id="lalt-${g.id}" data-accalivealt="${g.id}">${o.slice(0, 12).map(x => `<option value="${x.k}" ${x.k === m.k ? "selected" : ""}>${esc(x.label)} · ${pct(x.p)} now · ${odds(livePrice(x.p))}</option>`).join("")}</select></div>
+      <div class="abl-p"><b>${odds(livePrice(m.p))}</b><small>${pct(m.p)}</small></div><button class="x" data-accalive="${g.id}" aria-label="Remove ${esc(vs(sp, g))}">✕</button></div>`).join("")}</div>
+    <div class="sum3"><div><small>${type} est. odds</small><b>${odds(dec)}</b></div><div><small>Chance it lands</small><b>${pct(p)}</b></div><div><small>£${S.stake} returns</small><b class="ret">${money(S.stake * dec)}</b></div></div>
+    <div class="meter"><i style="width:${Math.max(p * 100, 2)}%"></i></div>${legs.length >= 2 ? bandNote(dec) : ""}
+    <div class="warn">In-play prices move every minute. These are our estimate of a bookie's price: check the live odds before you bet.</div>
     <button class="btn" data-accaliveslip>Add in-play ${type.toLowerCase()} to bet slip</button></section>` : "";
-  const rows = `<div class="ag-list">${live.map(g => { const on = sel.includes(g.id), { m } = liveAccaLeg(sp, g);
+  const rows = `<div class="ag-list">${live.map(g => { const on = sel.includes(g.id); S._accaN = Math.max(2, sel.length + (on ? 0 : 1)); const { m } = liveAccaLeg(sp, g);
     return `<button class="ag ${on ? "on" : ""}" data-accalive="${g.id}" aria-pressed="${on}"><span class="ag-tick" aria-hidden="true">${on ? "✓" : "+"}</span>
       <span class="ag-main"><span class="ag-teams">${logo(sp, sp === "nba" ? g.away : g.home)}<b>${esc(sp === "nba" ? g.away.name : g.home.name)}</b><span class="ag-score">${esc((sp === "nba" ? g.away : g.home).score)}–${esc((sp === "nba" ? g.home : g.away).score)}</span>${logo(sp, sp === "nba" ? g.home : g.away)}<b>${esc(sp === "nba" ? g.home.name : g.away.name)}</b></span>
       <span class="ag-meta"><span class="live-tag"><span class="dot red"></span>${esc(clockLabel(sp, g))}</span>${sp === "football" ? " · " + esc(leagueName(g.league)) : ""}</span>
@@ -1500,7 +1529,7 @@ function viewAcca() {
   const sp = S.sport, { w, list } = accaGames(), sel = accaSel().filter(id => list.some(g => g.id === id) || findGame(sp, id) && isPre(findGame(sp, id)));
   S.accaSel[sp] = sel;
   const risk = S.accaRisk || "safe";
-  const legs = sel.map(id => findGame(sp, id)).filter(Boolean).map(g => ({ g, m: legFor(sp, g) })).filter(x => x.m);
+  S._accaN = Math.max(2, sel.length); const legs = accaPreLegs(sp, sel);
   const dec = legs.reduce((a, x) => a * priceOf(x.m), 1), p = legs.reduce((a, x) => a * x.m.p, 1), est = legs.some(x => !x.m.dec);
   const type = legs.length === 1 ? "Single" : legs.length === 2 ? "Double" : legs.length === 3 ? "Treble" : legs.length + "-fold acca";
   const summary = legs.length ? `<section class="accabox"><div class="ab-hd"><h2>Your acca</h2><button class="more" data-accaclear>Clear</button></div>
@@ -1508,12 +1537,12 @@ function viewAcca() {
       <label class="sr" for="alt-${g.id}">Bet for ${esc(vs(sp, g))}</label><select id="alt-${g.id}" data-accaalt="${g.id}">${legOptions(sp, g).slice(0, 12).map(x => `<option value="${x.m.k}" ${x.m.k === m.k ? "selected" : ""}>${esc(x.m.label)} · ${pct(x.m.p)} · ${odds(priceOf(x.m))}</option>`).join("")}</select></div>
       <div class="abl-p"><b>${odds(priceOf(m))}</b><small>${pct(m.p)}</small></div><button class="x" data-accag="${g.id}" aria-label="Remove ${esc(vs(sp, g))}">✕</button></div>`).join("")}</div>
     <div class="sum3"><div><small>${type} odds${est ? " · est." : ""}</small><b>${odds(dec)}</b></div><div><small>Chance it lands</small><b>${pct(p)}</b></div><div><small>£${S.stake} returns</small><b class="ret">${money(S.stake * dec)}</b></div></div>
-    <div class="meter"><i style="width:${Math.max(p * 100, 2)}%"></i></div>
+    <div class="meter"><i style="width:${Math.max(p * 100, 2)}%"></i></div>${legs.length >= 2 ? bandNote(dec) : ""}
     ${legs.length >= 2 && p < .25 ? `<div class="warn">Every leg has to win, so the chance drops with each game you add. Fewer games or "Safest" gives a better chance.</div>` : ""}
     <button class="btn" data-accaslip>Add ${type.toLowerCase()} to bet slip</button></section>` : "";
   const byDay = new Map(); for (const g of list) { const k = dayKey(kick(g)); if (!byDay.has(k)) byDay.set(k, []); byDay.get(k).push(g); }
   const rows = [...byDay].map(([dk, gs]) => `<div class="day"><div class="dayhd"><h2>${dayLabel(dk)[0]}</h2><span>${dayLabel(dk)[1]}</span></div><div class="ag-list">${gs.map(g => {
-      const on = sel.includes(g.id), m = legFor(sp, g);
+      const on = sel.includes(g.id), m = legFor(sp, g, Math.max(2, sel.length + (on ? 0 : 1)));
       return `<button class="ag ${on ? "on" : ""}" data-accag="${g.id}" aria-pressed="${on}"><span class="ag-tick" aria-hidden="true">${on ? "✓" : "+"}</span>
         <span class="ag-main"><span class="ag-teams">${logo(sp, sp === "nba" ? g.away : g.home)}<b>${esc(sp === "nba" ? g.away.name : g.home.name)}</b><span class="ag-v">${sp === "nba" ? "@" : "v"}</span>${logo(sp, sp === "nba" ? g.home : g.away)}<b>${esc(sp === "nba" ? g.home.name : g.away.name)}</b></span>
         <span class="ag-meta">${hm(kick(g))}${sp === "football" ? " · " + esc(leagueName(g.league)) : ""}</span>
@@ -1716,7 +1745,19 @@ const asOf = g => isLive(g) ? `<span class="stamp">live · ${esc(g.status.detail
 const erf = x => { const t = 1 / (1 + 0.3275911 * Math.abs(x)), y = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x); return x >= 0 ? y : -y; };
 const phi = x => 0.5 * (1 + erf(x / Math.SQRT2));
 const pois = (k, l) => { let p = Math.exp(-l); for (let i = 1; i <= k; i++) p *= l / i; return p; };
+const LIVE_MARGIN = .85;   // in-play bookie prices pay about 85% of the fair winnings
+const livePrice = p => Math.max(1.01, 1 + (1 / p - 1) * LIVE_MARGIN);
 const pAtLeast = (k, l) => { if (k <= 0) return 1; let c = 0; for (let i = 0; i < k; i++) c += pois(i, l); return Math.max(0, 1 - c); };
+// minutes still to play, counting typical injury time (2 in the first half, 5 in the second)
+function fbLeft(g) {
+  if (g.status.state === "post") return 0;
+  const d = String(g.status.detail || ""); if (/HT|Half/i.test(d)) return 50;
+  const m = d.match(/(\d+)'(?:\s*\+\s*(\d+))?/), mn = m ? +m[1] : (minute(g) || 0), extra = m && m[2] ? +m[2] : 0;
+  if (mn < 45) return 97 - mn;
+  if (mn === 45 && extra) return Math.max(0.5, 2 - extra) + 50;
+  if (mn < 90) return 95 - mn;
+  return Math.max(0.5, 5 - extra);
+}
 function fbMinute(g) {
   if (g.status.state === "post") return 90;
   const d = String(g.status.detail || ""); if (/HT|Half/i.test(d)) return 45;
@@ -1727,7 +1768,7 @@ function liveMarkets(sport, g) {
   const pre = Object.fromEntries(g.model.markets.map(m => [m.k, m]));
   const push = (k, p, state) => { if (!pre[k]) return; out.push({ ...pre[k], pre: pre[k].p, p: Math.max(0, Math.min(1, p)), state: state || (post ? (p >= .5 ? "won" : "lost") : p >= .9995 ? "won" : p <= .0005 ? "lost" : "open") }); };
   if (sport === "football") {
-    const mn = fbMinute(g), rf = post ? 0 : Math.max(0, 90 - mn) / 90, lh = g.model.xgH * rf, la = g.model.xgA * rf;
+    const mn = fbMinute(g), left = fbLeft(g), played = Math.max(1, 97 - left), rf = post ? 0 : left / 97, lh = g.model.xgH * rf, la = g.model.xgA * rf;
     const st = k => (g.stats || []).find(x => x.k === k);
     let pH = 0, pD = 0, pA = 0;
     for (let i = 0; i <= 10; i++) for (let j = 0; j <= 10; j++) { const p = pois(i, lh) * pois(j, la), fh = hs + i, fa = as + j; if (fh > fa) pH += p; else if (fh === fa) pD += p; else pA += p; }
@@ -1741,11 +1782,11 @@ function liveMarkets(sport, g) {
     push("BTTS", hsc * asc); push("BTTSN", 1 - hsc * asc);
     push("HO05", hsc); push("AO05", asc); push("HO15", pAtLeast(2 - hs, lh)); push("AO15", pAtLeast(2 - as, la));
     const c = st("wonCorners"), cn = c ? c.h + c.a : null, ce = g.model.corners;
-    if (cn != null && ce) { const lc = ce * rf;
+    if (cn != null && ce) { const w = played / (played + 35), chase = Math.abs(hs - as) === 1 ? 1.15 : hs === as ? 1.05 : 1, lateMins = Math.min(left, mn >= 90 ? left : Math.max(0, 95 - Math.max(mn, 75))), boost = (left - lateMins + lateMins * 1.3 * chase) / Math.max(left, .01), lc = post ? 0 : boost * left * ((1 - w) * ce / 97 + w * cn / played);
       for (const line of [7.5, 8.5, 9.5, 10.5]) push("C" + line, pAtLeast(Math.floor(line) + 1 - cn, lc));
       push("CU105", 1 - pAtLeast(11 - cn, lc)); }
     const y = st("yellowCards"), r = st("redCards"), yn = y ? y.h + y.a + (r ? r.h + r.a : 0) : null, ye = g.model.cards;
-    if (yn != null && ye) for (const line of [2.5, 3.5, 4.5]) push("Y" + line, pAtLeast(Math.floor(line) + 1 - yn, ye * rf));
+    if (yn != null && ye) for (const line of [2.5, 3.5, 4.5]) push("Y" + line, pAtLeast(Math.floor(line) + 1 - yn, post ? 0 : left * ((1 - played / (played + 35)) * ye / 97 + played / (played + 35) * yn / played)));
   } else {
     const q = g.status.period || 1, played = post ? 48 : Math.min(48, Math.max(0, (Math.min(q, 4) - 1) * 12 + (12 - clockMins(g.status.clock)))), rf = post ? 0 : Math.max(0.02, (48 - played) / 48);
     const totNow = hs + as, mrgNow = hs - as, preTotal = g.odds && g.odds.total ? +g.odds.total : g.model.proj;
@@ -1768,7 +1809,7 @@ function liveLegFor(sport, g, k) { const m = liveMarkets(sport, g).find(x => x.k
 function angleCard(sport, g, title, line1, m) {
   if (!m) return "";
   return `<div class="angle"><div class="an-top"><small>${title}</small><span>${line1}</span></div><div class="an-bet"><span>${esc(m.label)}</span><b style="color:${tierColor(m.p)}">${pct(m.p)} now</b></div>
-    <button class="odd addlive" data-liveleg="${sport}|${g.id}|${m.k}"><span class="pr">${odds(1 / m.p)}</span><span class="pp">+ add</span></button></div>`;
+    <button class="odd addlive" data-liveleg="${sport}|${g.id}|${m.k}"><span class="pr">${odds(livePrice(m.p))}</span><span class="pp">+ add</span></button></div>`;
 }
 function anglesHTML(sport, g) {
   const LM = liveMarkets(sport, g).filter(m => m.state === "open" && m.p > .05 && m.p < .96), pick = (re, target = .62) => LM.filter(m => re.test(m.k)).sort((a, b) => Math.abs(a.p - target) - Math.abs(b.p - target))[0];
@@ -1801,7 +1842,7 @@ function bestForGame(sport, g) {
   if (!out.length) return "";
   return `<section class="section"><h2>${live ? "Best bets right now" : "Best bets for this game"}</h2><div class="gbets">${out.map(({ tag, cls, m }) => `<div class="gbet"><span class="tag ${cls}">${tag}</span><div class="gb-main"><b>${esc(m.label)}</b><small>${reasons(sport, g, m)[0] ? esc(reasons(sport, g, m)[0]) : ""}</small></div>
     <div class="gb-p"><span class="ring sm" style="--p:${Math.round(m.p * 100)};--c:${tierColor(m.p)}"><span>${pct(m.p)}</span></span></div>
-    ${live ? `<button class="odd addlive" data-liveleg="${sport}|${g.id}|${m.k}"><span class="pr">${odds(1 / m.p)}</span><span class="pp">fair · add</span></button>` : oddBtn(sport, g, m.k)}</div>`).join("")}</div></section>`;
+    ${live ? `<button class="odd addlive" data-liveleg="${sport}|${g.id}|${m.k}"><span class="pr">${odds(livePrice(m.p))}</span><span class="pp">est. · add</span></button>` : oddBtn(sport, g, m.k)}</div>`).join("")}</div></section>`;
 }
 function marketsTable(sport, g, only) {
   const order = sport === "nba" ? null : ["1", "X", "2", "1X", "X2", "DNB1", "DNB2", "O15", "O25", "U25", "O35", "U35", "BTTS", "BTTSN", "HO05", "AO05", "HO15", "AO15"];
@@ -1812,7 +1853,7 @@ function marketsTable(sport, g, only) {
   const post = g.status.state === "post", ms = liveMarkets(sport, g).filter(m => !SKIP.has(m.k) && (!only || only.test(m.k)));
   const rank = { open: 0, won: 1, lost: 2 }; ms.sort((a, b) => rank[a.state] - rank[b.state]);
   const stTag = m => m.state === "won" ? `<span class="mst won">${post ? "Won" : "Landed ✓"}</span>` : m.state === "lost" ? `<span class="mst lost">Lost</span>` : m.p >= .98 ? `<span class="mst quiet">Too short</span>` : m.p <= .02 ? `<span class="mst quiet">Unlikely</span>` : `<span class="mst open">Open</span>`;
-  return `<div class="mkts live"><div class="mk hd"><span>Market</span><span>${post ? "Result" : "Chance"}</span><span class="fo">Before</span><span style="text-align:center">${post ? "" : "Price"}</span></div>${ms.map(m => `<div class="mk ${m.state}"><span>${esc(m.label)}</span>${m.state === "open" ? `<span class="pb" style="--p:${Math.round(m.p * 100)};--c:${tierColor(m.p)}"><i></i><span>${pct(m.p)}</span></span>` : `<span class="pb"><span style="width:auto;color:var(--muted)">${m.state === "won" ? "Done" : "Out"}</span></span>`}<span class="fo">${pct(m.pre)}</span><span style="text-align:center">${m.state === "open" && !post && m.p > .02 && m.p < .98 ? `<button class="odd addlive" data-liveleg="${sport}|${g.id}|${m.k}" title="Add at fair price"><span class="pr">${odds(1 / m.p)}</span><span class="pp">+ add</span></button>` : stTag(m)}</span></div>`).join("")}</div>`;
+  return `<div class="mkts live"><div class="mk hd"><span>Market</span><span>${post ? "Result" : "Chance"}</span><span class="fo">Before</span><span style="text-align:center">${post ? "" : "Price"}</span></div>${ms.map(m => `<div class="mk ${m.state}"><span>${esc(m.label)}</span>${m.state === "open" ? `<span class="pb" style="--p:${Math.round(m.p * 100)};--c:${tierColor(m.p)}"><i></i><span>${pct(m.p)}</span></span>` : `<span class="pb"><span style="width:auto;color:var(--muted)">${m.state === "won" ? "Done" : "Out"}</span></span>`}<span class="fo">${pct(m.pre)}</span><span style="text-align:center">${m.state === "open" && !post && m.p > .02 && m.p < .98 ? `<button class="odd addlive" data-liveleg="${sport}|${g.id}|${m.k}" title="Add at our estimated price"><span class="pr">${odds(livePrice(m.p))}</span><span class="pp">+ add</span></button>` : stTag(m)}</span></div>`).join("")}</div>`;
 }
 function last5Table(t) {
   if (!t.last5 || !t.last5.length) return "";
@@ -2879,12 +2920,13 @@ document.addEventListener("click", e => {
   else if (d.accaclear !== undefined) { S.accaSel[S.sport] = []; S.accaPick = {}; render(); }
   else if (d.accaauto) {
     const n = +d.accaauto, { list } = accaGames();
-    const ranked = list.map(g => ({ g, m: legFor(S.sport, g) })).filter(x => x.m && x.m.p >= RISK[S.accaRisk || "safe"].pmin && priceOf(x.m) >= RISK[S.accaRisk || "safe"].min).sort((a, b) => b.m.p - a.m.p);
+    S._accaN = n; const t = Math.pow(RISK[S.accaRisk || "safe"].target, 1 / n);
+    const ranked = list.map(g => ({ g, m: legFor(S.sport, g, n) })).filter(x => x.m).sort((a, b) => (Math.abs(Math.log(priceOf(a.m) / t)) - .1 * a.m.p) - (Math.abs(Math.log(priceOf(b.m) / t)) - .1 * b.m.p));
     S.accaSel[S.sport] = ranked.slice(0, n).map(x => x.g.id); S.accaPick = {}; render();
-    if (ranked.length < n) toast(`Only ${ranked.length} games fit right now`); else toast(`Picked the ${n} safest games`);
+    if (ranked.length < n) toast(`Only ${ranked.length} games fit right now`); else toast(`Picked ${n} games for a ${RISK[S.accaRisk || "safe"].name} acca`);
   }
   else if (d.accaslip !== undefined) {
-    const legs = accaSel().map(id => findGame(S.sport, id)).filter(Boolean).map(g => ({ sport: S.sport, g, m: legFor(S.sport, g) })).filter(x => x.m);
+    S._accaN = Math.max(2, accaSel().length); const legs = accaPreLegs(S.sport, accaSel()).map(x => ({ sport: S.sport, ...x }));
     S.slip = asLegs(legs); save(); S.slipOpen = innerWidth <= 1100; render(); toast("Acca added to your bet slip");
   }
   else if (d.copyslip !== undefined) {
@@ -2932,7 +2974,7 @@ document.addEventListener("click", e => {
   else if (d.accaliveclear !== undefined) { (S.accaLiveSel || {})[S.sport] = []; S.accaLivePick = {}; render(); }
   else if (d.accaliveslip !== undefined) {
     const sp = S.sport, gs = ((S.accaLiveSel || {})[sp] || []).map(id => findGame(sp, id)).filter(g => g && isLive(g)); let n = 0;
-    for (const g of gs) { const { m } = liveAccaLeg(sp, g); if (m) { pushLiveLeg(sp, g, m); n++; } }
+    S._accaN = Math.max(2, gs.length); for (const { g, m } of accaLiveLegs(sp, gs.map(g => g.id))) { if (m) { pushLiveLeg(sp, g, m); n++; } }
     save(); S.slipOpen = innerWidth <= 1100; render(); toast(n ? "In-play acca added to your slip. Check your bookie's live prices" : "Those games have finished");
   }
   else if (d.iosx !== undefined) { store.set("iosTipX", true); render(); }
