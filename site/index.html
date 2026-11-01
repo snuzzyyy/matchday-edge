@@ -1456,10 +1456,23 @@ function challengeOptions() {
 }
 const today = () => new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 const CH_DEFAULT = () => ({ start: 1, target: 1000, rungs: 10, rung: 0, bank: 1, attempts: 1, started: today(), history: [], active: null, past: [] });
+// which sport an old ladder's bets were on (old saves didn't record it)
+function ladderSport(C) {
+  const legSport = ((C.active && C.active.legs) || []).map(l => l.sport)[0]; if (legSport) return legSport;
+  const hs = [...(C.history || []), ...(C.past || []).flatMap(p => p.history || [])];
+  const nbaTeams = new Set(((S.data && S.data.nba) || []).flatMap(g => [g.home.name, g.away.name]));
+  const isNba = h => /\bpoints?\b|rebounds?|assists?|threes?|\bQ[1-4]\b/i.test(h.bet || "") || String(h.match || "").split(/ @ | v /).some(t => nbaTeams.has(t.trim()));
+  const isFb = h => /goals?|corners?|cards?|draw|btts|to score/i.test(h.bet || "");
+  const n = hs.filter(isNba).length, f = hs.filter(isFb).length;
+  return n > f ? "nba" : "football";
+}
+const ladderEmpty = C => !C || !((C.history || []).length || C.active || C.rung || (C.past || []).length);
 function splitChal(d) {   // stored as { v: 2, football: ladder, nba: ladder }; older accounts had one ladder
-  if (!d) return { v: 2 }; if (d.v === 2) return d;
-  const legSport = ((d.active && d.active.legs) || []).map(l => l.sport)[0], histNba = (d.history || []).some(h => / points| rebounds| assists|Q[1-4]/i.test(h.bet || ""));
-  return { v: 2, [legSport || (histNba ? "nba" : "football")]: d };
+  if (!d) return { v: 2 };
+  if (d.v !== 2) return { v: 2, [ladderSport(d)]: d };
+  // fix ladders that an earlier version filed under the wrong sport
+  if (d.football && ladderEmpty(d.nba) && !ladderEmpty(d.football) && ladderSport(d.football) === "nba") return { v: 2, nba: d.football };
+  return d;
 }
 const SPN = { football: "Football", nba: "NBA" };
 const chalNow = (sport = S.sport) => { const C = S.user ? ((S.chalAll || {})[sport] || CH_DEFAULT()) : (S.data.challenge || CH_DEFAULT()); C.past = C.past || []; C.history = C.history || []; return C; };
