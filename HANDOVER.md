@@ -132,8 +132,9 @@ Menu (`NAV`): **Live · Games · Bets · £1K · Friends**. Games holds Fixtures
 ## 8. Android app
 
 - WebView wrapper loading the live site (so it updates itself). Has a photo picker (`onShowFileChooser`), and external links open in the browser.
-- Version **1.2** (versionCode 3). Built by `android.yml` and published to release `app`; then copy the APK into `site/` and push so `app.html` serves it.
-- **Signing caveat:** builds currently use a throwaway debug key, so each new APK needs the old app **uninstalled first**. The workflow and gradle already support a fixed key via secrets `MDE_KEYSTORE_B64` + `MDE_KEYSTORE_PASSWORD`. Storing secrets needs the owner's explicit approval (the auto-mode classifier blocked it). **Never commit a keystore or password to this public repo.**
+- Version **1.3** (versionCode 4). Built by `android.yml` and published to release `app`; then copy the APK into `site/` and push. `app.html` downloads from the GitHub release link so it also works from inside the app.
+- **Signed with a permanent key** (from 1.3). The key lives only in the GitHub secrets `MDE_KEYSTORE_B64` + `MDE_KEYSTORE_PASSWORD` and in the owner's private backup. The build fails on purpose if the secret is missing. Never commit a keystore or password to this public repo. Bump `versionCode` for every new APK so it installs over the old one.
+- 1.3 adds `window.MDEApp.share(text)` (native share sheet), a download listener (opens in the browser) and ClipData handling in the photo picker. The user agent ends in `MatchdayEdgeApp/1.3`.
 - Only rebuild the APK when the wrapper itself changes; normal app changes are website changes.
 
 ---
