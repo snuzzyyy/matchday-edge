@@ -3413,6 +3413,10 @@ async function reloadSnapshot() {
 setInterval(liveTick, 10000);
 setInterval(reloadSnapshot, 10 * 60e3);
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") liveTick(); });
+// coming back to the app: pick up changes made elsewhere (Pro given in Supabase, bets settled overnight, balance)
+let acctAt = Date.now();
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && S.user && sb && Date.now() - acctAt > 60e3) { acctAt = Date.now(); loadAccount(); } });
+setInterval(() => { if (document.visibilityState === "visible" && S.user && sb) { acctAt = Date.now(); loadAccount(); } }, 5 * 60e3);
 
 /* ---------- self-update: when a new version is published, reload into it (keeps your place) ---------- */
 const BUILD = (document.querySelector('meta[name="mde-build"]') || {}).content || "dev";
