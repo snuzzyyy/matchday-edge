@@ -170,6 +170,18 @@ h3{font-size:15px;font-weight:700}
 .cmp i{display:block;height:100%;border-radius:5px;transition:width .3s}
 .cmp .h{background:var(--blue)}.cmp .a{background:var(--tang)}
 .btiles{display:grid;gap:8px}
+.pchart{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 12px 10px 52px;touch-action:pan-y}
+.pchart svg{display:block;width:100%;height:170px;overflow:visible}.pc-zero{stroke:var(--line-2);stroke-width:1;stroke-dasharray:3 4}
+.pc-line{fill:none;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}.pc-line.up{stroke:var(--win)}.pc-line.down{stroke:var(--loss)}.pc-cross{stroke:var(--muted);stroke-width:1}
+.pc-ax{position:absolute;left:8px;top:12px;bottom:10px;display:flex;flex-direction:column;justify-content:space-between;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+.pc-tip{position:absolute;top:-6px;background:var(--bg-2);border:1px solid var(--line-2);border-radius:10px;padding:6px 10px;pointer-events:none;max-width:240px;box-shadow:0 8px 20px -8px rgba(0,0,0,.6)}
+.pc-tip b{display:block;font-family:var(--display);font-size:18px}.pc-tip small{display:block;font-size:11.5px;color:var(--fg-2)}.pc-tip .pos{color:var(--win)}.pc-tip .neg{color:var(--loss)}
+.st-row{display:grid;grid-template-columns:minmax(0,1fr) 44px 48px 82px;gap:8px;align-items:center;padding:10px 14px;border-top:1px solid var(--line);font-size:13.5px}.st-row:first-child{border-top:0}
+.st-row.hd{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}.st-row > span:not(:first-child){text-align:right;font-variant-numeric:tabular-nums}
+.st-row .pos{color:var(--win);font-weight:700}.st-row .neg{color:var(--loss);font-weight:700}.st-row small{display:block;font-size:11px;color:var(--muted);font-weight:600}
+.st-k{display:grid;gap:5px;min-width:0}.st-k b{font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.st-bar{display:block;height:6px;position:relative;background:var(--surface-3);border-radius:4px}.st-bar i{position:absolute;top:0;bottom:0;border-radius:4px}.st-bar.up i{left:50%;background:var(--win)}.st-bar.down i{right:50%;background:var(--loss)}
+.st-bar::after{content:"";position:absolute;left:50%;top:-2px;bottom:-2px;width:1px;background:var(--muted)}
 .shotbtn{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;align-items:center;width:100%;text-align:left;padding:12px 14px;border-radius:12px;border:1px dashed var(--blue-2);background:rgba(61,123,255,.08);color:var(--fg);font:inherit;cursor:pointer}.shotbtn > span:first-child{font-size:24px}.shotbtn b{display:block;font-size:14.5px}.shotbtn small{display:block;font-size:12.5px;color:var(--muted)}
 .acmode{margin-bottom:-6px}.acmode .dot{width:7px;height:7px;display:inline-block;vertical-align:1px}
 .ag-score{font-family:var(--display);font-weight:700;font-size:16px;color:var(--fg);padding:0 2px}.live-tag{display:inline-flex;align-items:center;gap:5px;color:var(--live);font-weight:700}.live-tag .dot{width:7px;height:7px}
@@ -1028,11 +1040,11 @@ const TAB_ICONS = (() => { const svg = p => `<svg viewBox="0 0 24 24" fill="none
   news: svg('<path d="M5 4.5h11.5V19a1.5 1.5 0 001.5 1.5H6.5A1.5 1.5 0 015 19z"/><path d="M16.5 8.5H19a1 1 0 011 1V19a1.5 1.5 0 01-1.5 1.5M8 8.5h5.5M8 12h5.5M8 15.5h3.5"/>'),
   challenge: svg('<path d="M8 4h8v5a4 4 0 01-8 0z"/><path d="M8 6H5a2 2 0 002 4h1M16 6h3a2 2 0 01-2 4h-1M12 13v3.5M8.5 20h7M9.5 20l.5-3.5h4l.5 3.5"/>')
 }; })();
-const NAV = [["live", "Live", ["live"], "live"], ["games", "Games", ["fixtures", "tables", "news"], "fixtures"], ["betsg", "Bets", ["bets", "acca", "mybets"], "bets"], ["challenge", "£1K Challenge", ["challenge"], "challenge"], ["friends", "Friends", ["friends"], "friends"]];
-const SUBNAME = { fixtures: "Fixtures", tables: "Tables", news: "News", bets: "Tips", acca: "Accas", mybets: "My Bets" };
+const NAV = [["live", "Live", ["live"], "live"], ["games", "Games", ["fixtures", "tables", "news"], "fixtures"], ["betsg", "Bets", ["bets", "acca", "mybets", "stats"], "bets"], ["challenge", "£1K Challenge", ["challenge"], "challenge"], ["friends", "Friends", ["friends"], "friends"]];
+const SUBNAME = { fixtures: "Fixtures", tables: "Tables", news: "News", bets: "Tips", acca: "Accas", mybets: "My Bets", stats: "Stats" };
 const navOf = v => NAV.find(n => n[2].includes(v));
 S.lastSub = store.get("lastSub", {});
-const view = () => { const h = location.hash.slice(1); return h === "account" || h === "perks" || VIEWS.some(v => v[0] === h) ? h : "live"; };
+const view = () => { const h = location.hash.slice(1); return h === "account" || h === "perks" || h === "stats" || VIEWS.some(v => v[0] === h) ? h : "live"; };
 
 /* ---------- odds ---------- */
 const FR = [[1,20],[1,16],[1,14],[1,12],[1,10],[1,9],[1,8],[1,7],[1,6],[1,5],[2,9],[1,4],[2,7],[3,10],[1,3],[4,11],[2,5],[4,9],[1,2],[8,15],[4,7],[8,13],[4,6],[8,11],[4,5],[5,6],[10,11],[19,20],[20,21],[1,1],[21,20],[11,10],[6,5],[5,4],[11,8],[7,5],[6,4],[8,5],[13,8],[7,4],[9,5],[15,8],[2,1],[85,40],[9,4],[12,5],[5,2],[13,5],[11,4],[3,1],[10,3],[7,2],[4,1],[9,2],[5,1],[11,2],[6,1],[13,2],[7,1],[15,2],[8,1],[17,2],[9,1],[10,1],[11,1],[12,1],[14,1],[16,1],[18,1],[20,1],[22,1],[25,1],[28,1],[33,1],[40,1],[50,1],[66,1],[80,1],[100,1],[125,1],[150,1],[200,1],[250,1],[300,1],[400,1],[500,1],[750,1],[1000,1]];
@@ -1118,6 +1130,16 @@ function shareSheet() {
       <button class="shopt" data-sharecopy><span class="shic" style="background:var(--surface-3)"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1"/></svg></span>Copy link</button></div>
     <div class="shlink">${esc(link)}</div></div>`;
 }
+function chartPoint(e) {
+  const box = e.target.closest && e.target.closest(".pchart"); if (!box || !S._chartPts) return;
+  const svg = box.querySelector("svg"), r = svg.getBoundingClientRect(), x = ((e.touches ? e.touches[0].clientX : e.clientX) - r.left) / r.width;
+  const n = S._chartPts.length, i = Math.max(0, Math.min(n - 1, Math.round((x * 600 - 8) / (584 / (n - 1))))), p = S._chartPts[i], cx = 8 + i * 584 / (n - 1);
+  const cr = box.querySelector(".pc-cross"); cr.setAttribute("x1", cx); cr.setAttribute("x2", cx); cr.style.display = "";
+  const tip = box.querySelector(".pc-tip"); tip.hidden = false; tip.innerHTML = `<b class="${p.v > 0 ? "pos" : p.v < 0 ? "neg" : ""}">${gbp(p.v)}</b><small>${esc(p.t)}</small>`;
+  tip.style.left = Math.max(0, Math.min(r.width - tip.offsetWidth, cx / 600 * r.width - tip.offsetWidth / 2)) + "px";
+}
+document.addEventListener("pointermove", chartPoint); document.addEventListener("touchstart", chartPoint, { passive: true });
+document.addEventListener("pointerleave", e => { const b = e.target.closest && e.target.closest(".pchart"); if (b) { b.querySelector(".pc-tip").hidden = true; b.querySelector(".pc-cross").style.display = "none"; } }, true);
 let toastT; function toast(msg) { const L = $("#layer"); let t = $(".toast"); if (!t) { t = document.createElement("div"); t.className = "toast"; document.body.appendChild(t); } t.textContent = msg; clearTimeout(toastT); toastT = setTimeout(() => t.remove(), 1400); }
 
 /* ---------- picks engine ---------- */
@@ -2151,13 +2173,18 @@ function legInfo0(l) {   // -> { html, st: "pre" | "live" | "hit" | "miss" | "vo
   if (!m && !g._luDone) loadDetail(l.sport + ":" + l.gid);   // finished before the app opened: fetch its final stats
   const mm = ((m && m.label) || l.label || "").match(/^(Over|Under) ([\d.]+) (points|goals|corners|cards)/i), stt = k => (g.stats || []).find(x => x.k === k);
   let state = m ? m.state : "open";
-  if (state !== "open" && g.status.state !== "post" && !(state === "won" && mm && /over/i.test(mm[1]))) state = "open";   // only call it early when it truly can't change (an Over already passed)
+  const lab = (m && m.label) || l.label || "", tm = lab.match(/^(.+) (over ([\d.]+) goals|to score)$/i);
+  // only call it early when it can't be undone: an Over that's passed, a team that has scored, both teams scored
+  const locked = state === "won" && (mm && /over/i.test(mm[1]) || tm || /^both teams to score$/i.test(lab));
+  if (state !== "open" && g.status.state !== "post" && !locked) state = "open";   // only call it early when it truly can't change (an Over already passed)
   const cls = state === "won" ? "hit" : state === "lost" ? "miss" : "";
   let cur = null;
   if (mm) { const t = mm[3].toLowerCase(), c = stt("wonCorners"), y = stt("yellowCards"), rc = stt("redCards"); cur = t === "points" || t === "goals" ? (+H.score || 0) + (+A.score || 0) : t === "corners" ? (c ? c.h + c.a : null) : (y ? y.h + y.a + (rc ? rc.h + rc.a : 0) : null); }
   const end = state === "won" ? "✓ Landed" : state === "lost" ? "✗ Lost" : "";
   let bar, left, right;
-  if (mm && cur != null && /over/i.test(mm[1])) { const need = Math.floor(+mm[2]) + 1; bar = Math.min(1, cur / need); left = `<b>${cur}</b> / ${need} ${mm[3].toLowerCase()}`; right = end || `${need - cur} to go`; }
+  if (!mm && tm) { const side = normT(tm[1]) === normT(H.name) || normT(tm[1]) === normT(H.full || "") ? H : A, need = tm[3] ? Math.floor(+tm[3]) + 1 : 1, gl = +side.score || 0;
+    bar = Math.min(1, gl / need); left = `<b>${gl}</b> / ${need} goal${need > 1 ? "s" : ""}`; right = state === "won" ? "✓ Landed" : state === "lost" ? "✗ Lost" : `${need - gl} to go`; }
+  else if (mm && cur != null && /over/i.test(mm[1])) { const need = Math.floor(+mm[2]) + 1; bar = Math.min(1, cur / need); left = `<b>${cur}</b> / ${need} ${mm[3].toLowerCase()}`; right = end || `${need - cur} to go`; }
   else if (mm && cur != null) { const max = Math.floor(+mm[2]); bar = Math.min(1, cur / (max + 1)); left = `<b>${cur}</b> so far · ${max} or fewer wins it`; right = end || `${Math.max(0, max - cur)} to spare`; }
   else { const p = m ? m.p : null; bar = p == null ? 0 : p; left = p == null ? "Waiting for the score…" : `<b>${Math.round(p * 100)}%</b> chance now`; right = end; }
   return { st: cls || "live", html: `<div class="tl-leg ${cls}"><div class="tl-top"><b>${name}</b><span>${esc(Lt.name)} ${esc(Lt.score)}–${esc(Rt.score)} ${esc(Rt.name)} · ${esc(clockLabel(l.sport, g))}</span></div><div class="tl-bar"><i style="width:${bar * 100}%"></i></div><div class="tl-num"><span>${left}</span><span>${right}</span></div></div>` };
@@ -2441,6 +2468,55 @@ function allTeams() {
   return [...m.values()].sort((a, b) => a.name.localeCompare(b.name));
 }
 // ---------- plan & perks ----------
+// ---------- Stats: where your profit actually comes from ----------
+const LEG_TYPE = l => { if (l.pid) return "Player " + (l.label || "props"); const k = String(l.k || "");
+  return /^(1|X|2|ML1|ML2)$/.test(k) ? "Match result" : /^(1X|X2|12)$/.test(k) ? "Double chance" : /^DNB/.test(k) ? "Draw no bet" : /^BTTS/.test(k) ? "Both teams to score" : /^(HO|AO)/.test(k) ? "Team goals"
+    : /^(O|U)\d/.test(k) ? "Total goals" : /^C/.test(k) ? "Corners" : /^Y/.test(k) ? "Cards" : /^(SP|FAVH)/.test(k) ? "Handicap" : /^T/.test(k) ? "Total points" : "Other"; };
+function betType(b) { const L = (b.legs || []).filter(l => l.pid || l.k); if (!L.length) return "Typed in by hand"; const t = [...new Set(L.map(LEG_TYPE))]; return t.length === 1 ? t[0] : "Mixed"; }
+const legBand = b => { const n = (b.legs || []).filter(l => l.pid || l.k).length || (b.legs || []).length || 1; return n === 1 ? "Singles" : n === 2 ? "Doubles" : n === 3 ? "Trebles" : "4+ legs"; };
+const oddsBand = d => d < 2 ? "Under evens" : d < 4 ? "Evens to 3/1" : d < 10 ? "3/1 to 9/1" : "9/1 and bigger";
+function statGroups(list, keyFn, order) {
+  const m = new Map(); for (const b of list) { const k = keyFn(b); if (!m.has(k)) m.set(k, []); m.get(k).push(b); }
+  const rows = [...m].map(([k, bs]) => { const st = bs.reduce((a, b) => a + +b.stake, 0), pl = bs.reduce((a, b) => a + (+b.returns || 0) - +b.stake, 0), dec = bs.filter(b => b.result !== "void"), w = dec.filter(b => b.result === "won").length;
+    return { k, n: bs.length, pl, roi: st ? pl / st : 0, wr: dec.length ? w / dec.length : null }; });
+  return order ? rows.sort((a, b) => order.indexOf(a.k) - order.indexOf(b.k)) : rows.sort((a, b) => b.pl - a.pl);
+}
+function statTable(title, rows, note) {
+  if (!rows.length) return ""; const max = Math.max(...rows.map(r => Math.abs(r.pl)), .01);
+  return `<section class="section"><h2>${title}</h2>${note ? `<p class="sub" style="margin:-6px 0 0">${note}</p>` : ""}<div class="setcard stbl"><div class="st-row hd"><span></span><span>Bets</span><span>Won</span><span>Profit</span></div>
+    ${rows.map(r => `<div class="st-row" title="${esc(r.k)}: ${r.n} bets, ${gbp(r.pl)} (${r.roi > 0 ? "+" : ""}${Math.round(r.roi * 100)}% return)"><span class="st-k"><b>${esc(r.k)}</b><span class="st-bar ${r.pl >= 0 ? "up" : "down"}"><i style="width:${Math.max(2, Math.abs(r.pl) / max * 50)}%"></i></span></span><span>${r.n}</span><span>${r.wr == null ? "–" : Math.round(r.wr * 100) + "%"}</span><span class="${r.pl > 0 ? "pos" : r.pl < 0 ? "neg" : ""}">${gbp(r.pl)}<small>${r.roi > 0 ? "+" : ""}${Math.round(r.roi * 100)}%</small></span></div>`).join("")}</div></section>`;
+}
+function profitChart(list) {
+  const pts = [...list].sort((a, b) => new Date(a.settled_at || a.placed_at) - new Date(b.settled_at || b.placed_at)); if (pts.length < 2) return "";
+  let run = 0; const ys = [0, ...pts.map(b => (run += (+b.returns || 0) - +b.stake))], W = 600, H = 170, pad = 8;
+  const lo = Math.min(0, ...ys), hi = Math.max(0, ...ys), span = hi - lo || 1, X = i => pad + i * (W - 2 * pad) / (ys.length - 1), Y = v => pad + (hi - v) * (H - 2 * pad) / span;
+  const path = ys.map((v, i) => `${i ? "L" : "M"}${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(""), last = ys[ys.length - 1];
+  S._chartPts = [{ t: "Start", v: 0 }, ...pts.map((b, i) => ({ t: `${new Date(b.settled_at || b.placed_at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })} · ${betTitle(b.legs, b.label)} · ${b.result === "won" ? "won" : b.result === "lost" ? "lost" : b.result}`, v: ys[i + 1] }))];
+  return `<section class="section"><h2>Profit over time</h2><div class="pchart" data-n="${ys.length}"><div class="pc-ax"><span>${gbp(hi)}</span><span>${gbp(lo)}</span></div>
+    <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Running profit across ${pts.length} settled bets, now ${gbp(last)}"><line x1="0" x2="${W}" y1="${Y(0)}" y2="${Y(0)}" class="pc-zero"/><path d="${path}" class="pc-line ${last >= 0 ? "up" : "down"}" vector-effect="non-scaling-stroke"/><line class="pc-cross" x1="0" x2="0" y1="0" y2="${H}" vector-effect="non-scaling-stroke" style="display:none"/></svg>
+    <div class="pc-tip" hidden></div></div><p class="sub" style="margin:0">Each step is a settled bet, oldest on the left. Tap or hover the chart to see each bet.</p></section>`;
+}
+function viewStats() {
+  if (!S.user) return `<div class="hd"><div><p class="sub">Sign in to see your stats.</p></div></div><a class="btn" href="#account">Sign in</a>`;
+  const rng = S.statRange || "all", cut = rng === "30" ? Date.now() - 30 * 864e5 : rng === "90" ? Date.now() - 90 * 864e5 : 0;
+  const all = (S.bets || []).filter(b => b.result !== "open" && +new Date(b.settled_at || b.placed_at) >= cut);
+  const chips = `<div class="chips winrow">${[["30", "30 days"], ["90", "90 days"], ["all", "All time"]].map(([k, l]) => `<button class="chip" data-statrange="${k}" aria-pressed="${rng === k}">${l}</button>`).join("")}</div>`;
+  const head = `<div class="hd"><div><p class="sub">What's working and what isn't, from your settled bets.</p></div>${chips}</div>`;
+  if (!all.length) return `${head}<div class="empty art"><img src="img/empty-bets.webp" alt="" loading="lazy"><b>No settled bets ${rng === "all" ? "yet" : "in this period"}</b><span>Once your bets settle, you'll see your profit by bet type, sport and month here.</span></div>`;
+  const st = all.reduce((a, b) => a + +b.stake, 0), pl = all.reduce((a, b) => a + (+b.returns || 0) - +b.stake, 0), dec = all.filter(b => b.result !== "void"), won = dec.filter(b => b.result === "won");
+  const types = statGroups(all, betType), best = types.filter(r => r.n >= 2)[0], worst = [...types].filter(r => r.n >= 2).sort((a, b) => a.pl - b.pl)[0];
+  const months = statGroups(all, b => new Date(b.settled_at || b.placed_at).toLocaleDateString("en-GB", { month: "long", year: "numeric" }));
+  months.sort((a, b) => new Date("1 " + b.k) - new Date("1 " + a.k));
+  return `${head}
+  <div class="pnlrow"><div><small>Profit</small><b class="${pl > 0 ? "pos" : pl < 0 ? "neg" : ""}">${gbp(pl)}</b></div><div><small>Return</small><b class="${pl > 0 ? "pos" : pl < 0 ? "neg" : ""}">${st ? (pl > 0 ? "+" : "") + Math.round(pl / st * 100) + "%" : "–"}</b></div><div><small>Win rate</small><b>${dec.length ? Math.round(won.length / dec.length * 100) + "%" : "–"}</b></div><div><small>Settled</small><b>${all.length}</b></div></div>
+  ${best && worst && best.k !== worst.k ? `<div class="sc-card"><div class="sc-head"><b>In short</b></div><p class="sub" style="margin:0">Your best bet type is <b>${esc(best.k)}</b> (${gbp(best.pl)}). ${worst.pl < 0 ? `<b>${esc(worst.k)}</b> is costing you ${gbp(-worst.pl)}.` : `Everything with 2+ bets is in profit.`}</p></div>` : ""}
+  ${profitChart(all)}
+  ${statTable("By bet type", types, "Accas mixing different bet types count as Mixed.")}
+  ${statTable("By number of legs", statGroups(all, legBand, ["Singles", "Doubles", "Trebles", "4+ legs"]))}
+  ${statTable("By odds", statGroups(all, b => oddsBand(+b.odds_dec), ["Under evens", "Evens to 3/1", "3/1 to 9/1", "9/1 and bigger"]))}
+  ${statTable("By sport", statGroups(all, b => ({ football: "Football", nba: "NBA" })[b.sport || ((b.legs || [])[0] || {}).sport] || "Other"))}
+  ${statTable("By month", months)}`;
+}
 function viewPerks() {
   if (!S.user) return `<div class="hd"><div><h1>Plans</h1><p class="sub">Sign in to see your plan.</p></div></div><a class="btn" href="#account">Sign in</a>`;
   const P = S.profile || {}, pro = P.plan === "pro", b = P.badges || [];
@@ -2965,7 +3041,7 @@ function render() {
   setTimeout(autoSettle, 0);
   const v = view();
   { const g = navOf(v); if (g && g[2].length > 1 && S.lastSub[g[0]] !== v) { S.lastSub[g[0]] = v; store.set("lastSub", S.lastSub); } }
-  const MAIN = $("#main"), html = iosTip() + subnav(v) + (v === "friends" ? viewAccount("friends") : v === "account" ? viewAccount() : v === "perks" ? viewPerks() : v === "tables" ? viewTables() : v === "news" ? viewNews() : v === "fixtures" ? viewFixtures() : v === "bets" ? viewBets() : v === "mybets" ? viewMyBets() : v === "acca" ? viewAcca() : v === "challenge" ? viewChallenge() : viewLive());
+  const MAIN = $("#main"), html = iosTip() + subnav(v) + (v === "friends" ? viewAccount("friends") : v === "account" ? viewAccount() : v === "perks" ? viewPerks() : v === "stats" ? viewStats() : v === "tables" ? viewTables() : v === "news" ? viewNews() : v === "fixtures" ? viewFixtures() : v === "bets" ? viewBets() : v === "mybets" ? viewMyBets() : v === "acca" ? viewAcca() : v === "challenge" ? viewChallenge() : viewLive());
   if (MAIN._h !== html) {
     const sx = [...MAIN.querySelectorAll(".tw,.chips,.scroller")].map(e => e.scrollLeft);
     MAIN.innerHTML = html; MAIN._h = html;
@@ -3074,6 +3150,7 @@ document.addEventListener("click", e => {
     save(); S.slipOpen = innerWidth <= 1100; render(); toast(n ? "In-play acca added to your slip. Check your bookie's live prices" : "Those games have finished");
   }
   else if (d.shotpick !== undefined) { const f = $("#shotPick"); f.value = ""; f.click(); }
+  else if (d.statrange) { S.statRange = d.statrange; render(); }
   else if (d.iosx !== undefined) { store.set("iosTipX", true); render(); }
   else if (d.impex) { S.importText = d.impex; const t = $("#imptext"); if (t) t.value = d.impex; S.impOddsTyped = false; impRefresh(); }
   else if (d.untrack) { S.tracked = S.tracked.filter(t => t.id !== d.untrack); store.set("tracked", S.tracked); render(); }
