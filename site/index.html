@@ -170,6 +170,7 @@ h3{font-size:15px;font-weight:700}
 .cmp i{display:block;height:100%;border-radius:5px;transition:width .3s}
 .cmp .h{background:var(--blue)}.cmp .a{background:var(--tang)}
 .btiles{display:grid;gap:8px}
+.bv-foot{display:flex;justify-content:center}.bv-foot .linkbtn{color:var(--loss)}
 .walbig{font-family:var(--display);font-size:24px!important;font-weight:700;line-height:1.1}
 .linkleg{width:100%;text-align:left;background:none;border-left:0;border-right:0;border-bottom:0;color:inherit;font:inherit;cursor:pointer;padding-left:0;padding-right:0;border-radius:0}.linkleg:hover .tl-top b{color:var(--blue-2)}
 .mchips{display:flex;flex-wrap:wrap;gap:8px}.mchip{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:var(--fg-2);background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:5px 10px}.mchip img{width:16px;height:16px}
@@ -1882,6 +1883,11 @@ function legInfo(l) {
   return r;
 }
 function legInfo0(l) {   // -> { html, st: "pre" | "live" | "hit" | "miss" | "void" }
+  if (l.fst && !findGame(l.sport, l.gid)) {   // the game has left the feed: show the numbers saved when it settled
+    const hit = l.fst === "hit", miss = l.fst === "miss", name = l.pid ? l.name : String(l.label || "").replace(/ \(in-play\)$/, "");
+    const w = l.pid && l.final != null ? Math.min(1, l.final / l.target) : hit ? 1 : miss ? .5 : 0;
+    return { st: l.fst, html: `<div class="tl-leg ${hit ? "hit" : miss ? "miss" : l.fst === "void" ? "void" : ""}"><div class="tl-top"><b>${esc(name)}</b><span>${esc(l.team || l.match || "")} · Final</span></div><div class="tl-bar"><i style="width:${w * 100}%"></i></div><div class="tl-num"><span>${l.pid && l.final != null ? `<b>${l.final}</b> / ${l.target} ${esc(l.label)}` : ""}</span><span>${hit ? "✓ Landed" : miss ? "✗ Missed" : l.fst === "void" ? "Void" : ""}</span></div></div>` };
+  }
   const g = findGame(l.sport, l.gid), tip = l.sport === "nba" ? "Tip-off" : "Kick-off";
   if (l.pid) {
     const r = legValue(l), done = r.v != null && r.v >= l.target, post = g && g.status.state === "post";
@@ -1935,7 +1941,7 @@ function betViewSheet(id) {
     : `<article class="trk-card"><div class="trk-hd"><div><b>${esc(b.label)}</b><small>${odds(+b.odds_dec)} · £${(+b.stake).toFixed(2)} returns ${money(+b.stake * +b.odds_dec)}</small></div><span class="st ${b.result}">${b.result}</span></div><p class="sub" style="margin:0">Typed in by hand, so there's no live tracking for this one.</p></article>`;
   return `<div class="scrim top" data-betviewx></div><div class="ijsheet" role="dialog" aria-modal="true" aria-label="Bet"><button class="close sm ij-x" data-betviewx aria-label="Close">✕</button>
     <div class="bv-who">${avatarHTML(who, 38)}<div><b>${mine ? "Your bet" : esc(who.display_name)}${mine ? "" : badgesHTML(who, 1)}</b><small>Placed ${ago2(b.placed_at)} ago${b.match && !L.length ? " · " + esc(b.match) : ""}</small></div></div>
-    ${card}${mine ? "" : `<div class="fi-acts">${reactBar(b)}${canTail(b) ? `<button class="btn sm tail" data-tail="${b.id}">Tail this bet</button>` : ""}</div>`}</div>`;
+    ${card}${mine ? `<div class="bv-foot"><button class="linkbtn" data-delbet="${b.id}">Delete this bet</button></div>` : ""}${mine ? "" : `<div class="fi-acts">${reactBar(b)}${canTail(b) ? `<button class="btn sm tail" data-tail="${b.id}">Tail this bet</button>` : ""}</div>`}</div>`;
 }
 function betCard(t) {
   const info = t.legs.map(legInfo), n = t.legs.length, hit = info.filter(i => i.st === "hit").length, voids = info.filter(i => i.st === "void").length;
@@ -2305,7 +2311,7 @@ function viewMyBets() {
     ${hand.length ? `<section class="section"><h2>To settle</h2><p class="sub" style="margin:-6px 0 0">Bets you typed in yourself aren't linked to a game, so mark these when they finish.</p><div style="display:grid;gap:8px">${hand.map(b => betRow(b)).join("")}</div></section>` : ""}
     ${!cards.length && !hand.length ? `<div class="empty art"><img src="img/empty-bets.webp" alt="" loading="lazy"><b>No open bets</b><span>Import a bet, or save one from your bet slip.</span></div>` : ""}
     ${bets.length ? statBlock() : ""}
-    ${settled.length ? `<section class="section"><h2>Settled</h2><div style="display:grid;gap:8px">${settled.slice(0, S.showAllSettled ? 500 : 8).map(b => betRow(b)).join("")}</div>${settled.length > 8 && !S.showAllSettled ? `<button class="linkbtn" data-allsettled>Show all ${settled.length}</button>` : ""}</section>` : ""}
+    ${settled.length ? `<section class="section"><h2>Settled</h2><div style="display:grid;gap:8px">${settled.slice(0, S.showAllSettled ? 500 : 8).map(betTile).join("")}</div>${settled.length > 8 && !S.showAllSettled ? `<button class="linkbtn" data-allsettled>Show all ${settled.length}</button>` : ""}</section>` : ""}
     <details class="handadd"><summary><span class="ic-dot">＋</span><span><b>Add a bet by hand</b><small>For bets you can't import. You'll mark these won or lost yourself.</small></span></summary>
       <form id="addBet" class="handform"><div class="field hf-bet"><label for="ab-label">Bet</label><input id="ab-label" placeholder="e.g. Liverpool to win" required></div>
       <div class="field"><label for="ab-odds">Odds</label><input id="ab-odds" placeholder="5/2" required></div><div class="field"><label for="ab-stake">Stake £</label><input id="ab-stake" type="number" inputmode="decimal" min="0" step="0.5" value="${S.stake}" required></div>
@@ -2445,7 +2451,7 @@ document.addEventListener("click", async e => {
     if (res === "open") { const k = store.get("noAuto", []); if (!k.includes(id)) store.set("noAuto", [...k, id].slice(-200)); }   // reopened by hand: leave it alone
     settleBet(b, res);
   }
-  else if (d.delbet) { const db = S.bets.find(x => x.id === d.delbet); if (db && S.wallet) walletAdjust((new Date(db.placed_at) >= new Date(S.wallet.set_at) ? +db.stake : 0) - credit(db)); S.bets = S.bets.filter(x => x.id !== d.delbet); render(); await sb.from("bets").delete().eq("id", d.delbet); }
+  else if (d.delbet) { S.betView = null; const db = S.bets.find(x => x.id === d.delbet); if (db && S.wallet) walletAdjust((new Date(db.placed_at) >= new Date(S.wallet.set_at) ? +db.stake : 0) - credit(db)); S.bets = S.bets.filter(x => x.id !== d.delbet); render(); await sb.from("bets").delete().eq("id", d.delbet); }
   else if (d.unfav) { const [sp, id] = d.unfav.split("|"); saveProfile({ fav_teams: (S.profile.fav_teams || []).filter(x => !(x.sport === sp && x.id === id)) }); }
   else if (d.waitlist !== undefined) { const r = await sb.from("pro_waitlist").upsert({ user_id: S.user.id }); if (r.error) toast("Couldn't join. Try again."); else { S.waitlisted = true; render(); toast("You're on the Pro waitlist"); } }
   else if (d.chalreset !== undefined) { const C = JSON.parse(JSON.stringify(chalNow())); if (C.history.length || C.rung) archiveAttempt(C, C.rung >= C.rungs ? "completed" : "stopped"); else Object.assign(C, { active: null }); S.rungSel = null; saveChal(C); toast("New ladder started"); }
@@ -2535,9 +2541,15 @@ async function settleBet(b, res, auto) {
   const before = credit(b);
   const returns = res === "won" ? Math.round(b.stake * b.odds_dec * 100) / 100 : res === "void" ? +b.stake : res === "lost" ? 0 : null;
   const settled_at = res === "open" ? null : new Date().toISOString();
+  let legs = null;
+  if (res !== "open" && (b.legs || []).some(l => (l.pid || l.k) && !l.fst && findGame(l.sport, l.gid))) {
+    legs = b.legs.map(l => { const g0 = findGame(l.sport, l.gid); if (!(l.pid || l.k) || l.fst || !g0 || (l.pid && !g0._postDetail) || g0.status.state !== "post") return l; const i = legInfo0(l); return { ...l, fst: i.st, final: l.pid ? legValue(l).v : null }; });
+    b.legs = legs;
+  }
   Object.assign(b, { result: res, returns, settled_at }); render(); walletAdjust(credit(b) - before);
   if (auto) toast(res === "won" ? `Winner! ${b.label.length > 40 ? b.label.slice(0, 40) + "…" : b.label} returned ${money(returns)}` : `Settled as lost: ${b.label.length > 44 ? b.label.slice(0, 44) + "…" : b.label}`);
-  let r = await sb.from("bets").update({ result: res, returns, settled_at }).eq("id", b.id); if (r.error) r = await sb.from("bets").update({ result: res, returns }).eq("id", b.id); if (r.error) toast("Couldn't save."); else loadSocial();
+  const upd = legs ? { result: res, returns, settled_at, legs } : { result: res, returns, settled_at };
+  let r = await sb.from("bets").update(upd).eq("id", b.id); if (r.error) r = await sb.from("bets").update({ result: res, returns, ...(legs ? { legs } : {}) }).eq("id", b.id); if (r.error) toast("Couldn't save."); else loadSocial();
   sb.rpc("leaderboard").then(x => { if (x.data) { S.board = x.data; render(); } });
 }
 function betOutcome(legs) {   // "won" / "lost" once it's certain, otherwise null
@@ -2550,6 +2562,7 @@ function betOutcome(legs) {   // "won" / "lost" once it's certain, otherwise nul
       const r = legValue(l);
       if (r.v != null && r.v >= l.target) continue;                 // landed: stats only go up
       if (g.status.state !== "post" || r.dnp) { all = false; continue; }   // still playing, or a void leg (leave those to you)
+      if (!g._postDetail) { g._luAt = 0; loadDetail(l.sport + ":" + l.gid); all = false; continue; }   // wait for the final box score
       if (r.v == null) { all = false; continue; }
       lost = true; continue;
     }
@@ -2565,6 +2578,14 @@ function autoSettle() {
   for (const sp of ["football", "nba"]) { const C = (S.chalAll || {})[sp]; if (C && C.active) { const r = activeResult(C.active); if (r) chalSettle(r, C.active.label, C.active.match, C.active.dec, sp); } }
   const skip = store.get("noAuto", []);
   for (const b of S.bets || []) if (b.result === "open" && !skip.includes(b.id)) { const r = betOutcome(b.legs); if (r) settleBet(b, r, true); }
+  // fill in final numbers for settled bets (from the box score fetched after full time), so the breakdown lasts
+  for (const b of S.bets || []) if (b.result !== "open" && (b.legs || []).some(l => (l.pid || l.k) && !l.fst)) {
+    let changed = false;
+    const legs = b.legs.map(l => { const g = findGame(l.sport, l.gid); if (!(l.pid || l.k) || l.fst || !g || g.status.state !== "post") return l;
+      if (l.pid && !g._postDetail) { g._luAt = 0; loadDetail(l.sport + ":" + l.gid); return l; }
+      changed = true; return { ...l, fst: legInfo0(l).st, final: l.pid ? legValue(l).v : null }; });
+    if (changed) { b.legs = legs; sb.from("bets").update({ legs }).eq("id", b.id); }
+  }
 }
 /* ---------- render ---------- */
 function render() {
@@ -2778,7 +2799,7 @@ function applyNba(g, s) {
 async function loadDetail(key) {
   const [sp, id] = key.split(":"), g = findGame(sp, id); if (!g || g._luAt && Date.now() - g._luAt < 60e3) return;
   g._luAt = Date.now();
-  try { if (sp === "nba") { if (!isPre(g)) applyNba(g, await getJ(`${SB}/basketball/nba/summary?event=${g.id}`)); } else { const s = await getJ(`${SB}/soccer/${g.league}/summary?event=${g.id}`); if (isPre(g)) parseLineups(g, s); else applyFb(g, s); } } catch {}
+  try { const wasPost = g.status.state === "post"; if (sp === "nba") { if (!isPre(g)) applyNba(g, await getJ(`${SB}/basketball/nba/summary?event=${g.id}`)); } else { const s = await getJ(`${SB}/soccer/${g.league}/summary?event=${g.id}`); if (isPre(g)) parseLineups(g, s); else applyFb(g, s); } if (wasPost) g._postDetail = true; } catch {}
   g._luDone = true; if (S.drawer === key) render();
 }
 let ticking = false;
@@ -2815,6 +2836,7 @@ async function checkVersion() {
   } catch {}
 }
 setInterval(checkVersion, 3 * 60e3);
+setInterval(() => autoSettle(), 20e3);   // settle bets even when nothing on screen is changing
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") checkVersion(); });
 setTimeout(checkVersion, 5000);
 
