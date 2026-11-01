@@ -170,6 +170,7 @@ h3{font-size:15px;font-weight:700}
 .cmp i{display:block;height:100%;border-radius:5px;transition:width .3s}
 .cmp .h{background:var(--blue)}.cmp .a{background:var(--tang)}
 .btiles{display:grid;gap:8px}
+.linkleg{width:100%;text-align:left;background:none;border-left:0;border-right:0;border-bottom:0;color:inherit;font:inherit;cursor:pointer;padding-left:0;padding-right:0;border-radius:0}.linkleg:hover .tl-top b{color:var(--blue-2)}
 .mchips{display:flex;flex-wrap:wrap;gap:8px}.mchip{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:var(--fg-2);background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:5px 10px}.mchip img{width:16px;height:16px}
 .mate-empty{padding:18px 12px}.mate-empty img{max-width:140px}
 .ij-team .fcode{font-size:13px;letter-spacing:.08em}
@@ -1869,7 +1870,13 @@ function clockLabel(sport, g) {
   let c = String(g.status.clock ?? ""); if (!c) return d; if (!c.includes(":")) c = `${Math.round((parseFloat(c) || 0) * 10) / 10}s`;
   return `${q} · ${c} left`;
 }
-function legInfo(l) {   // -> { html, st: "pre" | "live" | "hit" | "miss" | "void" }
+// every bet leg is tappable: it opens that game's page
+function legInfo(l) {
+  const r = legInfo0(l), g = l.gid && findGame(l.sport, l.gid);
+  if (g) { r.html = r.html.replace(/^<div class="tl-leg([^"]*)"/, `<button type="button" class="tl-leg linkleg$1" data-open="${l.sport}:${l.gid}" aria-label="Open the game"`); const k = r.html.lastIndexOf("</div>"); r.html = r.html.slice(0, k) + "</button>" + r.html.slice(k + 6); }
+  return r;
+}
+function legInfo0(l) {   // -> { html, st: "pre" | "live" | "hit" | "miss" | "void" }
   const g = findGame(l.sport, l.gid), tip = l.sport === "nba" ? "Tip-off" : "Kick-off";
   if (l.pid) {
     const r = legValue(l), done = r.v != null && r.v >= l.target, post = g && g.status.state === "post";
@@ -1882,8 +1889,10 @@ function legInfo(l) {   // -> { html, st: "pre" | "live" | "hit" | "miss" | "voi
   if (!g) return { st: "pre", html: `<div class="tl-leg"><div class="tl-top"><b>${name}</b><span>${esc(l.match || "")}</span></div><div class="tl-num"><span>This game has dropped out of the feed</span><span></span></div></div>` };
   const H = g.home, A = g.away, Lt = l.sport === "nba" ? A : H, Rt = l.sport === "nba" ? H : A;
   if (isPre(g)) return { st: "pre", html: `<div class="tl-leg"><div class="tl-top"><b>${name}</b><span>${esc(vs(l.sport, g))}</span></div><div class="tl-num"><span>${tip} ${whenLabel(kick(g))}</span><span></span></div></div>` };
-  const m = liveMarkets(l.sport, g).find(x => x.k === l.k), state = m ? m.state : "open", cls = state === "won" ? "hit" : state === "lost" ? "miss" : "";
-  const mm = ((m && m.label) || l.label || "").match(/^(Over|Under) ([\d.]+) (points|goals|corners|cards)/i), stt = k => (g.stats || []).find(x => x.k === k);
+  const m = liveMarkets(l.sport, g).find(x => x.k === l.k), mm = ((m && m.label) || l.label || "").match(/^(Over|Under) ([\d.]+) (points|goals|corners|cards)/i), stt = k => (g.stats || []).find(x => x.k === k);
+  let state = m ? m.state : "open";
+  if (state !== "open" && g.status.state !== "post" && !(state === "won" && mm && /over/i.test(mm[1]))) state = "open";   // only call it early when it truly can't change (an Over already passed)
+  const cls = state === "won" ? "hit" : state === "lost" ? "miss" : "";
   let cur = null;
   if (mm) { const t = mm[3].toLowerCase(), c = stt("wonCorners"), y = stt("yellowCards"), rc = stt("redCards"); cur = t === "points" || t === "goals" ? (+H.score || 0) + (+A.score || 0) : t === "corners" ? (c ? c.h + c.a : null) : (y ? y.h + y.a + (rc ? rc.h + rc.a : 0) : null); }
   const end = state === "won" ? "✓ Landed" : state === "lost" ? "✗ Lost" : "";
@@ -2573,7 +2582,7 @@ document.addEventListener("click", e => {
     save(); S.drawer = keep; render();
   }
   else if (d.leg) { const [sp, id, k] = d.leg.split("|"); const keep = S.drawer; toggleLeg(sp, id, k); S.drawer = keep; if (keep) render(); }
-  else if (d.open) { S.drawer = d.open; S.slipOpen = false; render(); const dr = $(".drawer"); dr && dr.scrollTo(0, 0); loadDetail(d.open); }
+  else if (d.open) { S.drawer = d.open; S.slipOpen = false; S.betView = null; S.mateOpen = null; render(); const dr = $(".drawer"); dr && dr.scrollTo(0, 0); loadDetail(d.open); }
   else if (d.close !== undefined) { S.drawer = null; S.slipOpen = false; render(); }
   else if (d.rm) { S.slip = S.slip.filter(l => l.id !== d.rm); save(); render(); }
   else if (d.clear !== undefined) { S.slip = []; save(); render(); }
