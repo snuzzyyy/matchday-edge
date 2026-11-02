@@ -390,9 +390,13 @@ No server of our own. ESPN is free, has no key and is about 1–3 minutes behind
 - Legs are grouped by game (`legGroups`): one header per game (badges, match, kick-off countdown `untilTxt`, or live score + clock), then one line per bet (`legLine`): status dot, bet, its own % chance (owner likes this), and while live a thin progress bar + "8 / 9 corners · 1 to go" parsed from `legInfo0`. Typed-in legs and games that left the feed keep the old rows.
 - `betCard` header: "Starts 19:45 · in 3h" before, red-dot "x of n landed" live; `.segbar` shows each leg's state (pulses while live).
 
+## Game page ready-made accas
+- `gameAccas(opts, price)` (bands in `GA_LEVELS`) builds Low / Medium / High bet builders per game. `gaPicks` caches the pre-match picks in `mde:ga` so the same three are tracked once the game starts (`gaTracked`: leg lines, segbar, chance now; finished games show the result). Overview is one wide column (`.ovw`).
+- My Bets: Live / Upcoming / Settled tabs (`S.mbTab`, `data-mbtab`).
+
 ## Accabox bot (feed)
 - `supabase/bot.sql`: `bot_accas` (id `day|sport|level|n`, legs, odds, chance, result). Only `result='won'` rows are readable by users; owner/dev can read all. Inserts only via `bot_snapshot(rows)` (owner/dev badge, first save wins).
-- `botSnapshot()` runs in owner/dev apps every 15 min: today's + tomorrow's `levelPreset` double/treble/four-fold/same-game for each level and sport, pre-match only. settle.py `settle_bot()` settles them with `outcome()`; unsure after 3 days → void. Feed (`loadSocial` → `S.botWins`, last 4 days) shows winners as Accabox posts (`botPost`).
+- `botSnapshot()` runs in owner/dev apps every 15 min: for every game kicking off in the next 36 h, the game page's three accas (`gameAccas`: Low evens–6/4, Medium 6/4–4/1, High 5/1+; id `day|sport|gid|level`). settle.py `settle_bot()` settles them with `outcome()`; unsure after 3 days → void. Feed (`loadSocial` → `S.botWins`, last 4 days) shows winners as Accabox posts (`botPost`).
 - settle.py now also settles NBA handicap legs ("Celtics +5.5 handicap", "Pacers -4.5").
 
 ## Tweet maker (owner only)
