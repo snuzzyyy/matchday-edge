@@ -1127,6 +1127,13 @@ button.setrow{width:100%;text-align:left;font:inherit;color:inherit;background:n
 .soc .fweek,.soc .fl-row{margin-bottom:0}
 .ptag{justify-self:start;display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:800;padding:2px 8px;border-radius:999px;background:var(--surface-3);color:var(--fg-2)}.ptag i{width:6px;height:6px;border-radius:50%;background:currentColor;animation:segpulse 1.6s ease-in-out infinite}
 .ptag.on,.ptag.start{background:rgba(34,197,94,.15);color:#4ade80}.ptag.bench{background:rgba(245,158,11,.15);color:#fbbf24}.ptag.out{background:rgba(239,68,68,.15);color:#f87171}.ptag.off,.ptag.wait{color:var(--muted)}
+.drawer{overflow-x:hidden}
+.g-cols.cards .gx>.section{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:16px 18px}
+.g-cols.cards .gx>.section>h2:first-child{margin-top:0}
+@media (min-width:1100px){.g-cols.livelay:not(.one){grid-template-columns:minmax(0,1fr) 420px;max-width:1240px;margin-left:auto;margin-right:auto}
+  .livelay .pitchwrap{max-width:360px}.livelay .statrow{grid-template-columns:52px minmax(0,1fr) 52px}.livelay .statrow .v{font-size:20px}
+  .livelay .pop-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.livelay .statrow{padding:3px 0}
 </style>
 
 <header class="top">
@@ -2444,7 +2451,7 @@ function drawerHTML(sport, g) {
     return `<div class="g-cols ${cls}"><div class="g-col">${L.map(w).join("")}</div><div class="g-col">${R.map(w).join("")}</div></div>`; };
   const pop = popularHTML(sport, g, true);
   body = tab === "bets" ? lay([[ended ? "" : bestForGame(sport, g), 0, 1], [marketsSec, 0, 2]], "wide")
-    : tab === "stats" ? (live || ended ? lay([[sec.stats, 0, 1], [sec.quarters, 0, 2], [sec.pitch, 1, 3], [sec.leaders, 1, 4], [sec.timeline, 0, 5]]) : lay([[sec.stats, 0, 1], [sec.quarters, 0, 2], [sec.timeline, 0, 3], [sec.leaders, 1, 4], [sec.form, 1, 5]]))
+    : tab === "stats" ? (live || ended ? lay([[sec.stats, 0, 1], [sec.quarters, 0, 2], [sec.pitch, 1, 3], [sec.leaders, 1, 4], [sec.timeline, 0, 5], [popularHTML(sport, g, true), 0, 6]], "cards livelay") : lay([[sec.stats, 0, 1], [sec.quarters, 0, 2], [sec.timeline, 0, 3], [sec.leaders, 1, 4], [sec.form, 1, 5]]))
     : tab === "players" ? lay([[sec.pitch, 0, 1], [sec.ptable, 1, 2], [sec.injuries, 1, 3]])
     : lay([[sec.win, 0, 1], [live ? anglesHTML(sport, g) : "", 0, 2], [quick, 0, 3], [pop || (ended ? "" : `<section class="section"><h2>Ready-made accas</h2><p class="sub">No ready-made accas for this game yet.</p><button class="btn sm" data-gtab="bets">See all markets</button></section>`), 0, 4], [pre ? bestForGame(sport, g) : "", 0, 5]], "wide ovw");
   const tabs = `<nav class="gtabs" aria-label="Game sections">${T.map(([k, n]) => `<button data-gtab="${k}" aria-current="${k === tab ? "page" : "false"}">${n}</button>`).join("")}</nav>`;
@@ -2475,7 +2482,7 @@ function slipDrawer() { return `<div class="scrim" data-close></div><aside class
 /* ---------- bet import + live player tracker ---------- */
 const PROPS = {
   nba: [[/points?\s*(?:\+|and|,)\s*rebounds?\s*(?:\+|and|,)\s*assists?|\bpra\b/i, "PRA", "pts+reb+ast"], [/three|3-?pointers?|3pt|3pm/i, "3PM", "threes"], [/rebounds?|\breb\b/i, "REB", "rebounds"], [/assists?|\bast\b/i, "AST", "assists"], [/steals?/i, "STL", "steals"], [/blocks?/i, "BLK", "blocks"], [/points?|\bpts\b/i, "PTS", "points"]],
-  football: [[/head(?:ed|er)s?\b.*on target|head(?:ed|er)s? (?:shots? )?on target/i, "headedShotsOnTarget", "headed shots on target"], [/\bhead(?:ed|er)s?\b/i, "headedShots", "headed shots"], [/shots? on target|\bsot\b/i, "shotsOnTarget", "shots on target"], [/shots?/i, "totalShots", "shots"], [/carded|booked|cards?/i, "cards", "card"], [/fouled|fouls? (won|drawn|suffered)|wins? a (foul|free kick)/i, "foulsSuffered", "times fouled"], [/fouls?/i, "foulsCommitted", "fouls"], [/assist/i, "goalAssists", "assist"], [/scor|goal/i, "totalGoals", "goal"]]
+  football: [[/head(?:ed|er)s?\b.*on target|head(?:ed|er)s? (?:shots? )?on target/i, "headedShotsOnTarget", "headed shots on target"], [/\bhead(?:ed|er)s?\b/i, "headedShots", "headed shots"], [/shots? on target|\bsot\b/i, "shotsOnTarget", "shots on target"], [/shots?/i, "totalShots", "shots"], [/carded|booked|cards?/i, "cards", "card"], [/fouled|fouls? (won|drawn|suffered)|wins? a (foul|free kick)/i, "foulsSuffered", "times fouled"], [/fouls?/i, "foulsCommitted", "fouls"], [/(?:scor\w*|goal)\s*(?:or|\/|&|and)\s*assist|g\s*\/\s*a\b|goal involvement/i, "goalOrAssist", "goal or assist"], [/assist/i, "goalAssists", "assist"], [/scor|goal/i, "totalGoals", "goal"]]
 };
 const deLetter = t => String(t || "").replace(/[øØ]/g, "o").replace(/[æÆ]/g, "ae").replace(/ß/g, "ss").replace(/[đĐ]/g, "d").replace(/[łŁ]/g, "l").replace(/ı/g, "i");
 const norm = t => deLetter(t).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z ]/g, " ").replace(/\s+/g, " ").trim();
@@ -2696,7 +2703,7 @@ function legValue(l) {
   }
   const LU = (g.lineups || {})[l.side], P = (LU || { players: [] }).players.find(p => String(p.id) === String(l.pid)); if (!P) return { v: null, g, dnp: !!(LU && LU.players.length) && !isPre(g) };
   if (l.half || /^headed/.test(l.stat)) { if (!g.plays && !isPre(g)) loadDetail("football:" + l.gid); if (l.half === 2 && !halfDone(g)) return { v: 0, g, on: onPitch(P), dnp: false }; return { v: g.plays ? halfStat(g, l) : null, g, on: onPitch(P), dnp: !P.starter && !P.subIn && (l.half === 1 ? halfDone(g) : g.status.state === "post") }; }
-  const v0 = l.stat === "cards" ? (P.s.yellowCards || 0) + (P.s.redCards || 0) : (P.s[l.stat] || 0);
+  const v0 = l.stat === "cards" ? (P.s.yellowCards || 0) + (P.s.redCards || 0) : l.stat === "goalOrAssist" ? Math.max(P.s.totalGoals || 0, g.plays ? halfStat(g, { ...l, stat: "totalGoals", half: 0 }) : 0) + Math.max(P.s.goalAssists || 0, g.plays ? halfStat(g, { ...l, stat: "goalAssists", half: 0 }) : 0) : (P.s[l.stat] || 0);
   const v = g.plays && /^(shotsOnTarget|totalShots|totalGoals|goalAssists|foulsSuffered|foulsCommitted|cards)$/.test(l.stat) ? Math.max(v0, halfStat(g, { ...l, half: 0 })) : v0;   /* the commentary is often ahead of ESPN's player totals */
   return { v, g, on: onPitch(P), dnp: !P.starter && !P.subIn && g.status.state === "post" };
 }
@@ -4633,7 +4640,8 @@ document.addEventListener("click", async e => {
   else if (d.impgo !== undefined) {
     const { idx, loading } = playerIndex(), raw = S.importText || "", r = parseBet(raw, idx);
     if (!raw.trim()) { toast("Paste a screenshot or type your bet first"); const t = $("#imptext"); if (t) t.focus(); return; }
-    if (loading) { toast("Still looking up the players. Try again in a second"); return; }
+    if (loading && (r.missing.length || !r.legs.length) && Date.now() - (S._impLoadAt || (S._impLoadAt = Date.now())) < 8000) { toast("Still looking up the players. Try again in a second"); return; }   /* never block for long, and never once every player is found */
+    S._impLoadAt = 0;
     const manual = impManual(r, false).map(label => ({ manual: true, label })), est = impEst(r.legs);
     const dec = parseOdds(($("#impodds") || {}).value) || r.dec || (manual.length ? null : est), stake = +(($("#impstake") || {}).value) || 0;
     if (!dec) { S.impShotMsg = "Add the odds from your bet slip (e.g. 9/2 or 5.5), then tap Save."; impRefresh(); const o = $("#impodds"); if (o) o.focus(); return; }

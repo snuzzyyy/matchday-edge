@@ -132,7 +132,7 @@ def leg_result(l):
                 if str((p.get("athlete") or {}).get("id")) != str(l["pid"]): continue
                 stx = {x.get("name"): num(x.get("value", x.get("displayValue"))) for x in p.get("stats", [])}
                 if not (p.get("starter") or p.get("subbedIn")): return None, None
-                val = stx.get("yellowCards", 0) + stx.get("redCards", 0) if l["stat"] == "cards" else stx.get(l["stat"], 0)
+                val = stx.get("yellowCards", 0) + stx.get("redCards", 0) if l["stat"] == "cards" else stx.get("totalGoals", 0) + stx.get("goalAssists", 0) if l["stat"] == "goalOrAssist" else stx.get(l["stat"], 0)
                 return ("won" if val >= l["target"] else "lost"), val
         return None, None
     k, tot = str(l.get("k", "")), hs + as_
