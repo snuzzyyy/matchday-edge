@@ -1099,6 +1099,7 @@ button.setrow{width:100%;text-align:left;font:inherit;color:inherit;background:n
 .lgl-m small{font-size:12px;color:var(--fg-2)}.lgl-bar{height:4px;border-radius:4px;background:var(--surface-3);overflow:hidden}.lgl-bar i{display:block;height:100%;border-radius:4px;background:#ff9a52}.lgl.hit .lgl-bar i{background:var(--win)}.lgl.miss .lgl-bar i{background:var(--loss)}
 .lgl-r{font-family:var(--display);font-weight:700;font-size:17px;white-space:nowrap}.lgl.hit .lgl-r{color:var(--win)}.lgl.miss .lgl-r{color:var(--loss)}.lgl.void .lgl-r{color:var(--muted);font-size:13px}
 .lgl .tl-teams,.lgl .tl-pps{margin-top:2px}
+.ver-pill{font-size:12.5px;font-weight:800;padding:6px 12px;border-radius:999px;white-space:nowrap;text-decoration:none}.ver-pill.ok{background:rgba(34,197,94,.14);color:var(--win)}.ver-pill.upd{background:var(--tang);color:#fff}
 </style>
 
 <header class="top">
@@ -3229,6 +3230,7 @@ function viewAccount(mode = "account") {
   <a class="setrow" href="#perks"><span class="ic-dot">${(S.profile || {}).plan === "pro" ? "★" : "☆"}</span><span><b>Your plan & perks</b><small>${(S.profile || {}).plan === "pro" ? "Pro · see everything you get" : "Free · see what Pro adds"}</small></span><span class="rchev" aria-hidden="true">›</span></a>
   <a class="setrow" href="#mybets"><span class="ic-dot">${ICON.chart}</span><span><b>My Bets</b><small>${S.bets.length ? `${S.bets.length} saved` : "Your bets and profit"}</small></span><span class="rchev" aria-hidden="true">›</span></a></div>
   ${profileView()}
+  ${versionCard()}
   <div class="signout-row"><button class="btn ghost sm" data-signout>Sign out</button></div>`;
 }
 /* ---------- social ---------- */
@@ -4110,6 +4112,16 @@ const APP_LATEST = [1, 7];
 const appUpdateStrip = () => { const m = navigator.userAgent.match(/MatchdayEdgeApp\/(\d+)\.(\d+)/); if (!m) return ""; const v = [+m[1], +m[2]];
   if (v[0] > APP_LATEST[0] || (v[0] === APP_LATEST[0] && v[1] >= APP_LATEST[1])) return "";
   return `<a class="strip upd" href="https://snuzzyyy.github.io/matchday-edge/app.html" target="_blank" rel="noopener"><span class="ic-dot">⬇️</span><span><b>Update to Accabox ${APP_LATEST.join(".")}</b><small>Kick-off alerts that arrive even when the app is closed. Installs over the top, your bets stay.</small></span><span class="upd-btn">Update</span></a>`; };
+/* which version you're on: the Android app's own number, and when the site itself last updated */
+function versionCard() {
+  const m = navigator.userAgent.match(/MatchdayEdgeApp\/(\d+)\.(\d+)/), latest = APP_LATEST.join("."), lm = new Date(document.lastModified);
+  const site = isNaN(lm) ? "" : lm.toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: TZ });
+  let row;
+  if (m) { const v = `${m[1]}.${m[2]}`, ok = +m[1] > APP_LATEST[0] || (+m[1] === APP_LATEST[0] && +m[2] >= APP_LATEST[1]);
+    row = `<div class="setrow"><span class="ic-dot">📱</span><span><b>Android app ${v}</b><small>${ok ? "This is the latest version" : `Version ${latest} is out`}</small></span>${ok ? `<span class="ver-pill ok">✓ Up to date</span>` : `<a class="ver-pill upd" href="https://snuzzyyy.github.io/matchday-edge/app.html" target="_blank" rel="noopener">Update to ${latest}</a>`}</div>`; }
+  else row = `<div class="setrow"><span class="ic-dot">🌐</span><span><b>Web version</b><small>Always the latest. The Android app is on ${latest}</small></span><span class="ver-pill ok">✓ Up to date</span></div>`;
+  return `<section class="section"><h2>App version</h2><div class="setcard">${row}${site ? `<div class="setrow"><span class="ic-dot">🔄</span><span><b>Latest features</b><small>Updated ${site}. New features load by themselves when you reopen the app</small></span></div>` : ""}</div></section>`;
+}
 const walletStrip = () => !S.user || S.walletReady === false ? "" : S.wallet
   ? `<a class="strip" href="#account"><span class="ic-dot">💷</span><span><b>Balance ${money(+S.wallet.amount)}</b><small>${(() => { const o = (S.bets || []).filter(b => b.result === "open").reduce((a, b) => a + cashStake(b), 0) + chalOpen(); return o ? `${money(o)} in open bets · <b class="pos">${money(+S.wallet.amount + openReturns())}</b> if they all land` : S.wallet.is_public ? "friends can see it" : "private"; })()}</small></span><span aria-hidden="true">›</span></a>`
   : `<a class="strip" href="#account"><span class="ic-dot">💷</span><span><b>Track your balance</b><small>It updates itself as your bets settle</small></span><span aria-hidden="true">›</span></a>`;
