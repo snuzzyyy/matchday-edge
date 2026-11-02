@@ -1043,6 +1043,11 @@ button.setrow{width:100%;text-align:left;font:inherit;color:inherit;background:n
 .abl-name,.trk-card .tl-top b,.ag-pick span,.bw-lab{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
 .fl-bet{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .abl-name{line-height:1.25}
+.fb-tag{display:inline-flex;align-items:center;gap:3px;margin-left:6px;padding:2px 7px;border-radius:999px;background:rgba(250,204,21,.14);border:1px solid rgba(250,204,21,.4);color:#fde047;font-size:10.5px;font-weight:800;letter-spacing:.02em;white-space:nowrap;vertical-align:middle}
+.bt-foot .fb-tag{margin:0 6px 0 0}.trk-hd .fb-tag{margin-top:4px}
+.fb-btn{padding:5px 11px;border-radius:999px;border:1px dashed var(--line-2);background:none;color:var(--fg-2);font:inherit;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}.fb-btn[aria-pressed=true]{border-style:solid;border-color:rgba(250,204,21,.5);background:rgba(250,204,21,.12);color:#fde047}
+.bc-foot{display:flex;justify-content:flex-end;padding-top:6px}.bv-foot{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.fb-check{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--bg-2);cursor:pointer;font-size:14px;font-weight:700}.fb-check input{width:18px;height:18px;margin-top:2px;accent-color:#facc15;flex:none}.hf-free{grid-column:1 / -1}.fb-check small{display:block;font-weight:500;font-size:12px;color:var(--muted);margin-top:2px}
 </style>
 
 <header class="top">
@@ -1858,7 +1863,7 @@ function slipHTML(mode = "rail") {
     }
     return `<div class="slip ${mode}">${head}<div class="slip-body"><div class="empty-slip"><img src="${art("empty-slip.webp")}" alt="" loading="lazy" class="es-img"><b style="color:var(--fg-2)">Your slip is empty</b>Tap any price to add a selection.</div>${quick}</div><div class="slip-ft"><div class="ft-links"><span>Odds shown as</span>${fmt}</div></div></div>`;
   }
-  const c = slipCalc(), ret = S.stake * c.dec, type = n === 1 ? "Single" : n === 2 ? "Double" : n === 3 ? "Treble" : n + "-fold";
+  const c = slipCalc(), ret = S.stake * c.dec - (S.slipFree ? +S.stake : 0), type = n === 1 ? "Single" : n === 2 ? "Double" : n === 3 ? "Treble" : n + "-fold";
   const legs = S.slip.map(l => `<div class="leg2">
       <div class="lg-main"><div class="ls">${esc(legText(l))}</div><div class="lm">${esc(l.match)} · ${whenLabel(l.kick)} · <b style="color:${tierColor(l.p)}">${pct(l.p)}</b>${l.custom ? ` · <span style="color:var(--tang-2)">your price</span> <button class="rs" data-legreset="${esc(l.id)}">reset</button>` : l.est ? " · est." : ""}</div></div>
       <input class="oddin ${l.custom ? "mine" : ""}" data-legodds="${esc(l.id)}" value="${odds(l.dec)}" autocomplete="off" spellcheck="false" aria-label="Odds for ${esc(legText(l))}. Type your bookie's price">
@@ -1872,6 +1877,7 @@ function slipHTML(mode = "rail") {
     <div class="sum3"><div class="slip-tot"><small>${type} odds${c.mine ? " · yours" : c.est ? " · est." : ""}</small><input class="oddin ${c.mine ? "mine" : ""}" data-slipodds value="${odds(c.dec)}" autocomplete="off" spellcheck="false" aria-label="Total odds. Type your bookie's price">${c.mine ? `<button class="rs" data-sliptotreset>reset to ${odds(c.prod)}</button>` : ""}</div><div><small>Chance it lands</small><b>${pct(c.p)}</b></div><div><small>Returns</small><b class="ret" id="ret">${money(ret)}</b></div></div>
     <div class="meter"><i style="width:${Math.max(c.p * 100, 2)}%"></i></div>
     <div class="stake2"><label for="stake">Stake</label><span class="in">£<input id="stake" type="number" inputmode="decimal" min="0" step="0.5" value="${S.stake}"></span><div class="qss">${stakes}</div></div>
+    <label class="fb-check"><input type="checkbox" id="slipfree" ${S.slipFree ? "checked" : ""}><span>🎁 I'm using a free bet <small>Returns show the winnings only, and your balance isn't charged</small></span></label>
     ${c.sameMatch ? `<div class="warn">Some legs are from the same game. Place this as a Bet Builder at Sky Bet or Paddy Power.</div>` : ""}
     <div class="place"><div class="place-hd"><small>Place it at</small><button class="copysel" data-copyslip>Copy selections</button></div><div class="books2">${books}</div></div>
     <div class="ft-links"><button class="linkbtn" data-savebet>${S.user ? "Save to My Bets" : "Sign in to save this bet"}</button>${fmt}</div>
@@ -2047,7 +2053,7 @@ function chalLogForm(C) {
   <div class="addrow"><button class="btn win" type="submit" data-res="W">It won</button><button class="btn lose" type="submit" data-res="L">It lost</button></div></form>`;
 }
 // what your open bets would pay back if every one lands (saved bets + running £1K steps)
-const openReturns = () => (S.bets || []).filter(b => b.result === "open").reduce((a, b) => a + +b.stake * +b.odds_dec, 0)
+const openReturns = () => (S.bets || []).filter(b => b.result === "open").reduce((a, b) => a + winReturns(b), 0)
   + chalList().filter(C => C.active).reduce((a, C) => a + +C.bank * +C.active.dec, 0);
 const chalOpen = () => chalList().filter(C => C.active).reduce((a, C) => a + (+C.bank || 0), 0);
 const chalDate = () => new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short" });
@@ -2685,17 +2691,17 @@ function betStatus(b) {
   return ["", k ? `Starts ${whenLabel(k)}` : "Open"];
 }
 function betTile(b) {
-  const [cls, txt] = betStatus(b), st = +b.stake, dec = +b.odds_dec;
-  return `<button class="btile" data-betview="${b.id}"><span class="bt-main"><b>${esc(betTitle(b.legs, b.label))}</b><small>${esc(gamesLine(b))}</small></span><span class="bt-odds"><b>${odds(dec)}</b><small>£${st.toFixed(2).replace(/\.00$/, "")} → ${b.result === "won" ? money(+b.returns) : money(st * dec)}</small></span><span class="bt-foot"><span class="bchip ${cls}">${cls === "live" ? '<span class="dot red"></span>' : ""}${txt}</span><span class="bt-more">See bet ›</span></span></button>`;
+  const [cls, txt] = betStatus(b), st = +b.stake, dec = +b.odds_dec, fr = freeOf(b);
+  return `<button class="btile" data-betview="${b.id}"><span class="bt-main"><b>${esc(betTitle(b.legs, b.label))}</b><small>${esc(gamesLine(b))}</small></span><span class="bt-odds"><b>${odds(dec)}</b><small>£${st.toFixed(2).replace(/\.00$/, "")}${fr ? " free" : ""} → ${b.result === "won" ? money(+b.returns) : money(winReturns(b))}</small></span><span class="bt-foot">${fr ? FREE_TAG : ""}<span class="bchip ${cls}">${cls === "live" ? '<span class="dot red"></span>' : ""}${txt}</span><span class="bt-more">See bet ›</span></span></button>`;
 }
 function betViewSheet(id) {
   const b = [...(S.feedBets || []), ...(S.bets || [])].find(x => x.id === id); if (!b) return "";
   const who = person(b.user_id), L = (b.legs || []).filter(l => l.pid || l.k), mine = S.user && b.user_id === S.user.id;
-  const card = L.length ? betCard({ legs: L, dec: +b.odds_dec, stake: +b.stake, text: b.label, noX: true, result: b.result })
-    : `<article class="trk-card"><div class="trk-hd"><div><b>${esc(b.label)}</b><small>${odds(+b.odds_dec)} · £${(+b.stake).toFixed(2)} returns ${money(+b.stake * +b.odds_dec)}</small></div><span class="st ${b.result}">${b.result}</span></div><p class="sub" style="margin:0">Typed in by hand, so there's no live tracking for this one.</p></article>`;
+  const card = L.length ? betCard({ legs: L, dec: +b.odds_dec, stake: +b.stake, free: freeOf(b), text: b.label, noX: true, result: b.result })
+    : `<article class="trk-card"><div class="trk-hd"><div><b>${esc(b.label)}</b><small>${odds(+b.odds_dec)} · £${(+b.stake).toFixed(2)}${freeOf(b) ? " free bet" : ""} returns ${money(winReturns(b))}</small></div><span class="st ${b.result}">${b.result}</span></div><p class="sub" style="margin:0">Typed in by hand, so there's no live tracking for this one.</p></article>`;
   return `<div class="scrim top" data-betviewx></div><div class="ijsheet" role="dialog" aria-modal="true" aria-label="Bet"><button class="close sm ij-x" data-betviewx aria-label="Close">✕</button>
     <div class="bv-who">${avatarHTML(who, 38)}<div><b>${mine ? "Your bet" : esc(who.display_name)}${mine ? "" : badgesHTML(who, 1)}</b><small>Placed ${ago2(b.placed_at)} ago${b.match && !L.length ? " · " + esc(b.match) : ""}</small></div></div>
-    ${card}${mine ? "" : `<div class="fi-acts">${reactBar(b)}${canTail(b) ? `<button class="btn sm tail" data-tail="${b.id}">Copy bet</button>` : ""}</div>`}${chatThread(b)}${mine ? `<div class="bv-foot"><button class="linkbtn" data-delbet="${b.id}">Delete this bet</button></div>` : ""}</div>`;
+    ${card}${mine ? "" : `<div class="fi-acts">${reactBar(b)}${canTail(b) ? `<button class="btn sm tail" data-tail="${b.id}">Copy bet</button>` : ""}</div>`}${chatThread(b)}${mine ? `<div class="bv-foot">${freeBtn(b)}<button class="linkbtn" data-delbet="${b.id}">Delete this bet</button></div>` : ""}</div>`;
 }
 /* ---------- the chance a bet lands, now: each leg from the score, the pace so far, the pre-match expectation and the time left ---------- */
 function gameFrac(sp, g) {
@@ -2755,7 +2761,7 @@ function betCard(t) {
   const x = t.noX ? "" : t.saved ? `<button class="x" data-delbet="${t.saved}" aria-label="Delete bet">✕</button>` : `<button class="x" data-untrack="${t.id}" aria-label="Stop tracking">✕</button>`;
   const BC = !t.result || t.result === "open" ? betChance(t.legs) : null, showC = BC && !lost && !(hit && hit + voids === n) && BC.unknown < n;
   const chanceCell = showC ? `<span title="${BC.unknown ? `${BC.unknown} leg${BC.unknown > 1 ? "s" : ""} you mark yourself not counted` : ""}"><small>Chance</small><b style="color:${tierColor(BC.p)}">${pct(BC.p)}</b></span>` : "", chanceBar = showC ? `<div class="meter bc-meter"><i style="width:${Math.max(2, BC.p * 100)}%"></i></div>` : "";
-  return `<article class="trk-card ${t.chal ? "chalcard" : ""}"><div class="trk-hd"><div>${t.tag ? `<a class="chaltag" href="#challenge" ${t.chal ? `data-chalsel="${t.chal}"` : ""}>🏆 ${esc(t.tag)} ›</a>` : ""}<b>${esc(title)}</b></div>${overall}${x}</div>${t.stake || t.dec || chanceCell ? `<div class="bc-money ${chanceCell ? "four" : ""}"><span><small>Stake</small><b>${t.stake ? money(+t.stake) : "–"}</b></span><span><small>Odds</small><b>${t.dec ? odds(t.dec) : "–"}</b></span><span><small>${t.result === "won" ? "Returned" : "Returns"}</small><b class="pos">${t.stake ? money(t.stake * (t.dec || 1)) : "–"}</b></span>${chanceCell}${chanceBar}</div>` : ""}<div class="bc-legs">${info.map((i, k) => showC ? withPc(i, t.legs[k]) : i.html).join("")}</div></article>`;
+  return `<article class="trk-card ${t.chal ? "chalcard" : ""}"><div class="trk-hd"><div>${t.tag ? `<a class="chaltag" href="#challenge" ${t.chal ? `data-chalsel="${t.chal}"` : ""}>🏆 ${esc(t.tag)} ›</a>` : ""}<b>${esc(title)}</b>${t.free ? FREE_TAG : ""}</div>${overall}${x}</div>${t.stake || t.dec || chanceCell ? `<div class="bc-money ${chanceCell ? "four" : ""}"><span><small>${t.free ? "Free stake" : "Stake"}</small><b>${t.stake ? money(+t.stake) : "–"}</b></span><span><small>Odds</small><b>${t.dec ? odds(t.dec) : "–"}</b></span><span><small>${t.result === "won" ? "Returned" : "Returns"}</small><b class="pos">${t.stake ? money(t.stake * (t.dec || 1) - (t.free || 0)) : "–"}</b></span>${chanceCell}${chanceBar}</div>` : ""}<div class="bc-legs">${info.map((i, k) => showC ? withPc(i, t.legs[k]) : i.html).join("")}</div>${t.bet ? `<div class="bc-foot">${freeBtn(t.bet)}</div>` : ""}</article>`;
 }
 function trackerHTML(bare, extra) {
   const all = [...(S.tracked || []), ...(extra || [])], sportOf = t => (t.legs[0] || {}).sport, T = bare ? all : all.filter(t => sportOf(t) === S.sport), other = all.length - T.length;
@@ -2810,6 +2816,7 @@ async function readShot(file) {
     const lines = [...ml.legs.map((l, i) => { const g = findGame(l.sport, l.gid); return `${g.home.name} v ${g.away.name}: ${l.label}${ml.odds[i] ? " @ " + (+ml.odds[i]).toFixed(2) : ""}`; }), ...props.map(l => `${l.name} ${l.target}+ ${l.label}`)];
     if (!lines.length) { S.impShotMsg = "Couldn't spot any of today's games in that screenshot. Try a clearer one, or type the bet below."; impRefresh(); return; }
     S.importText = lines.join("\n"); const t = $("#imptext"); if (t) t.value = S.importText;
+    if (/free\s*bet/i.test(raw)) { S.impFree = true; const f = $("#impfree"); if (f) f.checked = true; }
     const st = raw.match(/stake[^0-9£]{0,12}£?\s*(\d+(?:\.\d{1,2})?)/i) || raw.match(/£\s*(\d+(?:\.\d{1,2})?)\s*(?:stake|bet)/i); if (st) { S.impStake = st[1]; const i = $("#impstake"); if (i) i.value = st[1]; }
     const od = raw.match(/(?:total )?odds[^0-9a-z]{0,6}(\d{1,4}\/\d{1,3}|\d{1,4}\.\d{1,3}|evs|evens)\b/i) || raw.match(/@\s*(\d{1,4}\/\d{1,3}|\d{1,4}\.\d{1,3}|evs|evens)\b/i);
     const od3 = !od && raw.match(/[@€]\s*(\d{1,2})(\d{2})\b/); if (od3) od3[1] = od3[1] + "." + od3[2];   /* small text: "@ 2.10" often reads as "@210" */
@@ -2850,6 +2857,7 @@ function importSheet() {
     <div class="imp-ex">Examples: <button class="linkbtn" data-impex="Nicolas Jackson 2+ shots on target @ 2.50">Jackson 2+ shots on target</button> · <button class="linkbtn" data-impex="Luka Doncic 8+ assists @ 1.90">Doncic 8+ assists</button> · <button class="linkbtn" data-impex="Haaland to score @ 1.80">Haaland to score</button></div>
     <div id="impdyn">${impDyn()}</div>
     <div class="addrow"><div class="field" style="flex:1 1 100px"><label for="impodds">Odds</label><input id="impodds" value="${esc(S.impOddsTyped && S.impOdds ? S.impOdds : r.dec ? odds(r.dec) : "")}" placeholder="3.00 or 2/1"></div><div class="field" style="flex:1 1 100px"><label for="impstake">Stake £</label><input id="impstake" type="number" inputmode="decimal" min="0" step="0.5" value="${esc(S.impStake != null ? S.impStake : S.stake)}"></div></div>
+    <label class="fb-check"><input type="checkbox" id="impfree" ${S.impFree ? "checked" : ""}><span>🎁 I used a free bet <small>Free stake isn't taken off your balance, and a win pays the winnings only</small></span></label>
     <button class="btn" data-impgo>${S.user ? "Save and track" : "Track this bet"}</button></div>`;
 }
 /* ---------- tables + news (fetched on demand, straight from the feed) ---------- */
@@ -2999,20 +3007,20 @@ if (sb) {
 function statBlock() {   // one compact row; only once something has settled
   const settled = S.bets.filter(b => b.result !== "open"); if (!settled.length) return "";
   const won = settled.filter(b => b.result === "won").length, decided = settled.filter(b => b.result !== "void").length;
-  const staked = settled.reduce((a, b) => a + +b.stake, 0), profit = settled.reduce((a, b) => a + (+b.returns || 0) - +b.stake, 0), tone = profit > 0 ? "pos" : profit < 0 ? "neg" : "";
+  const staked = settled.reduce((a, b) => a + cashStake(b), 0), profit = settled.reduce((a, b) => a + betPL(b), 0), tone = profit > 0 ? "pos" : profit < 0 ? "neg" : "";
   return `<div class="pnlrow"><div><small>Settled</small><b>${settled.length}</b></div><div><small>Win rate</small><b>${decided ? Math.round(won / decided * 100) + "%" : "–"}</b></div><div><small>Profit</small><b class="${tone}">${gbp(profit)}</b></div><div><small>Return</small><b class="${tone}">${staked ? (profit > 0 ? "+" : "") + Math.round(profit / staked * 100) + "%" : "–"}</b></div></div>`;
 }
 function betRow(b) {
-  const pl = b.result === "won" ? `<span style="color:var(--win)">+${gbp(+b.returns - +b.stake)}</span>` : b.result === "lost" ? `<span style="color:var(--loss)">${gbp(-b.stake)}</span>` : b.result === "void" ? "stake back" : `returns ${gbp(+b.stake * +b.odds_dec)}`;
-  return `<div class="betrow"><div><div class="bl">${esc(b.label)}</div><div class="bm">${esc(b.match || "")} · ${new Date(b.placed_at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</div></div>
+  const pl = b.result === "won" ? `<span style="color:var(--win)">+${gbp(betPL(b))}</span>` : b.result === "lost" ? `<span style="color:var(--loss)">${gbp(-cashStake(b))}</span>` : b.result === "void" ? "stake back" : `returns ${gbp(winReturns(b))}`;
+  return `<div class="betrow"><div><div class="bl">${esc(b.label)}${freeOf(b) ? " " + FREE_TAG : ""}</div><div class="bm">${esc(b.match || "")} · ${new Date(b.placed_at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</div></div>
     <div class="br">${odds(+b.odds_dec)}<small>£${(+b.stake).toFixed(2)} · ${pl}</small></div>
-    <div class="acts"><span class="st ${b.result}">${b.result}</span>${b.result === "open" ? `<button class="btn sm win" data-settle="${b.id}|won">Won</button><button class="btn sm lose" data-settle="${b.id}|lost">Lost</button><button class="btn sm ghost" data-settle="${b.id}|void">Void</button>` : ""}<button class="x" style="margin-left:auto" data-delbet="${b.id}" aria-label="Delete bet">✕</button></div></div>`;
+    <div class="acts"><span class="st ${b.result}">${b.result}</span>${b.result === "open" ? `<button class="btn sm win" data-settle="${b.id}|won">Won</button><button class="btn sm lose" data-settle="${b.id}|lost">Lost</button><button class="btn sm ghost" data-settle="${b.id}|void">Void</button>` : ""}${freeBtn(b)}<button class="x" style="margin-left:auto" data-delbet="${b.id}" aria-label="Delete bet">✕</button></div></div>`;
 }
 function betRows() {
   const list = S.bets.filter(b => S.betFilter === "all" || (S.betFilter === "open" ? b.result === "open" : b.result !== "open"));
   if (!list.length) return `<div class="empty art"><img src="${art("empty-bets.webp")}" alt="" loading="lazy"><b>${S.betFilter === "open" ? "No open bets" : "Nothing here yet"}</b><span>${S.betFilter === "open" ? "Save a bet from your slip, or add one below." : "Settled bets will show here."}</span></div>`;
   return list.map(b => `<div class="betrow"><div><div class="bl">${esc(b.label)}</div><div class="bm">${esc(b.match || "")}${b.kickoff ? " · " + whenLabel(b.kickoff) : ""} · placed ${new Date(b.placed_at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</div></div>
-    <div class="br">${odds(+b.odds_dec)}<small>£${(+b.stake).toFixed(2)} stake${b.result === "won" ? ` · <span style="color:var(--win)">+${gbp(+b.returns - +b.stake)}</span>` : b.result === "lost" ? ` · <span style="color:var(--loss)">${gbp(-b.stake)}</span>` : ` · returns ${gbp(+b.stake * +b.odds_dec)}`}</small></div>
+    <div class="br">${odds(+b.odds_dec)}<small>£${(+b.stake).toFixed(2)} stake${b.result === "won" ? ` · <span style="color:var(--win)">+${gbp(betPL(b))}</span>` : b.result === "lost" ? ` · <span style="color:var(--loss)">${gbp(-cashStake(b))}</span>` : ` · returns ${gbp(winReturns(b))}`}</small></div>
     <div class="acts"><span class="st ${b.result}">${b.result}</span>${b.result === "open" ? `<button class="btn sm win" data-settle="${b.id}|won">Won</button><button class="btn sm lose" data-settle="${b.id}|lost">Lost</button><button class="btn sm ghost" data-settle="${b.id}|void">Void</button>` : `<button class="btn sm ghost" data-settle="${b.id}|open">Reopen</button>`}<button class="x" style="margin-left:auto" data-delbet="${b.id}" aria-label="Delete bet">✕</button></div></div>`).join("");
 }
 function allTeams() {
@@ -3031,7 +3039,7 @@ const legBand = b => { const n = (b.legs || []).filter(l => l.pid || l.k || l.ma
 const oddsBand = d => d < 2 ? "Under evens" : d <= 4.001 ? "Evens to 3/1" : d <= 10.001 ? "Over 3/1 to 9/1" : "Over 9/1";
 function statGroups(list, keyFn, order) {
   const m = new Map(); for (const b of list) { const k = keyFn(b); if (!m.has(k)) m.set(k, []); m.get(k).push(b); }
-  const rows = [...m].map(([k, bs]) => { const st = bs.reduce((a, b) => a + +b.stake, 0), pl = bs.reduce((a, b) => a + (+b.returns || 0) - +b.stake, 0), dec = bs.filter(b => b.result !== "void"), w = dec.filter(b => b.result === "won").length;
+  const rows = [...m].map(([k, bs]) => { const st = bs.reduce((a, b) => a + cashStake(b), 0), pl = bs.reduce((a, b) => a + betPL(b), 0), dec = bs.filter(b => b.result !== "void"), w = dec.filter(b => b.result === "won").length;
     return { k, n: bs.length, pl, roi: st ? pl / st : 0, wr: dec.length ? w / dec.length : null }; });
   return order ? rows.sort((a, b) => order.indexOf(a.k) - order.indexOf(b.k)) : rows.sort((a, b) => b.pl - a.pl);
 }
@@ -3042,7 +3050,7 @@ function statTable(title, rows, note) {
 }
 function profitChart(list) {
   const pts = [...list].sort((a, b) => new Date(a.settled_at || a.placed_at) - new Date(b.settled_at || b.placed_at)); if (pts.length < 2) return "";
-  let run = 0; const ys = [0, ...pts.map(b => (run += (+b.returns || 0) - +b.stake))], W = 600, H = 170, pad = 8;
+  let run = 0; const ys = [0, ...pts.map(b => (run += betPL(b)))], W = 600, H = 170, pad = 8;
   const lo = Math.min(0, ...ys), hi = Math.max(0, ...ys), span = hi - lo || 1, X = i => pad + i * (W - 2 * pad) / (ys.length - 1), Y = v => pad + (hi - v) * (H - 2 * pad) / span;
   const path = ys.map((v, i) => `${i ? "L" : "M"}${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(""), last = ys[ys.length - 1];
   S._chartPts = [{ t: "Start", v: 0 }, ...pts.map((b, i) => ({ t: `${new Date(b.settled_at || b.placed_at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })} · ${betTitle(b.legs, b.label)} · ${b.result === "won" ? "won" : b.result === "lost" ? "lost" : b.result}`, v: ys[i + 1] }))];
@@ -3057,7 +3065,7 @@ function viewStats() {
   const chips = `<div class="chips winrow">${[["30", "30 days"], ["90", "90 days"], ["all", "All time"]].map(([k, l]) => `<button class="chip" data-statrange="${k}" aria-pressed="${rng === k}">${l}</button>`).join("")}</div>`;
   const head = `<div class="hd"><div><p class="sub">What's working and what isn't, from your settled bets.</p></div>${chips}</div>`;
   if (!all.length) return `${head}<div class="empty art"><img src="${art("empty-bets.webp")}" alt="" loading="lazy"><b>No settled bets ${rng === "all" ? "yet" : "in this period"}</b><span>Once your bets settle, you'll see your profit by bet type, sport and month here.</span></div>`;
-  const st = all.reduce((a, b) => a + +b.stake, 0), pl = all.reduce((a, b) => a + (+b.returns || 0) - +b.stake, 0), dec = all.filter(b => b.result !== "void"), won = dec.filter(b => b.result === "won");
+  const st = all.reduce((a, b) => a + cashStake(b), 0), pl = all.reduce((a, b) => a + betPL(b), 0), dec = all.filter(b => b.result !== "void"), won = dec.filter(b => b.result === "won");
   const types = statGroups(all, betType), best = types.filter(r => r.n >= 2)[0], worst = [...types].filter(r => r.n >= 2).sort((a, b) => a.pl - b.pl)[0];
   const months = statGroups(all, b => new Date(b.settled_at || b.placed_at).toLocaleDateString("en-GB", { month: "long", year: "numeric" }));
   months.sort((a, b) => new Date("1 " + b.k) - new Date("1 " + a.k));
@@ -3187,7 +3195,7 @@ function liveFriendsHTML() {
 function friendsWeekHTML() {
   const since = Date.now() - 7 * 864e5, wk = (S.feedBets || []).filter(b => b.result !== "open" && +new Date(b.settled_at || b.placed_at) > since);
   if (!wk.length || !Object.keys(S.friends || {}).length) return "";
-  const by = {}; for (const b of wk) { const x = by[b.user_id] = by[b.user_id] || { uid: b.user_id, pl: 0, won: 0, n: 0, best: 0 }; x.n++; x.pl += (+b.returns || 0) - +b.stake; if (b.result === "won") { x.won++; x.best = Math.max(x.best, +b.odds_dec); } }
+  const by = {}; for (const b of wk) { const x = by[b.user_id] = by[b.user_id] || { uid: b.user_id, pl: 0, won: 0, n: 0, best: 0 }; x.n++; x.pl += betPL(b); if (b.result === "won") { x.won++; x.best = Math.max(x.best, +b.odds_dec); } }
   const L = Object.values(by), top = [...L].sort((a, b) => b.pl - a.pl)[0], wins = [...L].sort((a, b) => b.won - a.won)[0], big = [...L].sort((a, b) => b.best - a.best)[0];
   const nm = uid => esc(uid === S.user.id ? "You" : person(uid).display_name);
   const tile = (lab, uid, val) => `<button class="fw-t" data-mate="${uid}">${avatarHTML(person(uid), 30)}<span><small>${lab}</small><b>${nm(uid)}</b><em>${val}</em></span></button>`;
@@ -3199,7 +3207,7 @@ function h2hHTML(uid) {
   const me = S.user.id; if (uid === me) return "";
   const since = Date.now() - 30 * 864e5, mineB = (S.bets || []), theirs = betsOf(uid);
   const st = L => { const s = L.filter(b => b.result !== "open" && +new Date(b.settled_at || b.placed_at) > since), w = s.filter(b => b.result === "won"), d = s.filter(b => b.result !== "void");
-    return { n: s.length, pl: s.reduce((a, b) => a + (+b.returns || 0) - +b.stake, 0), wr: d.length ? Math.round(w.length / d.length * 100) : null, best: w.reduce((a, b) => Math.max(a, +b.odds_dec), 0) }; };
+    return { n: s.length, pl: s.reduce((a, b) => a + betPL(b), 0), wr: d.length ? Math.round(w.length / d.length * 100) : null, best: w.reduce((a, b) => Math.max(a, +b.odds_dec), 0) }; };
   const A = st(mineB), B = st(theirs); if (!A.n && !B.n) return "";
   const row = (lab, a, b, fa, better) => `<div class="h2h-r"><span class="${better > 0 ? "h2h-w" : ""}">${fa(a)}</span><small>${lab}</small><span class="${better < 0 ? "h2h-w" : ""}">${fa(b)}</span></div>`;
   const cmp = (a, b) => a == null || b == null ? 0 : a > b ? 1 : a < b ? -1 : 0;
@@ -3262,7 +3270,7 @@ function feedItems() {
   for (const b of S.feedBets || []) {
     const who = person(b.user_id), legs = (b.legs || []).length, kind = legs > 3 ? legs + "-fold acca" : legs === 3 ? "treble" : legs === 2 ? "double" : "bet";
     if (b.result === "open") items.push({ t: b.placed_at, b, html: `<b>${esc(who.display_name)}</b>${badgesHTML(who, 1)} placed a ${kind}`, tone: "" });
-    else { const pl = (+b.returns || 0) - +b.stake; items.push({ t: b.settled_at || b.placed_at, b, html: b.result === "won" ? `<b>${esc(who.display_name)}</b>${badgesHTML(who, 1)} won <span class="pos">+${gbp(pl)}</span>` : b.result === "lost" ? `<b>${esc(who.display_name)}</b>${badgesHTML(who, 1)} lost <span class="neg">${gbp(-b.stake)}</span>` : `<b>${esc(who.display_name)}</b>'s bet was void`, tone: b.result }); }
+    else { const pl = betPL(b); items.push({ t: b.settled_at || b.placed_at, b, html: b.result === "won" ? `<b>${esc(who.display_name)}</b>${badgesHTML(who, 1)} won <span class="pos">+${gbp(pl)}</span>` : b.result === "lost" ? (cashStake(b) ? `<b>${esc(who.display_name)}</b>${badgesHTML(who, 1)} lost <span class="neg">${gbp(-cashStake(b))}</span>` : `<b>${esc(who.display_name)}</b>${badgesHTML(who, 1)} lost a free bet`) : `<b>${esc(who.display_name)}</b>'s bet was void`, tone: b.result }); }
   }
   for (const [uid, D] of Object.entries(S.friendChal || {})) {
     const who = person(uid); for (const C of normChal(D).ladders || []) {
@@ -3318,7 +3326,7 @@ function friendsView() {
 }
 function viewMyBets() {
   const bets = S.user ? S.bets || [] : [], track = b => (b.legs || []).some(l => l.pid || l.k);
-  const savedCards = bets.filter(b => b.result === "open" && track(b)).map(b => ({ id: "s" + b.id, saved: b.id, text: b.label, legs: b.legs.filter(l => l.pid || l.k || l.manual), dec: +b.odds_dec, stake: +b.stake }));
+  const savedCards = bets.filter(b => b.result === "open" && track(b)).map(b => ({ id: "s" + b.id, saved: b.id, text: b.label, legs: b.legs.filter(l => l.pid || l.k || l.manual), dec: +b.odds_dec, stake: +b.stake, free: freeOf(b), bet: b }));
   const local = localTracked(bets);
   const chalCards = chalList().map((C, i) => [C, i]).filter(([C]) => C.active && (C.active.legs || []).some(l => l.k || l.pid)).map(([C, i]) => ({ id: "c" + C.id, chal: C.id, noX: true, tag: `Challenge ${i + 1} · step ${C.rung + 1}/${C.rungs}`, text: C.active.label, legs: C.active.legs, dec: +C.active.dec, stake: +C.bank }));
   const cards = [...local, ...savedCards].sort((a, b) => Math.min(...a.legs.map(l => +new Date(kick(findGame(l.sport, l.gid) || { start: 0 })) || 0)) - Math.min(...b.legs.map(l => +new Date(kick(findGame(l.sport, l.gid) || { start: 0 })) || 0)));
@@ -3337,6 +3345,7 @@ function viewMyBets() {
     <details class="handadd"><summary><span class="ic-dot">＋</span><span><b>Add a bet by hand</b><small>For bets you can't import. You'll mark these won or lost yourself.</small></span></summary>
       <form id="addBet" class="handform"><div class="field hf-bet"><label for="ab-label">Bet</label><input id="ab-label" placeholder="e.g. Liverpool to win" required></div>
       <div class="field"><label for="ab-odds">Odds</label><input id="ab-odds" placeholder="5/2" required></div><div class="field"><label for="ab-stake">Stake £</label><input id="ab-stake" type="number" inputmode="decimal" min="0" step="0.5" value="${S.stake}" required></div>
+      <label class="fb-check hf-free"><input type="checkbox" id="ab-free"><span>🎁 Free bet <small>Not taken off your balance</small></span></label>
       <button class="btn hf-go" type="submit">Add bet</button></form></details>`;
 }
 function myBetsView(inTab) {
@@ -3374,9 +3383,9 @@ function profileShowcase(uid) {
   const bets = me ? (S.bets || []) : betsOf(uid);
   const done = bets.filter(b => b.result === "won" || b.result === "lost").sort((a, b) => new Date(b.settled_at || b.placed_at) - new Date(a.settled_at || a.placed_at));
   const won = done.filter(b => b.result === "won"), settled = bets.filter(b => b.result !== "open");
-  const profit = settled.reduce((a, b) => a + (+b.returns || 0) - +b.stake, 0);
+  const profit = settled.reduce((a, b) => a + betPL(b), 0);
   let streak = 0; for (const b of done) { if (b.result === "won") streak++; else break; }
-  const bestOdds = won.reduce((m, b) => Math.max(m, +b.odds_dec), 0), big = [...won].sort((a, b) => (+b.returns - +b.stake) - (+a.returns - +a.stake))[0];
+  const bestOdds = won.reduce((m, b) => Math.max(m, +b.odds_dec), 0), big = [...won].sort((a, b) => betPL(b) - betPL(a))[0];
   const chLs = normChal(me ? S.chalAll : (S.friendChal || {})[uid]).ladders || [], topStep = Math.max(0, ...chLs.map(c => Math.max(c.rung || 0, ...(c.past || []).map(x => x.reached || 0))));
   const A = [["🎯", "First win", "Win a bet", won.length > 0], ["🔥", "Hot streak", "Win 3 in a row", streak >= 3 || done.some((b, i) => done.slice(i, i + 3).length === 3 && done.slice(i, i + 3).every(x => x.result === "won"))],
     ["🧩", "Acca hero", "Win a 3+ leg bet", won.some(b => (b.legs || []).length >= 3)], ["🚀", "Long shot", "Win at 3/1 or bigger", bestOdds >= 4],
@@ -3396,7 +3405,7 @@ function profileShowcase(uid) {
 function mateSheet(uid) {
   const me = uid === S.user.id, p = person(uid), bets = me ? (S.feedBets || []).filter(b => b.user_id === uid) : betsOf(uid), ch = chalPick(me ? S.chalAll : (S.friendChal || {})[uid]);
   const settled = bets.filter(b => b.result !== "open"), won = settled.filter(b => b.result === "won").length, decided = settled.filter(b => b.result !== "void").length;
-  const profit = settled.reduce((a, b) => a + (+b.returns || 0) - +b.stake, 0), staked = settled.reduce((a, b) => a + +b.stake, 0);
+  const profit = settled.reduce((a, b) => a + betPL(b), 0), staked = settled.reduce((a, b) => a + cashStake(b), 0);
   const isFr = !!(S.friends || {})[uid], shares = me || bets.length || (isFr ? p.share_bets !== false : !!p.bets_public), pc = S.people[uid] || {}, iFollow = S.following && S.following.has(uid);
   const ladders = (normChal(me ? S.chalAll : (S.friendChal || {})[uid]).ladders || []).filter(C => (C.history || []).length || C.active || C.rung || (C.past || []).length);
   return `<div class="scrim top" data-mateclose></div><div class="ijsheet" role="dialog" aria-modal="true" aria-label="${esc(p.display_name)}"><button class="close sm ij-x" data-mateclose aria-label="Close">✕</button>
@@ -3458,8 +3467,8 @@ document.addEventListener("submit", async e => {
   } else if (f.id === "addBet") {
     const o = parseOdds(val("ab-odds")), st = +val("ab-stake");
     if (!o) { toast("Odds look wrong. Try 5/2, EVS or 3.5"); return; }
-    const r = await sb.from("bets").insert({ label: val("ab-label").trim(), odds_dec: o, stake: st }).select().single();
-    if (r.error) toast("Couldn't save the bet."); else { S.bets.unshift(r.data); walletAdjust(-(+r.data.stake)); S.betFilter = "open"; render(); toast("Bet added"); }
+    const fr = !!(document.getElementById("ab-free") || {}).checked, r = await insertBet({ label: val("ab-label").trim(), odds_dec: o, stake: st, ...(fr ? { free_stake: st } : {}) });
+    if (r.error) toast("Couldn't save the bet."); else { S.bets.unshift(r.data); walletAdjust(-cashStake(r.data)); S.betFilter = "open"; render(); toast("Bet added"); }
   } else if (f.id === "addFriend") { addFriend(val("fcode")); f.reset();
   } else if (f.id === "walletForm") { const v = parseFloat(val("walamt")); if (!(v >= 0)) { toast("Enter an amount"); return; } S.walletEdit = false; walletSet(Math.round(v * 100) / 100); toast("Balance saved");
   } else if (f.id === "chatForm") {
@@ -3562,9 +3571,9 @@ document.addEventListener("click", async e => {
   else if (d.savebet !== undefined) {
     if (!S.user) { S.slipOpen = false; location.hash = "account"; return; }
     if (!S.slip.length) return;
-    const c = slipCalc(), row = { label: S.slip.map(legText).join(" + "), match: [...new Set(S.slip.map(l => l.match))].join(", "), legs: S.slip, odds_dec: Math.round(c.dec * 1000) / 1000, stake: S.stake, sport: S.slip[0].sport, kickoff: S.slip.map(l => l.kick).sort()[0] };
-    const r = await sb.from("bets").insert(row).select().single();
-    if (r.error) toast("Couldn't save the bet."); else { S.bets.unshift(r.data); walletAdjust(-(+r.data.stake)); toast("Saved to My Bets"); }
+    const c = slipCalc(), row = { label: S.slip.map(legText).join(" + "), match: [...new Set(S.slip.map(l => l.match))].join(", "), legs: S.slip, odds_dec: Math.round(c.dec * 1000) / 1000, stake: S.stake, sport: S.slip[0].sport, kickoff: S.slip.map(l => l.kick).sort()[0], ...(S.slipFree ? { free_stake: S.stake } : {}) };
+    const r = await insertBet(row);
+    if (r.error) toast("Couldn't save the bet."); else { S.bets.unshift(r.data); walletAdjust(-cashStake(r.data)); S.slipFree = false; toast(freeOf(r.data) ? "Saved to My Bets as a free bet 🎁" : "Saved to My Bets"); }
   }
 });
 document.addEventListener("change", async e => { if (e.target.id === "alertOpt" || e.target.id === "alertOpt2") { if (e.target.checked) { const ok = await askAlerts(); store.set("alerts", true); store.set("alertKnown", []); toast(ok ? "Notifications on" : "Notifications on inside the app"); alertTick(); sendAlert("Notifications are on", "You'll hear about your bets and the games you follow", "test"); } else { store.set("alerts", false); toast("Notifications off"); } render(); } });
@@ -3611,7 +3620,19 @@ function cashGo(mode) {
   S.cashOpen = null; S.rungSel = null; saveChal(C);
 }
 /* ---------- automatic settling from final scores and player stats ---------- */
-const credit = b => b.result === "won" ? (+b.returns || 0) : b.result === "void" ? +b.stake : 0;
+/* free bets: the free part of the stake isn't your money, so it isn't taken off your balance, isn't paid back with a win, and isn't lost */
+const freeOf = b => Math.min(+b.free_stake || 0, +b.stake || 0);
+const cashStake = b => Math.round(((+b.stake || 0) - freeOf(b)) * 100) / 100;
+const betPL = b => b.result === "open" ? 0 : b.result === "void" ? 0 : (+b.returns || 0) - cashStake(b);
+const winReturns = b => Math.round(((+b.stake || 0) * (+b.odds_dec || 1) - freeOf(b)) * 100) / 100;
+const credit = b => b.result === "won" ? (+b.returns || 0) : b.result === "void" ? cashStake(b) : 0;
+const freeBtn = b => S.user && b.user_id === S.user.id ? `<button class="fb-btn" data-freebet="${b.id}" aria-pressed="${!!freeOf(b)}">🎁 ${freeOf(b) ? "Free bet ✓" : "Used a free bet?"}</button>` : "";
+const FREE_TAG = `<span class="fb-tag" title="Placed with a free bet">🎁 Free bet</span>`;
+async function insertBet(row) {   /* free_stake needs a quick database update; until then the bet still saves, without it */
+  let r = await sb.from("bets").insert(row).select().single();
+  if (r.error && row.free_stake != null) { const { free_stake, ...rest } = row; r = await sb.from("bets").insert(rest).select().single(); if (!r.error) toast("Saved, but free bets need a quick database update. Ask Claude for the steps"); }
+  return r;
+}
 async function walletAdjust(delta) {
   if (!S.wallet || !delta) return;
   const cur = await sb.from("wallets").select("amount").eq("user_id", S.user.id).maybeSingle();   // fresh, in case the overnight job changed it
@@ -3624,18 +3645,18 @@ async function walletSet(amount) {
 }
 function walletSection(sw) {
   if (S.walletReady === false) return `<section class="section"><h2>Balance</h2><div class="setcard"><div class="setrow favwrap"><small>Balance tracking needs a quick database update. Ask Claude for the steps.</small></div></div></section>`;
-  const W = S.wallet, open = (S.bets || []).filter(b => b.result === "open").reduce((a, b) => a + +b.stake, 0) + chalOpen();
+  const W = S.wallet, open = (S.bets || []).filter(b => b.result === "open").reduce((a, b) => a + cashStake(b), 0) + chalOpen();
   const form = `<form class="setrow namerow" id="walletForm"><label for="walamt"><small>${W ? "Correct your balance (£)" : "Your betting balance (£)"}</small></label><input id="walamt" type="number" inputmode="decimal" step="0.01" min="0" placeholder="e.g. 50.00" value="${W ? (+W.amount).toFixed(2) : ""}"><button class="btn ghost sm" type="submit">${W ? "Save" : "Set"}</button></form>`;
   return `<section class="section"><h2>Balance</h2><div class="setcard">
     ${W && !S.walletEdit ? `<div class="setrow"><span class="ic-dot">💷</span><span><b class="walbig">${money(+W.amount)}</b><small>${open ? `${money(open)} in open bets · <b class="pos">${money(+W.amount + openReturns())}</b> if they all land` : "Updates as your bets settle"}</small></span><button class="btn ghost sm" data-walletedit>Edit</button></div>` : form}
     ${W ? sw("walletPub", !!W.is_public, "Show my balance to friends", "Off unless you switch it on") : `<div class="setrow favwrap"><small>Enter what's in your bookie account. Saving a bet takes the stake off, and a win adds the returns.</small></div>`}</div></section>`;
 }
 const walletStrip = () => !S.user || S.walletReady === false ? "" : S.wallet
-  ? `<a class="strip" href="#account"><span class="ic-dot">💷</span><span><b>Balance ${money(+S.wallet.amount)}</b><small>${(() => { const o = (S.bets || []).filter(b => b.result === "open").reduce((a, b) => a + +b.stake, 0) + chalOpen(); return o ? `${money(o)} in open bets · <b class="pos">${money(+S.wallet.amount + openReturns())}</b> if they all land` : S.wallet.is_public ? "friends can see it" : "private"; })()}</small></span><span aria-hidden="true">›</span></a>`
+  ? `<a class="strip" href="#account"><span class="ic-dot">💷</span><span><b>Balance ${money(+S.wallet.amount)}</b><small>${(() => { const o = (S.bets || []).filter(b => b.result === "open").reduce((a, b) => a + cashStake(b), 0) + chalOpen(); return o ? `${money(o)} in open bets · <b class="pos">${money(+S.wallet.amount + openReturns())}</b> if they all land` : S.wallet.is_public ? "friends can see it" : "private"; })()}</small></span><span aria-hidden="true">›</span></a>`
   : `<a class="strip" href="#account"><span class="ic-dot">💷</span><span><b>Track your balance</b><small>It updates itself as your bets settle</small></span><span aria-hidden="true">›</span></a>`;
 async function settleBet(b, res, auto) {
   const before = credit(b), prev = b.result;
-  const returns = res === "won" ? Math.round(b.stake * b.odds_dec * 100) / 100 : res === "void" ? +b.stake : res === "lost" ? 0 : null;
+  const returns = res === "won" ? winReturns(b) : res === "void" ? cashStake(b) : res === "lost" ? 0 : null;
   const settled_at = res === "open" ? null : new Date().toISOString();
   let legs = null;
   if (res !== "open" && (b.legs || []).some(l => (l.pid || l.k) && !l.fst && findGame(l.sport, l.gid))) {
@@ -3995,19 +4016,27 @@ document.addEventListener("click", async e => {
     const dec = parseOdds(($("#impodds") || {}).value) || r.dec || (manual.length ? null : est), stake = +(($("#impstake") || {}).value) || 0;
     if (!dec) { S.impShotMsg = "Add the odds from your bet slip (e.g. 9/2 or 5.5), then tap Save."; impRefresh(); const o = $("#impodds"); if (o) o.focus(); return; }
     const legs = [...r.legs, ...manual], text = (legs.map(l => l.manual ? l.label : l.pid ? legText(l) : `${l.label} (${l.match})`).join(" + ") || raw.trim()).slice(0, 200);
-    const done = msg => { S.importOpen = false; S.importText = ""; S.impOdds = ""; S.impOddsTyped = false; S.impStake = null; S.impShotMsg = ""; saveImpDraft(); if (location.hash !== "#mybets") location.hash = "mybets"; render(); toast(msg); };
+    const done = msg => { S.importOpen = false; S.importText = ""; S.impOdds = ""; S.impOddsTyped = false; S.impStake = null; S.impFree = false; S.impShotMsg = ""; saveImpDraft(); if (location.hash !== "#mybets") location.hash = "mybets"; render(); toast(msg); };
     const local = () => { if (!r.legs.length) return false; S.tracked = [{ id: "t" + Date.now(), text, legs: r.legs, dec, stake, at: new Date().toISOString() }, ...(S.tracked || [])]; store.set("tracked", S.tracked); return true; };
     if (!S.user || !sb) { if (local()) done("Tracking your bet on this device. Sign in to keep it on all your devices"); else toast("Sign in to save a bet you mark yourself"); return; }
     const gs = [...new Set(r.legs.map(l => l.sport + ":" + l.gid))].map(k => { const [sp, id] = k.split(":"), g = findGame(sp, id); return g && [sp, g]; }).filter(Boolean);
-    const row = { label: text, match: gs.map(([sp, g]) => vs(sp, g)).join(", "), legs: legs.map(l => l.manual ? l : { ...l, type: "prop" }), odds_dec: Math.round(Math.max(1.01, dec) * 1000) / 1000, stake, sport: (r.legs[0] || {}).sport || "football", kickoff: gs.map(([, g]) => kick(g)).sort()[0] || null };
-    const res = await sb.from("bets").insert(row).select().single();
+    const row = { label: text, match: gs.map(([sp, g]) => vs(sp, g)).join(", "), legs: legs.map(l => l.manual ? l : { ...l, type: "prop" }), odds_dec: Math.round(Math.max(1.01, dec) * 1000) / 1000, stake, sport: (r.legs[0] || {}).sport || "football", kickoff: gs.map(([, g]) => kick(g)).sort()[0] || null, ...((document.getElementById("impfree") || {}).checked ? { free_stake: stake } : {}) };
+    const res = await insertBet(row);
     if (res.error || !res.data) { if (local()) done("Couldn't reach your account, so it's tracking on this device for now"); else toast("Couldn't save. Check your connection and try again"); return; }
-    S.bets.unshift(res.data); walletAdjust(-(+res.data.stake)); loadSocial();
+    S.bets.unshift(res.data); walletAdjust(-cashStake(res.data)); loadSocial();
     done(!r.legs.length ? "Saved. Mark it won or lost in My Bets" : manual.length ? "Saved. Some legs track live, the rest you mark yourself" : !parseOdds(($("#impodds") || {}).value) && !r.dec ? `Saved at our estimated odds of ${odds(dec)}. Tap the bet to change them` : "Saved and tracking live");
   }
   else if (d.tipmode) { S.tipMode = d.tipmode; store.set("tipMode", d.tipmode); render(); }
   else if (d.chalodds2) { S.chalOdds = d.chalodds2; store.set("chalOdds", S.chalOdds); render(); }
   else if (d.accawin) { S.accaWin = d.accawin; render(); }
+  else if (d.freebet) {   /* mark (or unmark) a saved bet as placed with a free bet: fixes its returns and your balance */
+    const b = (S.bets || []).find(x => String(x.id) === d.freebet); if (!b) return;
+    const before = credit(b) - cashStake(b), nf = freeOf(b) ? 0 : +b.stake, b2 = { ...b, free_stake: nf }, upd = { free_stake: nf };
+    if (b.result === "won") upd.returns = b2.returns = winReturns(b2); else if (b.result === "void") upd.returns = b2.returns = cashStake(b2);
+    const r = await sb.from("bets").update(upd).eq("id", b.id).eq("user_id", S.user.id);
+    if (r.error) { toast("Free bets need a quick database update. Ask Claude for the steps"); return; }
+    Object.assign(b, b2); walletAdjust((credit(b) - cashStake(b)) - before); render(); toast(nf ? "Marked as a free bet 🎁" : "No longer marked as a free bet");
+  }
   else if (d.reroll) { const [mode, gid, old] = d.reroll.split("|"); reroll(mode === "live", gid, old); }
   else if (d.gfollow) { await toggleFollow(d.gfollow); }
   else if (d.notif !== undefined) { S.notifOpen = true; render(); }
@@ -4045,14 +4074,15 @@ document.addEventListener("focusin", e => { const t = e.target; if (t.dataset &&
 document.addEventListener("toggle", e => { const d = e.target; if (d && d.dataset && d.dataset.ap) (S.addOpen = S.addOpen || {})[d.dataset.ap] = d.open; }, true);
 document.addEventListener("click", e => { const b = e.target.closest("[data-legreset]"); if (!b) return; const l = S.slip.find(x => x.id === b.dataset.legreset); if (l && l.orig != null) { l.dec = l.orig; l.custom = false; if (l.estOrig != null) l.est = l.estOrig; save(); render(); toast("Back to the app's price"); } });
 document.addEventListener("input", e => {
-  if (e.target.id === "stake") { S.stake = Math.max(0, +e.target.value || 0); save(); const c = slipCalc(); document.querySelectorAll("#ret").forEach(r => r.textContent = money(S.stake * c.dec)); }
+  if (e.target.id === "stake") { S.stake = Math.max(0, +e.target.value || 0); save(); const c = slipCalc(); document.querySelectorAll("#ret").forEach(r => r.textContent = money(S.stake * c.dec - (S.slipFree ? S.stake : 0))); }
+  if (e.target.id === "slipfree") { S.slipFree = e.target.checked; render(); }
 });
 document.addEventListener("click", e => { if (e.target.closest("[data-injclose]")) { S.injOpen = null; render(); } if (e.target.closest("div[data-betviewx]")) { S.betView = null; render(); } if (e.target.closest("div[data-cashclose]")) { S.cashOpen = null; render(); } const shc = e.target.closest("[data-shareclose]"); if (shc && S.shareOpen) { if (shc.tagName === "A") setTimeout(() => { S.shareOpen = false; render(); }, 400); else { S.shareOpen = false; render(); } } if (e.target.closest("[data-importclose]")) { S.importOpen = false; saveImpDraft(); render(); } });
 document.addEventListener("input", e => {
   const id = e.target.id; if (!/^imp(text|odds|stake)$/.test(id)) return;
   if (id === "imptext") { S.importText = e.target.value; S.impShotMsg = ""; clearTimeout(S._impT); S._impT = setTimeout(impRefresh, 350); }
   if (id === "impodds") { S.impOdds = e.target.value; S.impOddsTyped = !!e.target.value.trim(); }
-  if (id === "impstake") S.impStake = e.target.value;
+  if (id === "impstake") S.impStake = e.target.value; if (id === "impfree") S.impFree = e.target.checked;
   saveImpDraft();
 });
 document.addEventListener("keydown", e => { if (e.key === "Escape" && S.injOpen) { S.injOpen = null; render(); return; } if (e.key === "Escape" && (S.drawer || S.slipOpen)) { S.drawer = null; S.slipOpen = false; render(); } });

@@ -199,7 +199,8 @@ def settle_bets():
     for b in bets:
         res, legs = outcome(b.get("legs"))
         if not res: continue
-        ret = round(float(b["stake"]) * float(b["odds_dec"]), 2) if res == "won" else 0
+        free = min(float(b.get("free_stake") or 0), float(b["stake"]))   # a free bet pays the winnings only
+        ret = round(float(b["stake"]) * float(b["odds_dec"]) - free, 2) if res == "won" else 0
         done = http("PATCH", f"bets?id=eq.{b['id']}&result=eq.open", {"result": res, "returns": ret, "settled_at": now(), "legs": legs}, "return=representation")
         if not done: continue   # the app got there first
         n += 1
