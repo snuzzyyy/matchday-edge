@@ -230,6 +230,12 @@ No server of our own. ESPN is free, has no key and is about 1–3 minutes behind
 **Friends:**
 - Feed tiles (`betTile`) with a live status; tap one to see the bet; Copy bet (`data-tail`).
 - Top players (`topView`), People and search (`peopleSection`), following (`follows`).
+- **Comments** (`supabase/chat.sql`: `comments` table; anyone who can see the bet can comment, delete own or on own bet): `loadComments`, `chatThread` in the bet sheet (`#chatForm`, `data-delcm`), 💬 count on feed items (`socialActs`), open sheet refreshes comments every 10 s. `S.chatReady` is false until the SQL is run, so comment UI hides itself.
+- **Copied marks:** copying a bet inserts a `tail` reaction (allowed by chat.sql); shown as "📋 Copied by N" and names in the bet sheet.
+- **Feed extras:** `friendsWeekHTML` (top earner, most wins, best odds, last 7 days), `liveFriendsHTML` (friends' bets in play, legs landed + chance).
+- **Friends' board periods:** `leaderboard_since(days)` RPC (chat.sql), chips `data-bdays` 7/30/0; falls back to `leaderboard()` if the RPC is missing.
+- **You vs friend:** `h2hHTML(uid)` in `mateSheet` (last 30 days).
+- **Friend notifications:** `socialPoll()` every 60 s: reactions, comments and copies on your bets, friends' wins, friends' new bets (`apref` keys social, copy, fwin, fbet; fbet off by default). Seen keys in `mde:socSeen`; the first run never alerts.
 - Profiles: `mateSheet`, and `profileShowcase` (stats, form, biggest win, badges, teams).
 
 **Profile** (`viewAccount` + `profileView`): grouped setting cards with switches (`setrow`), balance, Theme (Halloween), Alerts, Privacy (share bets, leaderboards, search, public bets), favourite teams. **Plan & perks** page: `viewPerks`.
