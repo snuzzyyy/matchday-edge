@@ -2930,11 +2930,15 @@ function legGroups(legs, infos) {
   const out = [], at = new Map();
   legs.forEach((l, k) => { const g = !l.manual && l.gid && findGame(l.sport, l.gid);
     if (!g) { out.push({ raw: infos[k].html }); return; }
-    const key = l.sport + g.id; if (!at.has(key)) { at.set(key, out.length); out.push({ sp: l.sport, g, lines: [] }); } out[at.get(key)].lines.push(legLine(l, k, legs)); });
+    const key = l.sport + g.id; if (!at.has(key)) { at.set(key, out.length); out.push({ sp: l.sport, g, lines: [] }); } out[at.get(key)].lines.push({ html: legLine(l, k, legs), st: infos[k].st }); });
+  /* like Sky Bet: legs still to come first, landed ones drop to the bottom; games all done sink below the rest */
+  const rank = st => st === "hit" || st === "void" ? 2 : st === "miss" ? 1 : 0;
+  for (const G of out) if (G.lines) G.lines.sort((a, b) => rank(a.st) - rank(b.st));
+  out.sort((a, b) => (a.lines ? +a.lines.every(x => rank(x.st) === 2) : 0) - (b.lines ? +b.lines.every(x => rank(x.st) === 2) : 0));
   return out.map(G => { if (G.raw) return G.raw; const { sp, g } = G, Lt = sp === "nba" ? g.away : g.home, Rt = sp === "nba" ? g.home : g.away, live = isLive(g), post = g.status.state === "post";
     const head = isPre(g) ? `<span class="lgg-t"><b>${esc(vs(sp, g))}</b><small>${esc(whenLabel(kick(g)))}${sp === "football" ? " · " + esc(leagueName(g.league)) : ""}</small></span><span class="lgg-cd">${untilTxt(kick(g))}</span>`
       : `<span class="lgg-t"><b>${esc(Lt.name)} <span class="lgg-sc">${esc(Lt.score)}–${esc(Rt.score)}</span> ${esc(Rt.name)}</b><small>${sp === "football" ? esc(leagueName(g.league)) : "NBA"}</small></span><span class="lgg-clk ${live ? "live" : ""}">${live ? `<span class="dot red"></span>${esc(clockLabel(sp, g))}` : post ? "FT" : esc(g.status.detail || "")}</span>`;
-    return `<div class="lgg"><button type="button" class="lgg-hd" data-open="${sp}:${g.id}" aria-label="Open ${esc(vs(sp, g))}"><span class="lgg-logos">${logo(sp, Lt)}${logo(sp, Rt)}</span>${head}</button><div class="lgg-legs">${G.lines.join("")}</div></div>`; }).join("");
+    return `<div class="lgg"><button type="button" class="lgg-hd" data-open="${sp}:${g.id}" aria-label="Open ${esc(vs(sp, g))}"><span class="lgg-logos">${logo(sp, Lt)}${logo(sp, Rt)}</span>${head}</button><div class="lgg-legs">${G.lines.map(x => x.html).join("")}</div></div>`; }).join("");
 }
 function betCard(t) {
   const info = t.legs.map((l, i) => { const r = legInfo(i && l.pid && !l.group && t.legs[i - 1].pid === l.pid ? { ...l, _sub: true } : l);
@@ -2947,7 +2951,7 @@ function betCard(t) {
   const title = betTitle(t.legs, t.text);
   const x = t.noX ? "" : t.saved ? `<button class="x" data-delbet="${t.saved}" aria-label="Delete bet">✕</button>` : `<button class="x" data-untrack="${t.id}" aria-label="Stop tracking">✕</button>`;
   const BC = !t.result || t.result === "open" ? betChance(t.legs) : null, showC = BC && !lost && !(hit && hit + voids === n) && BC.unknown < n;
-  const chanceCell = showC ? `<span title="${BC.unknown ? `${BC.unknown} leg${BC.unknown > 1 ? "s" : ""} you mark yourself not counted` : ""}"><small>Chance</small><b style="color:${tierColor(BC.p)}">${pct(BC.p)}</b></span>` : "", chanceBar = showC ? `<div class="meter bc-meter"><i style="width:${Math.max(2, BC.p * 100)}%"></i></div>` : "";
+  const chanceCell = showC ? `<span title="${BC.unknown ? `${BC.unknown} leg${BC.unknown > 1 ? "s" : ""} you mark yourself not counted` : ""}"><small>Chance</small><b style="color:${tierColor(BC.p)}">${BC.p > 0 && BC.p < .005 ? "<1%" : pct(BC.p)}</b></span>` : "", chanceBar = showC ? `<div class="meter bc-meter"><i style="width:${Math.max(2, BC.p * 100)}%"></i></div>` : "";
   return `<article class="trk-card ${t.chal ? "chalcard" : ""}"><div class="trk-hd"><div>${t.tag ? `<a class="chaltag" href="#challenge" ${t.chal ? `data-chalsel="${t.chal}"` : ""}>🏆 ${esc(t.tag)} ›</a>` : ""}<b>${esc(title)}</b>${t.free ? FREE_TAG : ""}</div>${overall}${x}</div>${t.stake || t.dec || chanceCell ? `<div class="bc-money ${chanceCell ? "four" : ""}"><span><small>${t.free ? "Free stake" : "Stake"}</small><b>${t.stake ? money(+t.stake) : "–"}</b></span><span><small>Odds</small><b>${t.dec ? odds(t.dec) : "–"}</b></span><span><small>${t.result === "won" ? "Returned" : "Returns"}</small><b class="pos">${t.stake ? money(t.stake * (t.dec || 1) - (t.free || 0)) : "–"}</b></span>${chanceCell}</div>` : ""}${segs}<div class="bc-legs">${legGroups(t.legs, info)}</div>${t.bet ? `<div class="bc-foot">${freeBtn(t.bet)}</div>` : ""}</article>`;
 }
 function trackerHTML(bare, extra) {
