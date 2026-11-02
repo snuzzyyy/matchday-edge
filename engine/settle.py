@@ -328,9 +328,5 @@ if __name__ == "__main__":
         print("No SUPABASE_SERVICE_KEY secret: skipping overnight settling."); sys.exit(0)
     try: print(f"Settled {settle_bets()} bet(s) and {settle_challenges()} £1K step(s).")
     except Exception as e: print("Settling skipped:", type(e).__name__, str(e)[:200])
-    try:
-        for r in http("GET", "bot_accas?result=neq.open&select=id,result,odds_dec,legs&order=settled_at.desc&limit=40") or []:   # audit trail for the bot's record
-            print("BOT", r["id"], r["result"], r["odds_dec"], " | ".join(f"{l.get('match','')}: {l.get('label') or l.get('name','')} {l.get('target','') if l.get('pid') else ''} -> {l.get('fst','?')} {l.get('final','')}" for l in (r.get("legs") or [])))
-    except Exception as e: print("bot audit failed", e)
     try: print(f"Settled {settle_bot()} Accabox bot acca(s).")
     except Exception as e: print("Settling skipped:", type(e).__name__, str(e)[:200])
