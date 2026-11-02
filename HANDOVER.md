@@ -399,7 +399,7 @@ No server of our own. ESPN is free, has no key and is about 1–3 minutes behind
 - `#check` (`viewCheck`): parses with `parseBet`; each leg's chance via `chkLeg` (match markets → `legChance`; player props → the player's model line, else `CHK_PRIOR`, combined for `foulInvolvements` / `goalOrAssist`, halves ×0.46/0.54, live → `paceChance`). Fair odds = 1/p; with typed odds, value > +10% good, ±10% fair, below poor. "Track this bet" opens the import pre-filled. `render()` now keeps focus/caret in #main inputs.
 - Edit a saved open bet: ✏️ Edit bet (`editBtn`, card foot + bet view) → import sheet with `S.impEdit` and `betToText(b)` (one leg per line); Save updates the row in place and moves the balance by the stake change.
 - Import: combined player stats (`combo:a,b`, e.g. "combine for 8+ shots & foul involvements") are summed in `legValue`/`chkLam`/settle.py. "Away Over/Under 0.5 Goals: Over" → "<team> to score". OCR odds that lose the dot ("@136") read as 1.36. `SKIP` is now only "12" (Over 0.5 goals is allowed in picks).
-- Both teams to score legs show each team as a chip (✓ scored / ✗ not yet) instead of a goal count.
+- Both teams to score legs show a bar split in two (home half, away half), each half fills when that team scores (`tl-split`; `legLine` reads the halves).
 
 ## Social (was Friends)
 - Nav label "Social". Tabs (`S.friendTab`): Timeline (`feedView("timeline")`: `S.feedBets` + `S.pubBets` (unfiltered bets query; RLS returns public ones) + Accabox bot winners), Friends (friends' feed, week, live, £1K), Leaderboards (`S.lbScope` friends → `boardView`, everyone → `topView`), People. Posts render via `feedPost`; one centred column (`.soc`).
