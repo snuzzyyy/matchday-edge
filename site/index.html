@@ -3554,7 +3554,8 @@ async function loadBotAll() {
   S.botAll = r.error ? [] : r.data || []; render();
 }
 function botSheet() {
-  const A = S.botAll, LVN = { low: "Low", medium: "Medium", high: "High" };
+  const LVN = { low: "Low", medium: "Medium", high: "High" }, lvOf = b => LVN[b.level] ? b.level : +b.odds_dec < 2.5 ? "low" : +b.odds_dec < 6 ? "medium" : "high";   /* older accas used other names: sort them by their odds */
+  const A = S.botAll;
   const head = `<div class="scrim top" data-botx></div><div class="ijsheet botsheet" role="dialog" aria-modal="true" aria-label="Accabox"><button class="close sm ij-x" data-botx aria-label="Close">✕</button>
     <div class="ij-head"><span class="bot-av big"><img src="mark.png" alt=""></span><div><h2>Accabox <span class="bot-tick">✓</span></h2><span class="ij-team">Official bot · builds a Low, Medium and High acca for every game</span></div></div>`;
   if (!A) return head + `<div class="loadbox">Loading…</div></div>`;
@@ -3573,7 +3574,7 @@ function botSheet() {
       ${best ? box("Biggest winner", odds(+best.odds_dec), esc(best.title)) : ""}
       ${box("Form", streak ? `${streak} ${sk === "won" ? "W" : "L"}` : "–", sk === "won" ? "winning run" : sk ? "losing run" : "")}
     </div>
-    <div class="bp-table"><div class="bp-row bp-hd"><b>Acca</b><span>W–L</span><span>Hit</span><span>Profit</span></div>${["low", "medium", "high"].map(l => row(LVN[l], A.filter(b => b.level === l))).join("")}${row("⚽ Football", A.filter(b => b.sport === "football"))}${row("🏀 NBA", A.filter(b => b.sport === "nba"))}</div>
+    <div class="bp-table"><div class="bp-row bp-hd"><b>By level</b><span>W–L</span><span>Hit</span><span>Profit</span></div>${["low", "medium", "high"].map(l => row(LVN[l], A.filter(b => lvOf(b) === l))).join("")}<div class="bp-row bp-hd"><b>By sport</b><span></span><span></span><span></span></div>${row("⚽ Football", A.filter(b => b.sport === "football"))}${row("🏀 NBA", A.filter(b => b.sport === "nba"))}</div>
     ${hide ? `<p class="note">Only winners are shown until losses are switched on.</p>` : ""}
     <h3 class="bv-h">Recent results</h3><div class="bp-list">${A.slice(0, 20).map(b => `<div class="bp-it ${b.result}"><span class="bp-ic">${b.result === "won" ? "✓" : b.result === "lost" ? "✗" : "–"}</span><span class="bp-t"><b>${esc(b.title)}</b><small>${b.settled_at ? ago2(b.settled_at) : ""}${b.chance ? ` · we had it at ${pct(+b.chance)}` : ""}</small></span><b>${odds(+b.odds_dec)}</b></div>`).join("")}</div>`
     : `<div class="empty">No results yet. They show here once games finish.</div>`}
