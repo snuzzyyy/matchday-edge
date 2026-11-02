@@ -214,7 +214,7 @@ a.prof-bdg{text-decoration:none}
 .fdot.w{background:rgba(34,216,143,.16);color:var(--win)}.fdot.l{background:rgba(255,83,112,.14);color:var(--loss)}
 .bigwin{cursor:pointer;background:radial-gradient(90% 160% at 100% 0%,rgba(34,216,143,.16),transparent 60%),var(--surface)}
 .bw-main{display:flex;align-items:baseline;gap:10px;min-width:0}.bw-amt{font-family:var(--display);font-size:28px;font-weight:700;color:var(--win)}.bw-lab{font-size:13.5px;color:var(--fg-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.achs{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.achs{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
 .ach{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;background:var(--bg-2);border:1px dashed var(--line-2);opacity:.55}
 .ach.on{opacity:1;border-style:solid;border-color:rgba(255,190,60,.45);background:radial-gradient(120% 160% at 0% 0%,rgba(255,190,60,.14),transparent 60%),var(--bg-2)}
 .ach i{font-style:normal;font-size:20px}.ach b{display:block;font-size:13px}.ach small{display:block;font-size:11px;color:var(--muted)}
@@ -267,7 +267,7 @@ a.prof-bdg{text-decoration:none}
 .subnav .dot{width:7px;height:7px}
 .setcard{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
 .setrow{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 14px;color:var(--fg);text-decoration:none;border-top:1px solid var(--line)}
-.setrow:first-child{border-top:0}.setrow b{display:block;font-size:14.5px}.setrow small{display:block;font-size:12.5px;color:var(--muted)}
+.setrow:first-child{border-top:0}.setrow b{display:block;font-size:14.5px}.setrow small b{display:inline;font-size:inherit}.setrow small{display:block;font-size:12.5px;color:var(--muted)}
 .setcard.links .setrow:hover{background:var(--surface-2,rgba(255,255,255,.03))}.setrow .rchev{color:var(--muted);font-size:20px}
 .setrow.sw{grid-template-columns:minmax(0,1fr) auto;cursor:pointer}.setrow.sw input{position:absolute;opacity:0;pointer-events:none}
 .sw-ui{width:46px;height:28px;border-radius:999px;background:var(--surface-3);border:1px solid var(--line-2);position:relative;transition:background .15s}
@@ -316,7 +316,7 @@ a.prof-bdg{text-decoration:none}
 .odd .lb{font-size:10px;color:var(--muted);font-weight:600;max-width:100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;padding:0 4px}
 .odd[aria-pressed=true]{background:var(--blue);border-color:var(--blue);color:#fff}
 .odd[aria-pressed=true] .pp,.odd[aria-pressed=true] .lb{color:rgba(255,255,255,.8)}
-.odd.empty{opacity:.35;pointer-events:none}
+.odd.empty{opacity:.45;pointer-events:none;background:transparent;border-style:dashed}.odd.empty .pr{font-size:12px;white-space:nowrap;color:var(--muted);font-family:inherit;font-weight:600}
 .fx .teams{grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:10px;border-radius:8px;padding:4px 6px;margin:-4px -6px}
 .fx .teams:hover{background:var(--surface-2)}
 .fx .teams .t{grid-column:1}
@@ -461,7 +461,7 @@ a.prof-bdg{text-decoration:none}
 .ring{--p:70;--c:var(--win);width:58px;height:58px;border-radius:50%;background:conic-gradient(var(--c) calc(var(--p)*1%),var(--surface-3) 0);display:grid;place-items:center;flex:none}
 .ring span{width:46px;height:46px;border-radius:50%;background:var(--surface);display:grid;place-items:center;font-family:var(--display);font-weight:700;font-size:17px}
 .pick .sel{font-weight:700;font-size:15px;line-height:1.25}
-.pick .mt{font-size:12px;color:var(--muted);margin-top:3px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.pick .mt{font-size:12px;color:var(--muted);margin-top:3px;display:flex;gap:4px 10px;align-items:center;flex-wrap:wrap}.pick .mt>span{white-space:nowrap}.pick .mt>.ch-sp{margin-right:0}
 .why{grid-column:1/-1;margin:0;padding:0;list-style:none;display:grid;gap:4px;font-size:12.5px;color:var(--fg-2)}
 .why li{display:flex;gap:8px}
 .why li::before{content:"";flex:none;width:5px;height:5px;border-radius:50%;background:var(--blue-2);margin-top:7px}
@@ -1328,7 +1328,7 @@ function viewLive() {
 const KLAB = { "1": "1", X: "X", "2": "2" };
 function oddBtn(sport, g, k, label) {
   const m = mkt(g, k);
-  if (!m) return `<span class="odd empty"><span class="pr">–</span></span>`;
+  if (!m) return `<span class="odd empty" title="No price yet"><span class="pr">No price</span></span>`;
   const id = legId(sport, g, m);
   return `<button class="odd" data-leg="${sport}|${g.id}|${k}" aria-pressed="${inSlip(id)}" title="${esc(m.label)}: ${pct(m.p)} model chance${m.dec ? "" : " (fair price)"}">${label ? `<span class="lb">${esc(label)}</span>` : KLAB[k] ? `<span class="k1">${KLAB[k]}</span>` : ""}<span class="pr">${odds(priceOf(m))}</span><span class="pp">${pct(m.p)}</span></button>`;
 }
@@ -1419,7 +1419,7 @@ function pickCard(c) {
   const { sport, g, m } = c, id = legId(sport, g, m), p = m.p;
   const why = reasons(sport, g, m);
   return `<article class="pick"><div class="ring" style="--p:${Math.round(p * 100)};--c:${tierColor(p)}"><span>${pct(p)}</span></div>
-  <div><div class="sel">${esc(m.label)}</div><div class="mt"><button class="more" data-open="${sport}:${g.id}">${esc(vs(sport, g))}</button><span>· ${whenLabel(kick(g))}</span>${sport === "football" ? `<span>· ${esc(leagueName(g.league))}</span>` : ""}</div></div>
+  <div><div class="sel">${esc(m.label)}</div><div class="mt"><button class="more" data-open="${sport}:${g.id}">${esc(vs(sport, g))}</button><span>${whenLabel(kick(g))}</span>${sport === "football" ? `<span>${esc(leagueName(g.league))}</span>` : ""}</div></div>
   ${why.length ? `<ul class="why">${why.map(w => `<li>${esc(w)}</li>`).join("")}</ul>` : ""}
   <div class="pfoot"><div class="price"><span class="big">${odds(priceOf(m))}</span><small>${m.dec ? `Market price${m.edge > 0 ? ` · <span style="color:var(--win)">+${Math.round(m.edge * 100)}% edge</span>` : ""}` : "Fair price · check your bookie"}</small></div>
   <button class="add" data-leg="${sport}|${g.id}|${m.k}" aria-pressed="${inSlip(id)}">${inSlip(id) ? "✓ In slip" : "+ Add to slip"}</button></div></article>`;
@@ -1906,7 +1906,7 @@ function chalSummary() {   // pick a challenge: up to 3 open at once
   const L = chalList(), sel = chalIdx();
   const card = (C, i) => `<button class="cs ${i === sel ? "on" : ""}" data-chalsel="${C.id}" aria-pressed="${i === sel}"><span class="cs-hd">🏆 Challenge ${i + 1}</span><b>${C.rung >= C.rungs ? "Done 🏆" : money(+C.bank || 0)}</b><small>${C.rung >= C.rungs ? "Finished" : `Step ${(C.rung || 0) + 1} · ${C.active ? `${C.active.sport ? SPN[C.active.sport] + " bet" : "Bet"} running` : "Pick a bet"}`}</small></button>`;
   const A = L.map(chalTotals), put = A.reduce((a, t) => a + t.putIn, 0), taken = A.reduce((a, t) => a + t.taken, 0), riding = A.reduce((a, t) => a + t.riding, 0), net = taken + riding - put;
-  return `<section class="chalsum">${L.map(card).join("")}${L.length < CH_MAX ? `<button class="cs cs-new" data-chalnew><span class="cs-hd">＋ New challenge</span><b>£1</b><small>${L.length ? `${CH_MAX - L.length} more allowed` : "Start your first"}</small></button>` : ""}
+  return `<section class="chalsum" style="grid-template-columns:repeat(${Math.min(CH_MAX, L.length + 1)},minmax(0,1fr))">${L.map(card).join("")}${L.length < CH_MAX ? `<button class="cs cs-new" data-chalnew><span class="cs-hd">＋ New challenge</span><b>£1</b><small>${L.length ? `${CH_MAX - L.length} more allowed` : "Start your first"}</small></button>` : ""}
     ${put ? `<div class="cs-total"><div><small>All challenges</small><b class="${net > 0 ? "pos" : net < 0 ? "neg" : ""}">${(net > 0 ? "+" : net < 0 ? "-" : "") + money(Math.abs(net))}</b></div><span>${money(put)} put in · ${money(taken)} taken out · ${money(riding)} still on the ladders</span></div>` : ""}</section>`;
 }
 function viewChallenge() {
@@ -1917,7 +1917,7 @@ function viewChallenge() {
   const ladder = rungs.map((v, i) => `<button class="rung ${i < C.rung ? "done" : i === C.rung ? "now" : ""} ${i === sel ? "sel" : ""}" data-rung="${i}" aria-label="Step ${i + 1}"><i style="height:${18 + i * 11}px"></i><span>${ladderLabel(v)}</span></button>`).join("");
   const useBtn = (attr, label) => mine ? (C.rung >= C.rungs ? "" : `<button class="add" ${attr}>${label}</button>`) : `<a class="add" href="#account" style="text-decoration:none">Sign in to use</a>`;
   const stepWord = `Use for step ${C.rung + 1}`, sportTag = sp => `<span class="ch-sp">${SPN[sp]}</span>`;
-  const single = c => `<article class="pick"><div class="ring" style="--p:${Math.round(c.m.p * 100)};--c:${tierColor(c.m.p)}"><span>${pct(c.m.p)}</span></div><div><div class="sel">${esc(c.m.label)}</div><div class="mt">${sportTag(c.sport)}<button class="more" data-open="${c.sport}:${c.g.id}">${esc(vs(c.sport, c.g))}</button><span>· ${whenLabel(kick(c.g))}</span></div></div><ul class="why">${reasons(c.sport, c.g, c.m).slice(0, 2).map(w => `<li>${esc(w)}</li>`).join("")}</ul><div class="pfoot"><div class="price"><span class="big">${odds(c.m.dec)}</span><small>£${C.bank} returns ${money(C.bank * c.m.dec)}</small></div>${useBtn(`data-chaluse="${c.sport}|${c.g.id}|${c.m.k}"`, stepWord)}</div></article>`;
+  const single = c => `<article class="pick"><div class="ring" style="--p:${Math.round(c.m.p * 100)};--c:${tierColor(c.m.p)}"><span>${pct(c.m.p)}</span></div><div><div class="sel">${esc(c.m.label)}</div><div class="mt">${sportTag(c.sport)}<button class="more" data-open="${c.sport}:${c.g.id}">${esc(vs(c.sport, c.g))}</button><span>${whenLabel(kick(c.g))}</span></div></div><ul class="why">${reasons(c.sport, c.g, c.m).slice(0, 2).map(w => `<li>${esc(w)}</li>`).join("")}</ul><div class="pfoot"><div class="price"><span class="big">${odds(c.m.dec)}</span><small>£${C.bank} returns ${money(C.bank * c.m.dec)}</small></div>${useBtn(`data-chaluse="${c.sport}|${c.g.id}|${c.m.k}"`, stepWord)}</div></article>`;
   const dbl = d => `<article class="pick"><div class="ring" style="--p:${Math.round(d.p * 100)};--c:${tierColor(d.p)}"><span>${pct(d.p)}</span></div><div><div class="sel">Double</div><div class="mt">${sportTag(d.a.sport)}Two short-priced legs that make roughly evens together</div></div><ul class="why">${[d.a, d.b].map(c => `<li>${esc(c.m.label)} (${esc(vs(c.sport, c.g))}, ${whenLabel(kick(c.g))}) · ${odds(priceOf(c.m))}</li>`).join("")}</ul><div class="pfoot"><div class="price"><span class="big">${odds(d.d)}</span><small>£${C.bank} returns ${money(C.bank * d.d)} (est.)</small></div>${useBtn(`data-chaluse="${d.a.sport}|${d.a.g.id}|${d.a.m.k}|${d.b.g.id}|${d.b.m.k}"`, stepWord)}</div></article>`;
   const A = C.active, auto = activeResult(A), linked = !!(A && (A.legs || []).some(l => l.k && findGame(l.sport, l.gid)));
   const running = A ? `<section class="runbet"><div class="rb-top"><span class="tag evens">Step ${C.rung + 1} bet${A.sport ? " · " + SPN[A.sport] : ""}</span>${mine ? `<button class="linkbtn" data-chalclear>Change bet</button>` : ""}</div>
@@ -1947,7 +1947,7 @@ function viewChallenge() {
   ${!mine ? `<div class="note">Playing with friends? <a href="#account">Create a free account</a> to run your own ladder.</div>` : ""}
   ${done && mine ? `<div class="chal-log"><b>You did it. £${C.start} → ${fmtBank(C.bank)}.</b><button class="btn" data-chalreset>Save it and start again</button></div>` : running}
   ${!done && !A ? `<section class="section"><div class="tierhd"><span class="tag evens">Step ${C.rung + 1}</span><span class="sub" style="margin:0">Football and NBA bets to turn ${fmtBank(C.bank)} into ${fmtBank(C.bank * 2)}. Pick one.</span></div>
-  <div class="oddsmode"><div class="seg3 two" role="group" aria-label="Which prices to suggest"><button data-chalodds2="over" aria-pressed="${S.chalOdds !== "near"}">Evens or bigger</button><button data-chalodds2="near" aria-pressed="${S.chalOdds === "near"}">Include just under evens</button></div>
+  <div class="oddsmode"><div class="seg3 two" role="group" aria-label="Which prices to suggest"><button data-chalodds2="over" aria-pressed="${S.chalOdds !== "near"}">Evens or bigger</button><button data-chalodds2="near" aria-pressed="${S.chalOdds === "near"}">Just under evens too</button></div>
     <p class="risk-desc">${S.chalOdds === "near" ? "Shows prices down to 5/6. Slightly more likely to win, but a win returns a bit under double (e.g. £1 at 10/11 returns £1.91)." : "Only evens (1/1) or bigger, so every win at least doubles your bank."}</p></div>
   <div class="pgrid">${O.singles.map(single).join("")}${O.doubles.map(dbl).join("")}</div>
   ${!O.singles.length && !O.doubles.length ? `<div class="empty">No suitable bets in the next few days${S.chalOdds !== "near" ? '. Try including prices just under evens' : ""}.</div>` : ""}
