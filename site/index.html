@@ -1103,6 +1103,12 @@ button.setrow{width:100%;text-align:left;font:inherit;color:inherit;background:n
 @media (max-width:1099px){.g-cols .g-col{display:contents}}.gx{order:var(--o,0);min-width:0}.g-cols.one{margin-left:auto;margin-right:auto;width:100%}
 @media (min-width:1100px){.g-cols.one.wide{max-width:none}.g-cols.wide .gbets{grid-template-columns:repeat(2,minmax(0,1fr))}.mg-cols{columns:2;column-gap:26px}.mg-cols>*{break-inside:avoid}.mg-cols .mg-ph{column-span:all}
   .drawer .gtop{flex-wrap:nowrap}.drawer .gtop .gtabs{flex:0 1 560px;order:3;margin:0}.drawer .gtop .gbell{order:4;margin-left:0}}
+.fi.bot{border-color:rgba(255,122,47,.35);background:radial-gradient(120% 140% at 100% 0%,rgba(255,122,47,.12),transparent 60%),var(--surface)}.bot-av{width:40px;height:40px;border-radius:12px;overflow:hidden;flex:none}.bot-av img{width:100%;height:100%;display:block}
+.bot-tick{display:inline-grid;place-items:center;width:16px;height:16px;border-radius:50%;background:var(--tang);color:#fff;font-size:10px;font-weight:900;margin:0 4px 0 4px;vertical-align:1px}
+.bot-card{display:grid;gap:8px;background:var(--bg-2);border:1px solid var(--line);border-radius:14px;padding:12px}.bot-hd{display:flex;justify-content:space-between;align-items:center;gap:8px}.bot-hd b{font-family:var(--display);font-size:24px}
+.bot-legs{list-style:none;margin:0;padding:0;display:grid;gap:7px}.bot-legs li{display:grid;grid-template-columns:20px minmax(0,1fr);gap:8px;align-items:start}.bot-legs b{display:block;font-size:14px;font-weight:600}.bot-legs small{font-size:12px;color:var(--muted)}
+.bot-ok{width:18px;height:18px;border-radius:50%;background:var(--win);color:#04210f;display:grid;place-items:center;font-size:11px;font-weight:900;margin-top:1px}
+.bot-ft{display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px 12px;font-size:12px;color:var(--muted);border-top:1px solid var(--line);padding-top:8px}.bot-ft b{font-size:14px}
 </style>
 
 <header class="top">
@@ -3321,6 +3327,24 @@ S.people = {}; S.peopleBets = {};
 const person = id => id === (S.user && S.user.id) ? S.profile : (S.friends || {})[id] || S.people[id] || { display_name: "A player" };
 const betsOf = uid => { const a = (S.feedBets || []).filter(b => b.user_id === uid), seen = new Set(a.map(b => b.id)); return [...a, ...(S.peopleBets[uid] || []).filter(b => !seen.has(b.id))].sort((x, y) => new Date(y.placed_at) - new Date(x.placed_at)); };
 const ago2 = iso => { const m = Math.round((Date.now() - new Date(iso)) / 6e4); return m < 1 ? "now" : m < 60 ? m + "m" : m < 1440 ? Math.round(m / 60) + "h" : Math.round(m / 1440) + "d"; };
+/* ---------- the Accabox bot: the day's ready-made accas are saved before kick-off (by the owner's or a dev's app), the server settles them, winners are posted in the feed ---------- */
+const isTeam = () => { const b = (S.profile || {}).badges || []; return b.includes("owner") || b.includes("dev"); };
+async function botSnapshot() {
+  if (!sb || !S.user || !S.data || !isTeam() || S.botReady === false || Date.now() - (S._botAt || 0) < 15 * 60e3) return; S._botAt = Date.now();
+  const keep = { sport: S.sport, win: S.accaWin, risk: S.accaRisk, n: S._accaN }, rows = [], names = { 1: "same-game", 2: "double", 3: "treble", 4: "four-fold" };
+  try {
+    for (const sp of ["football", "nba"]) for (const w of ["today", "tomorrow"]) for (const risk of Object.keys(RISK)) for (const n of [2, 3, 4, 1]) {
+      S.sport = sp; S.accaWin = w; S.accaRisk = risk; S._lvl = {}; if (!upcoming(sp, w).some(isPre)) continue;
+      const raw = levelPreset(n); if (raw.length < (n === 1 ? 2 : n) || raw.some(x => !isPre(x.g))) continue;
+      const first = raw.map(x => kick(x.g)).sort()[0]; if (+new Date(first) < Date.now() + 10 * 60e3) continue;
+      const L = asLegs(raw).map(({ id, orig, est, estOrig, custom, ...l }) => l), c = slipCalc(asLegs(raw)), day = new Date(first).toLocaleDateString("en-CA", { timeZone: TZ });
+      rows.push({ id: `${day}|${sp}|${risk}|${n}`, day, sport: sp, title: `${RISK[risk].name} ${names[n]}`, level: risk, legs: L, odds_dec: Math.round(c.dec * 1000) / 1000, chance: Math.round(c.p * 1e4) / 1e4, kickoff: first });
+    }
+  } finally { S.sport = keep.sport; S.accaWin = keep.win; S.accaRisk = keep.risk; S._accaN = keep.n; S._lvl = {}; }
+  const ids = new Set(), uniq = rows.filter(r => !ids.has(r.id) && ids.add(r.id));
+  if (uniq.length) { const r = await sb.rpc("bot_snapshot", { rows: uniq }); if (r.error && /bot_snapshot|function|schema cache/i.test(r.error.message || "")) S.botReady = false; }
+}
+setInterval(() => botSnapshot().catch(() => {}), 60e3);
 async function loadSocial() {
   if (!sb || !S.user) return;
   const fr = await sb.from("friendships").select("friend_id");
@@ -3344,6 +3368,8 @@ async function loadSocial() {
   const rx = betIds.length ? await sb.from("reactions").select("bet_id,user_id,emoji").in("bet_id", betIds) : { data: [] };
   S.reacts = {}; for (const r of rx.data || []) (S.reacts[r.bet_id] = S.reacts[r.bet_id] || []).push(r);
   await loadComments(betIds);
+  { const bw = await sb.from("bot_accas").select("*").eq("result", "won").gte("settled_at", new Date(Date.now() - 4 * 864e5).toISOString()).order("settled_at", { ascending: false }).limit(30); S.botWins = bw.error ? [] : bw.data || []; }
+  botSnapshot().catch(() => {});
   const lb = await sb.rpc("leaderboard"); if (lb.data) S.board = lb.data;
   S.boardBy = {};
   render();
@@ -3373,14 +3399,22 @@ function feedItems() {
     for (const h of (C.history || [])) if (h.at) items.push({ t: h.at, html: h.result === "W" ? `<b>${esc(who.display_name)}</b> won a £1K challenge step and now has <span class="pos">${fmtBank(h.ret)}</span>` : h.result === "L" ? `<b>${esc(who.display_name)}</b>'s £1K challenge ended on ${fmtBank(h.stake)}` : `<b>${esc(who.display_name)}</b> moved money on their £1K challenge`, sub: `${esc(h.bet)} @ ${esc(h.odds)}`, uid });
   }
   }
+  for (const w of S.botWins || []) items.push({ t: w.settled_at, bot: w, html: `<b>Accabox</b><span class="bot-tick" title="Official Accabox account">✓</span> ${w.sport === "nba" ? "🏀" : "⚽"} landed a <b>${esc(w.title)}</b> at <span class="pos">${odds(+w.odds_dec)}</span> 🎉` });
   return items.sort((a, b) => new Date(b.t) - new Date(a.t)).slice(0, 60);
+}
+function botPost(it) {
+  const w = it.bot, L = (w.legs || []).filter(l => l.label || l.pid), dec = +w.odds_dec;
+  return `<article class="fi bot won"><span class="fi-av bot-av"><img src="mark.png" alt="Accabox"></span><div class="fi-body"><div class="fi-top"><span>${it.html}</span><time>${ago2(it.t)}</time></div>
+    <div class="bot-card"><div class="bot-hd"><span class="tag evens">${w.sport === "nba" ? "NBA" : "Football"} · ready-made acca</span><b>${odds(dec)}</b></div>
+      <ul class="bot-legs">${L.map(l => `<li><span class="bot-ok">✓</span><span><b>${esc(String(legText(l) || "").replace(/ \(in-play\)$/, ""))}</b><small>${esc(l.match || l.team || "")}</small></span></li>`).join("")}</ul>
+      <div class="bot-ft"><span>£10 returned <b class="pos">${money(10 * dec)}</b></span><span>Built by Accabox before kick-off · we had it at ${pct(+w.chance || 0)}</span></div></div></div></article>`;
 }
 function feedView() {
   if (S.socialReady === undefined) return `<div class="loadbox">Loading your friends…</div>`;
   const nFr = Object.keys(S.friends || {}).length, items = feedItems();
   const invite = `<div class="invite"><div><b>${nFr ? "Bring more friends in" : "Add your friends"}</b><span>Share your invite link. When they sign up, you're connected automatically.</span></div><button class="btn sm" data-invite>Share invite link</button></div>`;
   if (!items.length) return `${invite}<div class="empty art"><img src="${art("empty-bets.webp")}" alt="" loading="lazy"><b>Nothing here yet</b><span>${nFr ? "When you or your friends save and settle bets, they show up here." : "Once your friends join, their bets and wins show up here."}</span></div>`;
-  return `${!nFr ? invite : ""}${friendsWeekHTML()}${liveFriendsHTML()}${nFr ? `<h2 class="feed-h">Latest</h2>` : ""}<div class="feed">${items.map(it => { const b = it.b, who = person(b ? b.user_id : it.uid);
+  return `${!nFr ? invite : ""}${friendsWeekHTML()}${liveFriendsHTML()}${nFr || (S.botWins || []).length ? `<h2 class="feed-h">Latest</h2>` : ""}<div class="feed">${items.map(it => { if (it.bot) return botPost(it); const b = it.b, who = person(b ? b.user_id : it.uid);
     return `<article class="fi ${it.tone || ""}"><button class="fi-av" data-mate="${b ? b.user_id : it.uid}" aria-label="View ${esc(who.display_name)}">${avatarHTML(who, 40)}</button><div class="fi-body"><div class="fi-top"><span>${it.html}</span><time>${ago2(it.t)}</time></div>
       ${b ? `${betTile(b)}${socialActs(b)}` : `<div class="fi-meta">${it.sub || ""}</div>`}</div></article>`; }).join("")}</div>${nFr ? invite : ""}`;
 }

@@ -390,6 +390,11 @@ No server of our own. ESPN is free, has no key and is about 1–3 minutes behind
 - Legs are grouped by game (`legGroups`): one header per game (badges, match, kick-off countdown `untilTxt`, or live score + clock), then one line per bet (`legLine`): status dot, bet, its own % chance (owner likes this), and while live a thin progress bar + "8 / 9 corners · 1 to go" parsed from `legInfo0`. Typed-in legs and games that left the feed keep the old rows.
 - `betCard` header: "Starts 19:45 · in 3h" before, red-dot "x of n landed" live; `.segbar` shows each leg's state (pulses while live).
 
+## Accabox bot (feed)
+- `supabase/bot.sql`: `bot_accas` (id `day|sport|level|n`, legs, odds, chance, result). Only `result='won'` rows are readable by users; owner/dev can read all. Inserts only via `bot_snapshot(rows)` (owner/dev badge, first save wins).
+- `botSnapshot()` runs in owner/dev apps every 15 min: today's + tomorrow's `levelPreset` double/treble/four-fold/same-game for each level and sport, pre-match only. settle.py `settle_bot()` settles them with `outcome()`; unsure after 3 days → void. Feed (`loadSocial` → `S.botWins`, last 4 days) shows winners as Accabox posts (`botPost`).
+- settle.py now also settles NBA handicap legs ("Celtics +5.5 handicap", "Pacers -4.5").
+
 ## Tweet maker (owner only)
 - `#tweets` (`viewTweets`, link in Account only when `isOwner()` = profile badge `owner`). Sport (football/NBA/both), type (`TW_KINDS`: top performers, results, one game recap/preview, player spotlight, acca of the day, live now), window, game picker, style toggles.
 - `twBuild()` writes the text from real data: NBA box scores (`g.box`), football goals from `g.events`, assists/shots/saves after "Load player stats" (`loadDetail` → `g.lineups`), previews from `g.model`, accas from `levelPreset`. Fits to 280 (`twLen`, emojis count 2) by dropping weakest rows / question / hashtags; results become a numbered thread. Editable text, Copy, Post on X (intent link).

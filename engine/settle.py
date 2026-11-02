@@ -6,6 +6,7 @@ It mirrors the app's rules: a bet is settled only when the result is certain fro
 final team stats or the final box score. Anything it can't be sure about (void legs, unknown
 markets, players who didn't play) is left for the app or for you to settle.
 """
+from urllib.parse import quote
 import json, os, re, sys, urllib.request, urllib.parse
 from datetime import datetime, timezone
 
@@ -153,6 +154,12 @@ def leg_result(l):
             m = hs - as_ + float(g["odds"]["spread"])
             if m == 0: return None, None
             return W(m > 0 if k == "SP1" else m < 0), None
+        mh = re.match(r"^(.+?) ([+-][\d.]+)(?: handicap)?$", l.get("label", ""))   # "Celtics +5.5 handicap", "Pacers -4.5"
+        if mh and mh[1] in (g["home"].get("name"), g["away"].get("name")):
+            mine, theirs = (hs, as_) if mh[1] == g["home"].get("name") else (as_, hs)
+            m = mine - theirs + float(mh[2])
+            if m == 0: return None, None
+            return W(m > 0), None
         mm = re.match(r"^(Over|Under) ([\d.]+) points", l.get("label", ""))
         if mm: return W(tot > float(mm[2]) if mm[1] == "Over" else tot < float(mm[2])), None
         return None, None
@@ -205,6 +212,23 @@ def settle_bets():
         if not done: continue   # the app got there first
         n += 1
         if res == "won": credit_wallet(b["user_id"], ret)
+    return n
+
+
+def settle_bot():
+    """The Accabox bot's ready-made accas: settle them like bets; only winners are ever shown. Older than 3 days and still unsure: void."""
+    rows = http("GET", "bot_accas?result=eq.open&select=id,legs,kickoff,created_at&limit=500")
+    if not isinstance(rows, list): return 0   # table not set up yet
+    n, cutoff = 0, datetime.now(timezone.utc).timestamp() - 3 * 86400
+    for r in rows:
+        res, legs = outcome(r.get("legs"))
+        if not res:
+            k = r.get("kickoff") or r.get("created_at")
+            try: old = datetime.fromisoformat(str(k).replace("Z", "+00:00")).timestamp() < cutoff
+            except Exception: old = False
+            if old: http("PATCH", f"bot_accas?id=eq.{quote(r['id'], safe='')}&result=eq.open", {"result": "void", "settled_at": now()})
+            continue
+        if http("PATCH", f"bot_accas?id=eq.{quote(r['id'], safe='')}&result=eq.open", {"result": res, "settled_at": now(), "legs": legs}, "return=representation"): n += 1
     return n
 
 
@@ -295,4 +319,6 @@ if __name__ == "__main__":
     if not KEY:
         print("No SUPABASE_SERVICE_KEY secret: skipping overnight settling."); sys.exit(0)
     try: print(f"Settled {settle_bets()} bet(s) and {settle_challenges()} £1K step(s).")
+    except Exception as e: print("Settling skipped:", type(e).__name__, str(e)[:200])
+    try: print(f"Settled {settle_bot()} Accabox bot acca(s).")
     except Exception as e: print("Settling skipped:", type(e).__name__, str(e)[:200])
