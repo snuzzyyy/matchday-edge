@@ -1104,7 +1104,14 @@ button.setrow{width:100%;text-align:left;font:inherit;color:inherit;background:n
 @media (max-width:1099px){.g-cols .g-col{display:contents}}.gx{order:var(--o,0);min-width:0}.g-cols.one{margin-left:auto;margin-right:auto;width:100%}
 @media (min-width:1100px){.g-cols.one.wide{max-width:none}.g-cols.wide .gbets{grid-template-columns:repeat(2,minmax(0,1fr))}.mg-cols{columns:2;column-gap:26px}.mg-cols>*{break-inside:avoid}.mg-cols .mg-ph{column-span:all}
   .drawer .gtop{flex-wrap:nowrap}}
-.fi.bot{border-color:rgba(255,122,47,.35);background:radial-gradient(120% 140% at 100% 0%,rgba(255,122,47,.12),transparent 60%),var(--surface)}.bot-av{width:40px;height:40px;border-radius:12px;overflow:hidden;flex:none}.bot-av img{width:100%;height:100%;display:block}
+.fi.bot{border-color:rgba(255,122,47,.35);background:radial-gradient(120% 140% at 100% 0%,rgba(255,122,47,.12),transparent 60%),var(--surface)}.bot-av{width:40px;height:40px;border-radius:12px;overflow:hidden;flex:none}.bot-av img{width:100%;height:100%;display:block}button.bot-av{border:0;cursor:pointer}.bot-av.big{width:64px;height:64px;border-radius:16px;display:block}
+.bot-name{background:none;border:0;padding:0;font:inherit;font-weight:800;color:inherit;cursor:pointer}.bot-name:hover{text-decoration:underline}
+.bp-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.bp-stats .v{font-size:22px}.bp-stats .k{overflow-wrap:anywhere}
+.bp-table{display:grid;border:1px solid var(--line);border-radius:12px;overflow:hidden}.bp-row{display:grid;grid-template-columns:minmax(0,1.4fr) 1fr .8fr 1.1fr;gap:8px;padding:9px 12px;font-size:13.5px;border-top:1px solid var(--line);align-items:center}.bp-row span{text-align:right}.bp-row:first-child{border-top:0}.bp-hd{background:var(--surface);font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.bp-list{display:grid;gap:6px}.bp-it{display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:10px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 10px}.bp-it>b{font-family:var(--display);font-size:16px}
+.bp-ic{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:900;background:var(--surface-3);color:var(--muted)}.bp-it.won .bp-ic{background:var(--win);color:#04210f}.bp-it.lost .bp-ic{background:rgba(239,68,68,.2);color:var(--loss)}
+.bp-t{display:grid;min-width:0}.bp-t b{font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.bp-t small{font-size:11.5px;color:var(--muted)}
+.bp-about summary{cursor:pointer;font-weight:700;color:var(--blue-2)}.bp-about ul{margin:8px 0 0;padding-left:18px;display:grid;gap:6px;font-size:13.5px;color:var(--fg-2)}
 .bot-tick{display:inline-grid;place-items:center;width:16px;height:16px;border-radius:50%;background:var(--tang);color:#fff;font-size:10px;font-weight:900;margin:0 4px 0 4px;vertical-align:1px}
 .bot-card{grid-column:1/-1;min-width:0;display:grid;gap:8px;background:var(--bg-2);border:1px solid var(--line);border-radius:14px;padding:12px}.bot-hd{display:flex;justify-content:space-between;align-items:center;gap:8px;min-width:0}.bot-hd .tag{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.bot-hd b{font-family:var(--display);font-size:24px}
 .bot-legs{list-style:none;margin:0;padding:0;display:grid;gap:7px}.bot-legs li{display:grid;grid-template-columns:20px minmax(0,1fr);gap:8px;align-items:start}.bot-legs b{display:block;font-size:14px;font-weight:600}.bot-legs small{font-size:12px;color:var(--muted)}
@@ -3535,15 +3542,50 @@ function feedItems(scope = "timeline") {
     for (const h of (C.history || [])) if (h.at) items.push({ t: h.at, html: h.result === "W" ? `<b>${esc(who.display_name)}</b> won a £1K challenge step and now has <span class="pos">${fmtBank(h.ret)}</span>` : h.result === "L" ? `<b>${esc(who.display_name)}</b>'s £1K challenge ended on ${fmtBank(h.stake)}` : `<b>${esc(who.display_name)}</b> moved money on their £1K challenge`, sub: `${esc(h.bet)} @ ${esc(h.odds)}`, uid });
   }
   }
-  if (scope === "timeline") for (const w of S.botWins || []) items.push({ t: w.settled_at, bot: w, html: `<b>Accabox</b><span class="bot-tick" title="Official Accabox account">✓</span> ${w.sport === "nba" ? "🏀" : "⚽"} landed ${/acca ·/.test(w.title) ? "the" : "a"} <b>${esc(w.title)}</b> at <span class="pos">${odds(+w.odds_dec)}</span> 🎉` });
+  if (scope === "timeline") for (const w of S.botWins || []) items.push({ t: w.settled_at, bot: w, html: `<button type="button" class="bot-name" data-botprof>Accabox</button><span class="bot-tick" title="Official Accabox account">✓</span> ${w.sport === "nba" ? "🏀" : "⚽"} landed ${/acca ·/.test(w.title) ? "the" : "a"} <b>${esc(w.title)}</b> at <span class="pos">${odds(+w.odds_dec)}</span> 🎉` });
   return items.sort((a, b) => new Date(b.t) - new Date(a.t)).slice(0, 60);
 }
 function feedPost(it) { if (it.bot) return botPost(it); const b = it.b, who = person(b ? b.user_id : it.uid);
     return `<article class="fi ${it.tone || ""}"><button class="fi-av" data-mate="${b ? b.user_id : it.uid}" aria-label="View ${esc(who.display_name)}">${avatarHTML(who, 40)}</button><div class="fi-body"><div class="fi-top"><span>${it.html}</span><time>${ago2(it.t)}</time></div>
       ${b ? `${betTile(b)}${socialActs(b)}` : `<div class="fi-meta">${it.sub || ""}</div>`}</div></article>`;  }
+/* the Accabox bot's own profile: every settled ready-made acca, at a £10 stake each */
+async function loadBotAll() {
+  const r = await sb.from("bot_accas").select("id,day,sport,title,level,odds_dec,chance,result,settled_at").neq("result", "open").gte("settled_at", new Date(Date.now() - 60 * 864e5).toISOString()).order("settled_at", { ascending: false }).limit(2000);
+  S.botAll = r.error ? [] : r.data || []; render();
+}
+function botSheet() {
+  const A = S.botAll, LVN = { low: "Low", medium: "Medium", high: "High" };
+  const head = `<div class="scrim top" data-botx></div><div class="ijsheet botsheet" role="dialog" aria-modal="true" aria-label="Accabox"><button class="close sm ij-x" data-botx aria-label="Close">✕</button>
+    <div class="ij-head"><span class="bot-av big"><img src="mark.png" alt=""></span><div><h2>Accabox <span class="bot-tick">✓</span></h2><span class="ij-team">Official bot · builds a Low, Medium and High acca for every game</span></div></div>`;
+  if (!A) return head + `<div class="loadbox">Loading…</div></div>`;
+  const dec = A.filter(b => b.result !== "void"), W = dec.filter(b => b.result === "won"), pl = b => b.result === "won" ? 10 * (+b.odds_dec - 1) : b.result === "lost" ? -10 : 0;
+  const sum = L => L.reduce((a, b) => a + pl(b), 0), sign = v => (v > 0 ? "+" : v < 0 ? "-" : "") + money(Math.abs(v));
+  const profit = sum(A), best = [...W].sort((a, b) => b.odds_dec - a.odds_dec)[0];
+  let streak = 0, sk = (dec[0] || {}).result; for (const b of dec) { if (b.result !== sk) break; streak++; }
+  const box = (k, v, sub, cls = "") => `<div class="cbox"><span class="k">${k}</span><span class="v ${cls}">${v}</span>${sub ? `<span class="k">${sub}</span>` : ""}</div>`;
+  const row = (name, L) => { const d = L.filter(b => b.result !== "void"), w = d.filter(b => b.result === "won").length, v = sum(L);
+    return `<div class="bp-row"><b>${name}</b><span>${w}–${d.length - w}</span><span>${d.length ? Math.round(w / d.length * 100) : 0}%</span><span class="${v > 0 ? "pos" : v < 0 ? "neg" : ""}">${sign(v)}</span></div>`; };
+  const hide = !dec.some(b => b.result === "lost") && W.length && !isTeam();
+  return head + `
+    ${dec.length ? `<div class="odds-math bp-stats">
+      ${box("Record", `${W.length}–${dec.length - W.length}`, `${Math.round(W.length / dec.length * 100)}% landed`)}
+      ${box("Profit at £10 a go", sign(profit), `${dec.length} accas · ${money(dec.length * 10)} staked`, profit > 0 ? "pos" : profit < 0 ? "neg" : "")}
+      ${best ? box("Biggest winner", odds(+best.odds_dec), esc(best.title)) : ""}
+      ${box("Form", streak ? `${streak} ${sk === "won" ? "W" : "L"}` : "–", sk === "won" ? "winning run" : sk ? "losing run" : "")}
+    </div>
+    <div class="bp-table"><div class="bp-row bp-hd"><b>Acca</b><span>W–L</span><span>Hit</span><span>Profit</span></div>${["low", "medium", "high"].map(l => row(LVN[l], A.filter(b => b.level === l))).join("")}${row("⚽ Football", A.filter(b => b.sport === "football"))}${row("🏀 NBA", A.filter(b => b.sport === "nba"))}</div>
+    ${hide ? `<p class="note">Only winners are shown until losses are switched on.</p>` : ""}
+    <h3 class="bv-h">Recent results</h3><div class="bp-list">${A.slice(0, 20).map(b => `<div class="bp-it ${b.result}"><span class="bp-ic">${b.result === "won" ? "✓" : b.result === "lost" ? "✗" : "–"}</span><span class="bp-t"><b>${esc(b.title)}</b><small>${b.settled_at ? ago2(b.settled_at) : ""}${b.chance ? ` · we had it at ${pct(+b.chance)}` : ""}</small></span><b>${odds(+b.odds_dec)}</b></div>`).join("")}</div>`
+    : `<div class="empty">No results yet. They show here once games finish.</div>`}
+    <details class="bp-about"><summary>How Accabox works</summary><ul>
+      <li>Before every game, Accabox builds three accas from our model: <b>Low</b> (about evens to 6/4), <b>Medium</b> (6/4 to 4/1) and <b>High</b> (5/1 or bigger).</li>
+      <li>They're saved before kick-off and can't be changed afterwards, so nothing is picked after the fact.</li>
+      <li>Every one is settled automatically from the final stats. Winners are posted to the Timeline.</li>
+      <li>Profit assumes £10 on each acca. It's a guide, not betting advice: please gamble responsibly.</li></ul></details></div>`;
+}
 function botPost(it) {
   const w = it.bot, L = (w.legs || []).filter(l => l.label || l.pid), dec = +w.odds_dec;
-  return `<article class="fi bot won"><span class="fi-av bot-av"><img src="mark.png" alt="Accabox"></span><div class="fi-body"><div class="fi-top"><span>${it.html}</span><time>${ago2(it.t)}</time></div></div>
+  return `<article class="fi bot won"><button type="button" class="fi-av bot-av" data-botprof aria-label="Accabox profile"><img src="mark.png" alt="Accabox"></button><div class="fi-body"><div class="fi-top"><span>${it.html}</span><time>${ago2(it.t)}</time></div></div>
     <div class="bot-card"><div class="bot-hd"><span class="tag evens">${w.sport === "nba" ? "🏀 NBA" : "⚽ Football"} · ${esc(({ low: "Low", medium: "Medium", high: "High" })[w.level] || "Acca")}</span><b>${odds(dec)}</b></div>
       <ul class="bot-legs">${L.map(l => `<li><span class="bot-ok">✓</span><span><b>${esc(String(legText(l) || "").replace(/ \(in-play\)$/, ""))}</b><small>${esc(l.match || l.team || "")}</small></span></li>`).join("")}</ul>
       <div class="bot-ft"><span>£10 returned <b class="pos">${money(10 * dec)}</b></span><span>Built by Accabox before kick-off · we had it at ${pct(+w.chance || 0)}</span></div></div></article>`;
@@ -4208,6 +4250,8 @@ document.addEventListener("click", async e => {
       sb.rpc("people", { ids: [uid] }).then(r => { if (r.data && r.data[0]) { S.people[uid] = { ...(S.people[uid] || {}), ...r.data[0] }; render(); } });
       sb.from("bets").select("*").eq("user_id", uid).order("placed_at", { ascending: false }).limit(30).then(r => { S.peopleBets[uid] = r.data || []; render(); });
     } }
+  else if (d.botprof !== undefined) { S.botOpen = true; S.botAll = null; render(); if (sb) loadBotAll(); }
+  else if (d.botx !== undefined) { S.botOpen = false; render(); }
   else if (d.mateclose !== undefined) { S.mateOpen = null; render(); }
   else if (d.unfriend) { const nm = (S.friends[d.unfriend] || {}).display_name; const r = await sb.rpc("remove_friend", { other: d.unfriend }); if (r.error) toast("Couldn't remove them"); else { toast(`Removed ${nm || "mate"}`); loadSocial(); } }
   else if (d.noavatar !== undefined) { await saveProfile({ avatar_url: null }); sb.storage.from("avatars").remove([`${S.user.id}/avatar.webp`, `${S.user.id}/avatar.jpg`]); }
@@ -4638,6 +4682,7 @@ function render() {
   else L.innerHTML = "";
   if (S.injOpen) L.insertAdjacentHTML("beforeend", injuryCard(S.injOpen));
   if (S.mateOpen && S.user) L.insertAdjacentHTML("beforeend", mateSheet(S.mateOpen));
+  if (S.botOpen) L.insertAdjacentHTML("beforeend", botSheet());
   if (S.shareOpen && S.user) L.insertAdjacentHTML("beforeend", shareSheet());
   if (S.betView && S.user) L.insertAdjacentHTML("beforeend", betViewSheet(S.betView));
   if (S.notifOpen) L.insertAdjacentHTML("beforeend", notifSheet());

@@ -16,7 +16,8 @@ create table if not exists public.bot_accas (
 alter table public.bot_accas enable row level security;
 drop policy if exists "bot winners are public" on public.bot_accas;
 drop policy if exists "owner sees all bot accas" on public.bot_accas;
-create policy "bot winners are public" on public.bot_accas for select to authenticated using (result = 'won');
+drop policy if exists "bot results are public" on public.bot_accas;
+create policy "bot results are public" on public.bot_accas for select to authenticated using (result <> 'open');   -- settled accas (won, lost, void) are public so the Accabox profile can show its full record
 create policy "owner sees all bot accas" on public.bot_accas for select to authenticated using (exists (select 1 from public.profiles p where p.id = auth.uid() and p.badges && array['owner','dev']));
 create or replace function public.bot_snapshot(rows jsonb) returns int
 language plpgsql security definer set search_path = public as $$
