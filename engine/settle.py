@@ -124,7 +124,7 @@ def leg_result(l):
                    (st == "shotsOnTarget" and on and me(who[0])) or (st == "totalShots" and shot and me(who[0])) or \
                    (st == "totalGoals" and (t.startswith("Goal") or t == "Penalty - Scored") and not own and me(who[0])) or \
                    (st == "goalAssists" and t.startswith("Goal") and me(who[1])) or (st == "foulsSuffered" and t.startswith("Foul") and me(who[1])) or \
-                   (st == "foulsCommitted" and t.startswith("Foul") and me(who[0])) or (st == "cards" and ("Yellow Card" in t or "Red Card" in t) and me(who[0])):
+                   (st == "foulsCommitted" and t.startswith("Foul") and me(who[0])) or (st == "foulInvolvements" and t.startswith("Foul") and (me(who[0]) or me(who[1]))) or (st == "cards" and ("Yellow Card" in t or "Red Card" in t) and me(who[0])):
                     v += 1
             return ("won" if v >= l["target"] else "lost"), v
         for t in s.get("rosters", []):
@@ -132,7 +132,7 @@ def leg_result(l):
                 if str((p.get("athlete") or {}).get("id")) != str(l["pid"]): continue
                 stx = {x.get("name"): num(x.get("value", x.get("displayValue"))) for x in p.get("stats", [])}
                 if not (p.get("starter") or p.get("subbedIn")): return None, None
-                val = stx.get("yellowCards", 0) + stx.get("redCards", 0) if l["stat"] == "cards" else stx.get("totalGoals", 0) + stx.get("goalAssists", 0) if l["stat"] == "goalOrAssist" else stx.get(l["stat"], 0)
+                val = stx.get("yellowCards", 0) + stx.get("redCards", 0) if l["stat"] == "cards" else stx.get("totalGoals", 0) + stx.get("goalAssists", 0) if l["stat"] == "goalOrAssist" else stx.get("foulsCommitted", 0) + stx.get("foulsSuffered", 0) if l["stat"] == "foulInvolvements" else stx.get(l["stat"], 0)
                 return ("won" if val >= l["target"] else "lost"), val
         return None, None
     k, tot = str(l.get("k", "")), hs + as_

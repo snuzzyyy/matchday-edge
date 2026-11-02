@@ -2487,7 +2487,7 @@ function slipDrawer() { return `<div class="scrim" data-close></div><aside class
 /* ---------- bet import + live player tracker ---------- */
 const PROPS = {
   nba: [[/points?\s*(?:\+|and|,)\s*rebounds?\s*(?:\+|and|,)\s*assists?|\bpra\b/i, "PRA", "pts+reb+ast"], [/three|3-?pointers?|3pt|3pm/i, "3PM", "threes"], [/rebounds?|\breb\b/i, "REB", "rebounds"], [/assists?|\bast\b/i, "AST", "assists"], [/steals?/i, "STL", "steals"], [/blocks?/i, "BLK", "blocks"], [/points?|\bpts\b/i, "PTS", "points"]],
-  football: [[/head(?:ed|er)s?\b.*on target|head(?:ed|er)s? (?:shots? )?on target/i, "headedShotsOnTarget", "headed shots on target"], [/\bhead(?:ed|er)s?\b/i, "headedShots", "headed shots"], [/shots? on target|\bsot\b/i, "shotsOnTarget", "shots on target"], [/shots?/i, "totalShots", "shots"], [/carded|booked|cards?/i, "cards", "card"], [/fouled|fouls? (won|drawn|suffered)|wins? a (foul|free kick)/i, "foulsSuffered", "times fouled"], [/fouls?/i, "foulsCommitted", "fouls"], [/(?:scor\w*|goal)\s*(?:or|\/|&|and)\s*assist|g\s*\/\s*a\b|goal involvement/i, "goalOrAssist", "goal or assist"], [/assist/i, "goalAssists", "assist"], [/scor|goal/i, "totalGoals", "goal"]]
+  football: [[/head(?:ed|er)s?\b.*on target|head(?:ed|er)s? (?:shots? )?on target/i, "headedShotsOnTarget", "headed shots on target"], [/\bhead(?:ed|er)s?\b/i, "headedShots", "headed shots"], [/shots? on target|\bsot\b/i, "shotsOnTarget", "shots on target"], [/shots?/i, "totalShots", "shots"], [/carded|booked|cards?/i, "cards", "card"], [/foul involvements?|involved in \d*\+? ?fouls?/i, "foulInvolvements", "foul involvements"], [/fouled|fouls? (won|drawn|suffered)|wins? a (foul|free kick)/i, "foulsSuffered", "times fouled"], [/fouls?/i, "foulsCommitted", "fouls"], [/(?:scor\w*|goal)\s*(?:or|\/|&|and)\s*assist|g\s*\/\s*a\b|goal involvement/i, "goalOrAssist", "goal or assist"], [/assist/i, "goalAssists", "assist"], [/scor|goal/i, "totalGoals", "goal"]]
 };
 const deLetter = t => String(t || "").replace(/[øØ]/g, "o").replace(/[æÆ]/g, "ae").replace(/ß/g, "ss").replace(/[đĐ]/g, "d").replace(/[łŁ]/g, "l").replace(/ı/g, "i");
 const norm = t => deLetter(t).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z ]/g, " ").replace(/\s+/g, " ").trim();
@@ -2692,6 +2692,7 @@ function halfStat(g, l) {   // a player's count in one half, from the play-by-pl
     else if (l.stat === "goalAssists" && /^Goal/i.test(t) && me(p.who[1])) v++;
     else if (l.stat === "foulsSuffered" && /^Foul/i.test(t) && me(p.who[1])) v++;
     else if (l.stat === "foulsCommitted" && /^Foul/i.test(t) && me(p.who[0])) v++;
+    else if (l.stat === "foulInvolvements" && /^Foul/i.test(t) && (me(p.who[0]) || me(p.who[1]))) v++;
     else if (l.stat === "cards" && /Yellow Card|Red Card/i.test(t) && me(p.who[0])) v++; }
   return v;
 }
@@ -2708,8 +2709,8 @@ function legValue(l) {
   }
   const LU = (g.lineups || {})[l.side], P = (LU || { players: [] }).players.find(p => String(p.id) === String(l.pid)); if (!P) return { v: null, g, dnp: !!(LU && LU.players.length) && !isPre(g) };
   if (l.half || /^headed/.test(l.stat)) { if (!g.plays && !isPre(g)) loadDetail("football:" + l.gid); if (l.half === 2 && !halfDone(g)) return { v: 0, g, on: onPitch(P), dnp: false }; return { v: g.plays ? halfStat(g, l) : null, g, on: onPitch(P), dnp: !P.starter && !P.subIn && (l.half === 1 ? halfDone(g) : g.status.state === "post") }; }
-  const v0 = l.stat === "cards" ? (P.s.yellowCards || 0) + (P.s.redCards || 0) : l.stat === "goalOrAssist" ? Math.max(P.s.totalGoals || 0, g.plays ? halfStat(g, { ...l, stat: "totalGoals", half: 0 }) : 0) + Math.max(P.s.goalAssists || 0, g.plays ? halfStat(g, { ...l, stat: "goalAssists", half: 0 }) : 0) : (P.s[l.stat] || 0);
-  const v = g.plays && /^(shotsOnTarget|totalShots|totalGoals|goalAssists|foulsSuffered|foulsCommitted|cards)$/.test(l.stat) ? Math.max(v0, halfStat(g, { ...l, half: 0 })) : v0;   /* the commentary is often ahead of ESPN's player totals */
+  const v0 = l.stat === "cards" ? (P.s.yellowCards || 0) + (P.s.redCards || 0) : l.stat === "foulInvolvements" ? (P.s.foulsCommitted || 0) + (P.s.foulsSuffered || 0) : l.stat === "goalOrAssist" ? Math.max(P.s.totalGoals || 0, g.plays ? halfStat(g, { ...l, stat: "totalGoals", half: 0 }) : 0) + Math.max(P.s.goalAssists || 0, g.plays ? halfStat(g, { ...l, stat: "goalAssists", half: 0 }) : 0) : (P.s[l.stat] || 0);
+  const v = g.plays && /^(shotsOnTarget|totalShots|totalGoals|goalAssists|foulsSuffered|foulsCommitted|foulInvolvements|cards)$/.test(l.stat) ? Math.max(v0, halfStat(g, { ...l, half: 0 })) : v0;   /* the commentary is often ahead of ESPN's player totals */
   return { v, g, on: onPitch(P), dnp: !P.starter && !P.subIn && g.status.state === "post" };
 }
 /* bets tracked on this phone only: hidden when the same bet is saved (matched by its legs, not just its name) */
