@@ -7,9 +7,9 @@
 <meta name="mde-build" content="dev">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Matchday Edge">
+<meta name="apple-mobile-web-app-title" content="Accabox">
 <meta name="description" content="Live football and NBA scores, in-play stats, model-rated best bets, accas and league tables.">
-<meta property="og:title" content="Matchday Edge">
+<meta property="og:title" content="Accabox">
 <meta property="og:description" content="Live stats. Smarter bets. Football and NBA live scores, best bets, accas and tables.">
 <meta property="og:image" content="https://snuzzyyy.github.io/matchday-edge/og.png">
 <meta property="og:url" content="https://snuzzyyy.github.io/matchday-edge/">
@@ -23,7 +23,7 @@
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
 </head>
 <body>
-<title>Matchday Edge</title>
+<title>Accabox</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1053,9 +1053,9 @@ button.setrow{width:100%;text-align:left;font:inherit;color:inherit;background:n
 <header class="top">
   <div class="wrap">
     <div class="bar">
-      <a class="brand" href="#live" aria-label="Matchday Edge home">
+      <a class="brand" href="#live" aria-label="Accabox home">
         <span class="mark"><img src="mark.png" data-plain="mark.png" data-hw="img/halloween/mark.webp" alt="" width="34" height="34"></span>
-        <span class="brand-txt"><span class="word"><span class="haunt">Haunted</span>Matchday <b>Edge</b></span><span class="updated" id="updated"><span class="dot"></span><span>Loading…</span></span></span>
+        <span class="brand-txt"><span class="word"><span class="haunt">Haunted</span>Acca<b>box</b></span><span class="updated" id="updated"><span class="dot"></span><span>Loading…</span></span></span>
       </a>
       <div class="sport" role="group" aria-label="Sport">
         <button id="sp-football" data-sport="football" aria-pressed="true" aria-label="Football"><img class="spi" src="img/icon-football.webp" data-plain="img/icon-football.webp" data-hw="img/halloween/icon-football.webp" alt=""><span class="sl">Football</span></button>
@@ -1198,7 +1198,7 @@ function copyText(txt, msg) {
 }
 function inviteText() {
   const code = (S.profile || {}).friend_code || "", link = location.origin + location.pathname + "?invite=" + encodeURIComponent(code);
-  return { link, text: `Join me on Matchday Edge: live scores, best bets and a friends' leaderboard. My friend code is ${code}. ${link}` };
+  return { link, text: `Join me on Accabox: live scores, best bets and a friends' leaderboard. My friend code is ${code}. ${link}` };
 }
 function shareSheet() {
   const { link, text } = inviteText(), t = encodeURIComponent(text);
@@ -1207,7 +1207,7 @@ function shareSheet() {
     <div><h2>Invite friends</h2><p class="sub" style="margin:4px 0 0">When they sign up with your link, you're connected automatically.</p></div>
     <div class="shgrid">${opt("https://wa.me/?text=" + t, `<svg viewBox="0 0 24 24" fill="#fff"><path d="M12 2a10 10 0 00-8.6 15.1L2 22l5-1.3A10 10 0 1012 2zm0 18.2a8.2 8.2 0 01-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1112 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.6.8-.8 1-.3.2-.5.1a6.7 6.7 0 01-3.3-2.9c-.2-.4.2-.4.7-1.3a.4.4 0 000-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 00-.7.3 3 3 0 00-.9 2.2 5.2 5.2 0 001.1 2.7 11.8 11.8 0 004.5 4c1.7.7 2.3.8 3.2.6a2.7 2.7 0 001.8-1.2 2.2 2.2 0 00.1-1.3c0-.1-.2-.2-.5-.3z"/></svg>`, "WhatsApp", "#25D366", true)}
       ${opt("sms:?&body=" + t, `<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"><path d="M4 5h16v11H9l-5 4z"/></svg>`, "Messages", "#3D7BFF")}
-      ${opt("mailto:?subject=" + encodeURIComponent("Join me on Matchday Edge") + "&body=" + t, `<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>`, "Email", "#8A5CFF")}
+      ${opt("mailto:?subject=" + encodeURIComponent("Join me on Accabox") + "&body=" + t, `<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>`, "Email", "#8A5CFF")}
       <button class="shopt" data-sharecopy><span class="shic" style="background:var(--surface-3)"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1"/></svg></span>Copy link</button></div>
     <div class="shlink">${esc(link)}</div></div>`;
 }
@@ -3087,7 +3087,7 @@ function viewPerks() {
   const PRO_NOW = [["★", "Gold PRO badge", "Next to your name in feeds, profiles and leaderboards"], ["🚫", "No Pro adverts", "The upgrade cards are hidden for you"], ["⚡", "First to try new features", "Pro members get new tools before everyone else"]];
   const PRO_SOON = [["💱", "Real UK bookmaker prices", "Sky Bet, Paddy Power, William Hill and Betfair side by side"], ["🧠", "Deeper models", "Half-time markets and smarter in-play player chances"], ["📚", "Unlimited saved accas", "Build, save and share accas with friends"]];
   const row = ([i, t, d], st) => `<div class="pk-row ${st ? "pk-" + st : ""}"><span class="pk-ic">${i}</span><span><b>${t}</b><small>${d}</small></span><span class="pk-st">${st === "have" ? "✓" : st === "soon" ? "Soon" : ""}</span></div>`;
-  const roles = [b.includes("owner") && ["OWNER", "owner", "You run Matchday Edge. Full access to everything."], b.includes("dev") && ["DEV", "dev", "You help build the app and see new features first."], pro && ["PRO", "pro", "Pro member. Pro perks are switched on for you."]].filter(Boolean);
+  const roles = [b.includes("owner") && ["OWNER", "owner", "You run Accabox. Full access to everything."], b.includes("dev") && ["DEV", "dev", "You help build the app and see new features first."], pro && ["PRO", "pro", "Pro member. Pro perks are switched on for you."]].filter(Boolean);
   const cmp = [["Live scores, tips, accas", "✓", "✓"], ["Self-settling bets and balance", "✓", "✓"], ["Friends, following, Top players", "✓", "✓"], ["£1K challenges", "✓", "✓"], ["PRO badge", "–", "✓"], ["No Pro adverts", "–", "✓"], ["Early access to new features", "–", "✓"], ["Bet alerts and player bets", "✓", "✓"], ["Real UK bookmaker prices", "–", "Soon"], ["Deeper models", "–", "Soon"]];
   return `<section class="pk-hero ${pro ? "pro" : ""}"><div><small>Your plan</small><h1>${pro ? "★ Pro" : "Free"}</h1><p>${pro ? "Thanks for being Pro. Here's everything you get, plus what's on the way." : "You've got all the core features. Pro adds extras on top."}</p></div>
     ${roles.length ? `<div class="pk-roles">${roles.map(([t, c, d]) => `<div class="pk-role"><span class="bdg ${c}">${t}</span><small>${d}</small></div>`).join("")}</div>` : ""}</section>
@@ -3103,7 +3103,7 @@ function proCard() {
   if (S.user && S.profile && S.profile.plan === "pro") return "";   // already Pro: no advert
   const feats = [["Real UK bookmaker prices", "Live Sky Bet, Paddy Power, William Hill and Betfair odds side by side, with the best price highlighted."], ["Deeper models", "Half-time markets and smarter in-play player chances."], ["Unlimited saved accas", "Build, save and share accas with your friends."]];
   const cta = !S.user ? `<a class="btn pro-btn" href="#account">Create a free account to join the waitlist</a>` : S.waitlisted ? `<span class="msg ok">${ICON.check.replace("<svg", '<svg style="width:16px;height:16px;vertical-align:-3px"')} You're on the waitlist. You'll hear first when Pro opens.</span>` : `<button class="btn pro-btn" data-waitlist>Join the waitlist</button><span style="color:var(--muted);font-size:13px">Free to join. No card needed.</span>`;
-  return `<section class="pro"><img class="pro-art" src="${art("pro-banner.webp")}" alt="Matchday Edge Pro"><div class="pro-top"><div><div class="pro-badge">Matchday Edge <span>PRO</span></div><p class="sub" style="margin-top:8px">More data, sharper picks and alerts, for players who bet every week.</p></div><span class="soon">Coming soon</span></div>
+  return `<section class="pro"><img class="pro-art" src="${art("pro-banner.webp")}" alt="Accabox Pro"><div class="pro-top"><div><div class="pro-badge">Accabox <span>PRO</span></div><p class="sub" style="margin-top:8px">More data, sharper picks and alerts, for players who bet every week.</p></div><span class="soon">Coming soon</span></div>
   <div class="pro-feats">${feats.map(([t, d]) => `<div class="pf">${ICON.check}<div><b>${t}</b><span>${d}</span></div></div>`).join("")}</div><div class="pro-cta">${cta}</div></section>`;
 }
 function viewAccount(mode = "account") {
@@ -3112,7 +3112,7 @@ function viewAccount(mode = "account") {
   if (S.recovery && S.user) return `<div class="hd"><div><h1>Set a new password</h1></div></div><form class="authcard" id="pwForm" style="max-width:420px"><div class="field"><label for="newpw">New password</label><input id="newpw" type="password" minlength="8" autocomplete="new-password" required></div>${m}<button class="btn" type="submit">Save password</button></form>`;
   if (!S.user) {
     const up = S.authTab === "up";
-    return `<div class="acct-wrap"><div class="acct-grid"><div class="acct-intro"><img class="acct-hero" src="${art("account-hero.webp")}" alt=""><h1>${mode === "friends" ? "Bet with your friends" : "Your Matchday Edge account"}</h1><p class="sub">Free for you and your friends. Sign up in seconds.</p>
+    return `<div class="acct-wrap"><div class="acct-grid"><div class="acct-intro"><img class="acct-hero" src="${art("account-hero.webp")}" alt=""><h1>${mode === "friends" ? "Bet with your friends" : "Your Accabox account"}</h1><p class="sub">Free for you and your friends. Sign up in seconds.</p>
       <ul class="perks"><li><span class="ic">${ICON.chart}</span><div><b>Track every bet</b><span>Save bets from your slip, mark them won or lost, and see your real profit and loss.</span></div></li>
       <li><span class="ic">${ICON.ladder}</span><div><b>Your own £1 → £1K ladder</b><span>Run the challenge yourself and log each result in one tap.</span></div></li>
       <li><span class="ic">${ICON.star}</span><div><b>Favourite teams</b><span>Your teams starred in fixtures and pinned to the top.</span></div></li>
@@ -3304,7 +3304,7 @@ function topView() {
   if (S.followReady === false) return needFollowSql();
   if (!Array.isArray(S.top)) { if (!S.top) { S.top = "loading"; sb.rpc("top_players", { days: 30 }).then(r => { S.top = r.data || []; for (const x of S.top) S.people[x.user_id] = { ...(S.people[x.user_id] || {}), id: x.user_id, display_name: x.display_name, avatar_url: x.avatar_url, badges: x.badges, plan: x.plan, bets_public: x.bets_public }; render(); }); } return `<div class="loadbox">Loading top players…</div>`; }
   if (!S.top.length) return `<div class="empty">No one has 3+ settled bets in the last 30 days yet. Settle a few and you could be top.</div>`;
-  return `<section class="section"><p class="sub" style="margin:0">Best profit over the last 30 days, across everyone on Matchday Edge (3+ settled bets). Tap a player to see their bets and copy them.</p>
+  return `<section class="section"><p class="sub" style="margin:0">Best profit over the last 30 days, across everyone on Accabox (3+ settled bets). Tap a player to see their bets and copy them.</p>
     <div class="plist">${S.top.map((r, i) => { const roi = +r.staked ? Math.round(+r.profit / +r.staked * 100) : 0;
       return `<div class="toprow"><span class="lbn ${i < 3 ? "top" + (i + 1) : ""}">${i + 1}</span>${personRow({ ...r, id: r.user_id }, `<span class="${+r.profit >= 0 ? "pos" : "neg"}">${gbp(+r.profit)}</span> · ${r.won}/${r.settled} won · ${roi > 0 ? "+" : ""}${roi}% return${r.bets_public ? " · bets public" : ""}`)}</div>`; }).join("")}</div></section>`;
 }
@@ -3519,7 +3519,7 @@ document.addEventListener("click", async e => {
     // the phone's own share menu where the browser has one (iPhone Safari, Chrome); otherwise our own sheet (the Android app)
     if (window.MDEApp && MDEApp.share) { MDEApp.share(text); return; }   // Android app 1.3+: the phone's own share menu
     const phone = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-    if (navigator.share && phone) { try { await navigator.share({ title: "Matchday Edge", text }); } catch (err) { if (err && err.name !== "AbortError") { S.shareOpen = true; render(); } } return; }
+    if (navigator.share && phone) { try { await navigator.share({ title: "Accabox", text }); } catch (err) { if (err && err.name !== "AbortError") { S.shareOpen = true; render(); } } return; }
     S.shareOpen = true; render();
   }
   else if (d.sharecopy !== undefined) { const { link } = inviteText(); S.shareOpen = false; render(); copyText(link, "Invite link copied. Paste it to your friends"); }
@@ -3713,7 +3713,7 @@ const notifyAllowed = () => ALERT_APP() ? (MDEApp.canNotify ? MDEApp.canNotify()
 let swReg = null; if ("serviceWorker" in navigator && !ALERT_APP()) navigator.serviceWorker.register("sw.js").then(r => { swReg = r; }).catch(() => {});
 async function askAlerts() {
   if (ALERT_APP()) { if (MDEApp.askNotify) MDEApp.askNotify(); return true; }
-  if (!("Notification" in window)) { toast(IOS ? "Add Matchday Edge to your Home Screen first, then switch alerts on there" : "This browser can't show notifications"); return false; }
+  if (!("Notification" in window)) { toast(IOS ? "Add Accabox to your Home Screen first, then switch alerts on there" : "This browser can't show notifications"); return false; }
   const r = await Notification.requestPermission(); if (r !== "granted") toast("Notifications are blocked. Allow them in your browser settings"); return r === "granted";
 }
 function sendAlert(title, body, tag) {
@@ -3789,7 +3789,7 @@ function notifSheet() {
     <div class="nf-grp ${on ? "" : "off"}"><h3>Games you follow</h3><div class="chips">${chip("ko", "Kick-off")}${chip("goal", "Goals")}${chip("red", "Red cards")}${chip("ht", "Half-time & quarters")}${chip("tight", "Close NBA finishes")}${chip("ft", "Full-time")}</div>
       ${F.length ? `<div class="nf-list">${F.map(({ f, g }) => `<div class="nf-row">${logo(f.sport, f.sport === "nba" ? g.away : g.home)}<span><b>${esc(vs(f.sport, g))}</b><small>${isLive(g) ? `<span class="dot red"></span> Live · ${esc(clockLabel(f.sport, g))}` : g.status.state === "post" ? "Finished" : esc(whenLabel(kick(g)))} · ${esc(f.sport === "nba" ? "NBA" : leagueName(g.league))}</small></span><button class="btn ghost sm" data-gfollow="${f.sport}:${g.id}">Remove</button></div>`).join("")}</div>`
         : `<div class="nf-empty">${BELL_SVG}<span>Tap the bell next to any game on the Live page, or <b>Notify me</b> on a game's page, to follow it.</span></div>`}</div>
-    <p class="colkey" style="margin:0">Notifications arrive while Matchday Edge is open or running in the background.</p></div>`;
+    <p class="colkey" style="margin:0">Notifications arrive while Accabox is open or running in the background.</p></div>`;
 }
 function alertTick() {
   if (!alertsOn() || !S.data) return;
@@ -3898,9 +3898,9 @@ function render() {
   for (const el of L.querySelectorAll(".ijsheet")) { const t = sheetTop[el.getAttribute("aria-label")]; if (t) el.scrollTop = t; }
   { const c2 = $("#chatIn"); if (c2 && chatKeep) { c2.value = chatKeep.v; if (chatKeep.f) { c2.focus({ preventScroll: true }); try { c2.setSelectionRange(chatKeep.a, chatKeep.b); } catch {} } } }
   if (S.photoHelp) L.insertAdjacentHTML("beforeend", `<div class="scrim top" data-photohelpx></div><div class="ijsheet" role="dialog" aria-modal="true" aria-label="Profile photo"><button class="close sm ij-x" data-photohelpx aria-label="Close">✕</button>
-    <div><h2>Your photos didn't open</h2><p class="sub" style="margin:4px 0 0">The Matchday Edge app on your phone is an older version that can't open your gallery. Two easy fixes:</p></div>
+    <div><h2>Your photos didn't open</h2><p class="sub" style="margin:4px 0 0">The Accabox app on your phone is an older version that can't open your gallery. Two easy fixes:</p></div>
     <ol class="helpsteps"><li><b>Quickest:</b> open the website in Chrome, sign in and set your photo there. It shows in the app straight away.<button class="btn sm" data-copysite style="margin-top:8px">Copy the website link</button></li>
-    <li><b>Or update the app:</b> uninstall Matchday Edge, then install the latest version from the download page.<a class="btn ghost sm" href="https://snuzzyyy.github.io/matchday-edge/app.html" style="margin-top:8px">Open the download page</a></li></ol></div>`);
+    <li><b>Or update the app:</b> uninstall Accabox, then install the latest version from the download page.<a class="btn ghost sm" href="https://snuzzyyy.github.io/matchday-edge/app.html" style="margin-top:8px">Open the download page</a></li></ol></div>`);
   const CL = $("#cashlayer"); if (!(S.cashOpen && S.user)) { if (CL.firstChild) CL.innerHTML = ""; } else if (!$("#cashamt")) CL.innerHTML = cashSheet();
   const IL = $("#implayer");
   if (!S.importOpen) { if (IL.firstChild) IL.innerHTML = ""; }

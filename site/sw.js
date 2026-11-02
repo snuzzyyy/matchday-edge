@@ -1,4 +1,4 @@
-// Matchday Edge: only used to show bet alerts. No caching, so the app always loads fresh.
+// Accabox: only used to show bet alerts. No caching, so the app always loads fresh.
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", e => e.waitUntil(self.clients.claim()));
 self.addEventListener("notificationclick", e => {

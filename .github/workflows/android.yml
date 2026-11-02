@@ -35,6 +35,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          cp android/app/build/outputs/apk/debug/app-debug.apk MatchdayEdge.apk
-          gh release view app >/dev/null 2>&1 || gh release create app --title "Matchday Edge for Android" --notes "Download MatchdayEdge.apk on your phone and open it to install. The app loads the live site, so it updates itself."
-          gh release upload app MatchdayEdge.apk --clobber
+          cp android/app/build/outputs/apk/debug/app-debug.apk Accabox.apk
+          cp Accabox.apk MatchdayEdge.apk   # old download links keep working
+          gh release view app >/dev/null 2>&1 || gh release create app --title "Accabox for Android" --notes "Download Accabox.apk on your phone and open it to install. The app loads the live site, so it updates itself."
+          gh release edit app --title "Accabox for Android" --notes "Download Accabox.apk on your phone and open it to install. The app loads the live site, so it updates itself."
+          gh release upload app Accabox.apk MatchdayEdge.apk --clobber

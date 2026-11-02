@@ -1,4 +1,4 @@
-# Matchday Edge: notes for Claude
+# Accabox (formerly Matchday Edge): notes for Claude
 
 Read **HANDOVER.md** first. **§0 is the first job (NBA player bets in the acca builder, swapping legs, more than 3 legs).** §11 lists mistakes not to repeat.
 

@@ -1,4 +1,4 @@
-# Matchday Edge: handover
+# Accabox (formerly Matchday Edge): handover
 
 Everything a new Claude session (or developer) needs to keep building Matchday Edge without re-discovering anything.
 Last updated: 1 Nov 2026, end of the second build session.
@@ -95,7 +95,7 @@ For every NBA game that is `pre` and starts within ~36 hours:
 
 ## 1. What it is
 
-**Matchday Edge** is a UK sports-betting companion app for **football (14 leagues incl. League One/Two, Eredivisie, Portugal, MLS) and the NBA**, built for the owner (GitHub **snuzzyyy**, display name **Snuzzy**, friend code **690481**) and their friends.
+**Accabox** (renamed from Matchday Edge on 2 Nov 2026; X handle @accabox was free then) is a UK sports-betting companion app for **football (14 leagues incl. League One/Two, Eredivisie, Portugal, MLS) and the NBA**, built for the owner (GitHub **snuzzyyy**, display name **Snuzzy**, friend code **690481**) and their friends.
 
 It does:
 - live scores and stats, a prediction model on every market, tips for every game
@@ -382,3 +382,9 @@ No server of our own. ESPN is free, has no key and is about 1–3 minutes behind
 | New stat for imports | `PROPS` (regex, stat key, label) + `legValue`/`halfStat` + `engine/settle.py` |
 | New team stat bet | `teamStatIn` / `teamStatVals` / `TSTAT` + `engine/settle.py` (`T:`) |
 | Rebuild APK | §8 |
+
+## Rename to Accabox (2 Nov 2026)
+- Name shown everywhere is **Accabox** (header wordmark `Acca<b>box</b>`, title, manifest, share texts, download page, Android label from app 1.5).
+- Unchanged on purpose: the repo/URL `snuzzyyy.github.io/matchday-edge`, localStorage keys `mde:*`, the Android package `com.snuzzyyy.matchdayedge`, the user-agent token `MatchdayEdgeApp/1.x` (the site detects it), secrets `MDE_*`. Changing any of these breaks installs or saved data.
+- The release publishes both `Accabox.apk` (download page links here) and `MatchdayEdge.apk` (old links).
+- Splash (normal + Halloween), og.png and the download banners were re-lettered; originals are in `art/brand-originals/`.

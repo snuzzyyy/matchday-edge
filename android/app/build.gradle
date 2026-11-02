@@ -6,8 +6,8 @@ android {
         applicationId "com.snuzzyyy.matchdayedge"
         minSdk 24
         targetSdk 34
-        versionCode 5
-        versionName "1.4"
+        versionCode 6
+        versionName "1.5"
     }
     // The signing key lives in GitHub secrets (never in the repo). Without it, builds fall back to a throwaway debug key.
     def ks = System.getenv("MDE_KEYSTORE_PATH")

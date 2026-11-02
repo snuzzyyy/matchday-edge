@@ -20,7 +20,7 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
-/** Full-screen wrapper around the live Matchday Edge site. Content updates come from the site itself. */
+/** Full-screen wrapper around the live Accabox site. Content updates come from the site itself. */
 public class MainActivity extends Activity {
     private static final String HOME = "https://snuzzyyy.github.io/matchday-edge/";
     private WebView web;
@@ -37,7 +37,7 @@ public class MainActivity extends Activity {
         s.setDomStorageEnabled(true);
         s.setDatabaseEnabled(true);
         s.setCacheMode(WebSettings.LOAD_DEFAULT);
-        s.setUserAgentString(s.getUserAgentString() + " MatchdayEdgeApp/1.4");
+        s.setUserAgentString(s.getUserAgentString() + " MatchdayEdgeApp/1.5");
         // Lets the site open the phone's own share menu (WhatsApp, Messages, Snapchat...)
         web.addJavascriptInterface(new Object() {
             @JavascriptInterface
