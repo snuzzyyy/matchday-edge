@@ -394,6 +394,10 @@ No server of our own. ESPN is free, has no key and is about 1–3 minutes behind
 - `gameAccas(opts, price)` (bands in `GA_LEVELS`) builds Low / Medium / High bet builders per game. `gaPicks` caches the pre-match picks in `mde:ga` so the same three are tracked once the game starts (`gaTracked`: leg lines, segbar, chance now; finished games show the result). Overview is one wide column (`.ovw`).
 - My Bets: Live / Upcoming / Settled tabs (`S.mbTab`, `data-mbtab`).
 
+## Bets tabs and Bet checker
+- Bets sub-tabs are Tips · Accas · Checker · My Bets. Multi-sport is reached from the Accas header button, Stats from My Bets → Settled; `NAV_ALIAS` keeps the tab highlighted for them.
+- `#check` (`viewCheck`): parses with `parseBet`; each leg's chance via `chkLeg` (match markets → `legChance`; player props → the player's model line, else `CHK_PRIOR`, combined for `foulInvolvements` / `goalOrAssist`, halves ×0.46/0.54, live → `paceChance`). Fair odds = 1/p; with typed odds, value > +10% good, ±10% fair, below poor. "Track this bet" opens the import pre-filled. `render()` now keeps focus/caret in #main inputs.
+
 ## Social (was Friends)
 - Nav label "Social". Tabs (`S.friendTab`): Timeline (`feedView("timeline")`: `S.feedBets` + `S.pubBets` (unfiltered bets query; RLS returns public ones) + Accabox bot winners), Friends (friends' feed, week, live, £1K), Leaderboards (`S.lbScope` friends → `boardView`, everyone → `topView`), People. Posts render via `feedPost`; one centred column (`.soc`).
 - Declutter (Nov 2): Live results are one-line `resRow`s (8, then "Show all"), compact idle box, iPhone install tip only on Live, £1K banner only before the first challenge, 4 suggestions, 4 locked badges.
