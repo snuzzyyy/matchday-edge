@@ -1707,9 +1707,13 @@ const addMoreSel = (g, chosen, opts, price, attr) => {
   // the one we'd add: likeliest bet from a different kind (result / goals / corners / cards), not one that just repeats another
   const groups = new Set(chosen.map(SG_GROUP)), isRes = k => /^(1|2|DNB1|DNB2|1X|X2)$/.test(k);
   const scorerOf = k => { const m = opts.find(x => x.k === k); return m && m.prop && m.prop.stat === "totalGoals" ? m.prop.side : null; }, teamGoal = { HO05: "h", AO05: "a" };
-  const best = free.filter(m => !groups.has(SG_GROUP(m.k)) && !(teamGoal[m.k] && chosen.some(k => scorerOf(k) === teamGoal[m.k])) && !(m.prop && m.prop.stat === "totalGoals" && chosen.includes(m.prop.side === "h" ? "HO05" : "AO05")) && price(m) >= Math.max(1.08, RISK[S.accaRisk || "safe"].minLeg || 1) && !(/^(HO|AO)/.test(m.k) && chosen.some(isRes)) && !(isRes(m.k) && chosen.some(k => /^(HO|AO)/.test(k))) && m.p >= .3).sort((a, b) => b.p - a.p)[0];
+  const okKind = m => !groups.has(SG_GROUP(m.k)) && !(teamGoal[m.k] && chosen.some(k => scorerOf(k) === teamGoal[m.k])) && !(m.prop && m.prop.stat === "totalGoals" && chosen.includes(m.prop.side === "h" ? "HO05" : "AO05")) && !(/^(HO|AO)/.test(m.k) && chosen.some(isRes)) && !(isRes(m.k) && chosen.some(k => /^(HO|AO)/.test(k)));
+  /* the suggestion matches your level: Safest = the likeliest bet, Balanced = 2/7 to 5/4, Bigger odds = 4/6 to 3/1 (the likeliest inside that range) */
+  const risk = S.accaRisk || "safe", band = { safe: [1.08, 99, .3, "the likeliest extra bet"], balanced: [1.28, 2.25, .38, "a Balanced extra bet"], bigger: [1.66, 4, .25, "a bigger-price extra bet"] }[risk] || [1.08, 99, .3, "the likeliest extra bet"];
+  const inBand = (lo, hi, pMin) => free.filter(m => okKind(m) && price(m) >= lo && price(m) <= hi && m.p >= pMin).sort((a, b) => b.p - a.p)[0];
+  const best = inBand(band[0], band[1], band[2]) || (risk !== "safe" ? inBand(Math.max(1.08, RISK[risk].minLeg || 1), 99, .25) : null);
   if (!free.length) return "";
-  return `<div class="addmore-row">${best ? `<button class="addbest" ${attr}-best="${g.id}|${best.k}">＋ Add the likeliest extra bet: <b>${esc(best.label)}</b> · ${pct(best.p)} · ${odds(price(best))}</button>` : ""}
+  return `<div class="addmore-row">${best ? `<button class="addbest" ${attr}-best="${g.id}|${best.k}">＋ Add ${band[3]}: <b>${esc(best.label)}</b> · ${pct(best.p)} · ${odds(price(best))}</button>` : ""}
     <details class="addpick" data-ap="${attr}-${g.id}" ${(S.addOpen || {})[attr + "-" + g.id] ? "open" : ""}><summary>or choose one yourself</summary><label class="sr" for="${attr}-${g.id}">Add another bet from ${esc(vs(S.sport, g))}</label><select class="addmore" id="${attr}-${g.id}" ${attr}="${g.id}"><option value="">Pick a bet from this game…</option>${optsHTML(free, null, price)}</select></details></div>`; };
 const sameGameNote = all => all.some(x => x.extra) ? `<div class="note">Bets from the same game are linked, so your bookie's bet builder price will be different from this estimate.</div>` : "";
 function accaPreLegs(sp, ids) { return withMinFallback(() => accaPreLegs0(sp, ids), priceOf); }
