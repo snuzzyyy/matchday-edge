@@ -383,6 +383,10 @@ No server of our own. ESPN is free, has no key and is about 1–3 minutes behind
 | New team stat bet | `teamStatIn` / `teamStatVals` / `TSTAT` + `engine/settle.py` (`T:`) |
 | Rebuild APK | §8 |
 
+## Bet cards (My Bets, bet sheets, £1K)
+- Each leg with a known game renders through `legRow()`: badges + bet name + chance (or ✓/✗/VOID), a strip (`.gs3`): pre = kick-off + countdown (`untilTxt`), live/FT = mini scoreboard with clock; then the progress body from `legInfo0` with its `tl-top` removed (skipped pre-match and for plain "chance now" legs). Typed-in legs and games that left the feed fall back to the old rows.
+- `betCard` header: "Starts 19:45 · in 3h" before, red-dot "x of n landed" live; `.segbar` shows each leg's state (pulses while live).
+
 ## Tweet maker (owner only)
 - `#tweets` (`viewTweets`, link in Account only when `isOwner()` = profile badge `owner`). Sport (football/NBA/both), type (`TW_KINDS`: top performers, results, one game recap/preview, player spotlight, acca of the day, live now), window, game picker, style toggles.
 - `twBuild()` writes the text from real data: NBA box scores (`g.box`), football goals from `g.events`, assists/shots/saves after "Load player stats" (`loadDetail` → `g.lineups`), previews from `g.model`, accas from `levelPreset`. Fits to 280 (`twLen`, emojis count 2) by dropping weakest rows / question / hashtags; results become a numbered thread. Editable text, Copy, Post on X (intent link).
