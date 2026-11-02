@@ -3542,13 +3542,13 @@ function feedItems(scope = "timeline") {
     for (const h of (C.history || [])) if (h.at) items.push({ t: h.at, html: h.result === "W" ? `<b>${esc(who.display_name)}</b> won a £1K challenge step and now has <span class="pos">${fmtBank(h.ret)}</span>` : h.result === "L" ? `<b>${esc(who.display_name)}</b>'s £1K challenge ended on ${fmtBank(h.stake)}` : `<b>${esc(who.display_name)}</b> moved money on their £1K challenge`, sub: `${esc(h.bet)} @ ${esc(h.odds)}`, uid });
   }
   }
-  if (scope === "timeline") for (const w of S.botWins || []) items.push({ t: w.settled_at, bot: w, html: `<button type="button" class="bot-name" data-botprof>Accabox</button><span class="bot-tick" title="Official Accabox account">✓</span> ${w.sport === "nba" ? "🏀" : "⚽"} landed ${/acca ·/.test(w.title) ? "the" : "a"} <b>${esc(w.title)}</b> at <span class="pos">${odds(+w.odds_dec)}</span> 🎉` });
+  if (scope === "timeline") for (const w of S.botWins || []) items.push({ t: w.settled_at, bot: w, html: `<b>Accabox</b><span class="bot-tick" title="Official Accabox account">✓</span> ${w.sport === "nba" ? "🏀" : "⚽"} landed ${/acca ·/.test(w.title) ? "the" : "a"} <b>${esc(w.title)}</b> at <span class="pos">${odds(+w.odds_dec)}</span> 🎉` });
   return items.sort((a, b) => new Date(b.t) - new Date(a.t)).slice(0, 60);
 }
 function feedPost(it) { if (it.bot) return botPost(it); const b = it.b, who = person(b ? b.user_id : it.uid);
     return `<article class="fi ${it.tone || ""}"><button class="fi-av" data-mate="${b ? b.user_id : it.uid}" aria-label="View ${esc(who.display_name)}">${avatarHTML(who, 40)}</button><div class="fi-body"><div class="fi-top"><span>${it.html}</span><time>${ago2(it.t)}</time></div>
       ${b ? `${betTile(b)}${socialActs(b)}` : `<div class="fi-meta">${it.sub || ""}</div>`}</div></article>`;  }
-/* the Accabox bot's own profile: every settled ready-made acca, at a £10 stake each */
+/* the Accabox bot's own profile (switched off for now: nothing opens it; re-add data-botprof to the name/avatar in botPost and the feed line to bring it back) */
 async function loadBotAll() {
   const r = await sb.from("bot_accas").select("id,day,sport,title,level,odds_dec,chance,result,settled_at").neq("result", "open").gte("settled_at", new Date(Date.now() - 60 * 864e5).toISOString()).order("settled_at", { ascending: false }).limit(2000);
   S.botAll = r.error ? [] : r.data || []; render();
@@ -3586,7 +3586,7 @@ function botSheet() {
 }
 function botPost(it) {
   const w = it.bot, L = (w.legs || []).filter(l => l.label || l.pid), dec = +w.odds_dec;
-  return `<article class="fi bot won"><button type="button" class="fi-av bot-av" data-botprof aria-label="Accabox profile"><img src="mark.png" alt="Accabox"></button><div class="fi-body"><div class="fi-top"><span>${it.html}</span><time>${ago2(it.t)}</time></div></div>
+  return `<article class="fi bot won"><span class="fi-av bot-av"><img src="mark.png" alt="Accabox"></span><div class="fi-body"><div class="fi-top"><span>${it.html}</span><time>${ago2(it.t)}</time></div></div>
     <div class="bot-card"><div class="bot-hd"><span class="tag evens">${w.sport === "nba" ? "🏀 NBA" : "⚽ Football"} · ${esc(({ low: "Low", medium: "Medium", high: "High" })[w.level] || "Acca")}</span><b>${odds(dec)}</b></div>
       <ul class="bot-legs">${L.map(l => `<li><span class="bot-ok">✓</span><span><b>${esc(String(legText(l) || "").replace(/ \(in-play\)$/, ""))}</b><small>${esc(l.match || l.team || "")}</small></span></li>`).join("")}</ul>
       <div class="bot-ft"><span>£10 returned <b class="pos">${money(10 * dec)}</b></span><span>Built by Accabox before kick-off · we had it at ${pct(+w.chance || 0)}</span></div></div></article>`;
