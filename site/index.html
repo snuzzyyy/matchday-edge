@@ -3641,7 +3641,7 @@ function friendsView() {
 /* ---------- Tweet maker: owner only. Writes tweets (and a matching image card) from tonight's real stats ---------- */
 const isOwner = () => ((S.profile || {}).badges || []).includes("owner");
 const TW_TAGS = { "eng.1": "#PL", "eng.2": "#EFL", "eng.3": "#EFL", "eng.4": "#EFL", "esp.1": "#LaLiga", "ita.1": "#SerieA", "ger.1": "#Bundesliga", "fra.1": "#Ligue1", "sco.1": "#SPFL", "uefa.champions": "#UCL", "uefa.europa": "#UEL", "ned.1": "#Eredivisie", "por.1": "#LigaPortugal", "usa.1": "#MLS" };
-const TW_KINDS = [["top", "Top performers"], ["results", "Results"], ["game", "One game"], ["player", "Player spotlight"], ["acca", "Acca of the day"], ["live", "Live now"]];
+const TW_KINDS = [["top", "Top performers"], ["results", "Results"], ["game", "Previews & recaps"], ["player", "Player spotlight"], ["acca", "Acca of the day"], ["live", "Live now"]];
 const twLen = t => { let n = 0; for (const ch of String(t).replace(/https?:\/\/\S+/g, "x".repeat(23))) { const c = ch.codePointAt(0); n += c === 0xfe0f || c === 0x200d ? 0 : c >= 0x1f000 || (c >= 0x2600 && c <= 0x27bf) || (c >= 0x1100 && c <= 0x11ff) ? 2 : 1; } return n; };
 const twPick = (arr, seed) => arr[Math.abs(seed) % arr.length];
 const twState = () => (S.tw = S.tw || { sport: "football", kind: "top", win: 14, pre: "today", off: {}, game: null, player: null, seed: 0, emoji: true, tags: true, ask: true, adult: null, level: "balanced", legs: 3, custom: {} });
