@@ -4346,7 +4346,7 @@ function sendAlert(title, body, tag) {
     else new Notification(title, { body, tag, icon: "icon-192.png" }); } catch {}
 }
 /* notifications: which kinds you want, and games you follow (the bell on the Live page and the game page) */
-const AP_DEF = { betko: true, soon: true, land: true, close: true, miss: true, result: true, ko: true, goal: true, red: true, ht: true, tight: true, ft: true, social: true, copy: true, fwin: true, fbet: false };
+const AP_DEF = { betko: true, soon: true, land: true, close: false, miss: false, result: true, ko: true, goal: true, red: true, ht: true, tight: true, ft: true, social: true, copy: true, fwin: true, fbet: false };
 const apref = k => ({ ...AP_DEF, ...store.get("alertPrefs", {}) })[k] !== false;
 const gFollows = () => store.get("gfollow", []);
 const isFollowed = (sp, id) => gFollows().some(f => f.sport === sp && f.gid === String(id));
@@ -4407,7 +4407,7 @@ function notifSheet() {
   return `<div class="scrim top" data-notifx></div><div class="ijsheet nf-sheet" role="dialog" aria-modal="true" aria-label="Notifications"><button class="close sm ij-x" data-notifx aria-label="Close">✕</button>
     <div><h2>Notifications</h2><p class="sub" style="margin:4px 0 0">Choose what you hear about: your bets, your friends, and the games you follow.</p></div>
     <div class="setcard"><label class="setrow sw"><span><b>Notifications</b><small>${desc}</small></span><input type="checkbox" id="alertOpt2" ${on ? "checked" : ""}><span class="sw-ui" aria-hidden="true"></span></label></div>
-    <div class="nf-grp ${on ? "" : "off"}"><h3>Your bets</h3><div class="chips">${chip("soon", "5 mins before kick-off")}${chip("betko", "Kick-off")}${chip("land", "Legs landing")}${chip("close", "Nearly there")}${chip("miss", "Legs missing")}${chip("result", "Won or lost")}</div></div>
+    <div class="nf-grp ${on ? "" : "off"}"><h3>Your bets</h3><div class="chips">${chip("soon", "5 mins before kick-off")}${chip("betko", "Kick-off")}${chip("land", "Legs landing")}${chip("miss", "Legs missing")}${chip("result", "Won or lost")}</div></div>
     <div class="nf-grp ${on ? "" : "off"}"><h3>Friends</h3><div class="chips">${chip("social", "Reactions & comments")}${chip("copy", "Copies of your bets")}${chip("fwin", "Friends' wins")}${chip("fbet", "Friends' new bets")}</div></div>
     <div class="nf-grp ${on ? "" : "off"}"><h3>Games you follow</h3><div class="chips">${chip("ko", "Kick-off")}${chip("goal", "Goals")}${chip("red", "Red cards")}${chip("ht", "Half-time & quarters")}${chip("tight", "Close NBA finishes")}${chip("ft", "Full-time")}</div>
       ${F.length ? `<div class="nf-list">${F.map(({ f, g }) => `<div class="nf-row">${logo(f.sport, f.sport === "nba" ? g.away : g.home)}<span><b>${esc(vs(f.sport, g))}</b><small>${isLive(g) ? `<span class="dot red"></span> Live · ${esc(clockLabel(f.sport, g))}` : g.status.state === "post" ? "Finished" : esc(whenLabel(kick(g)))} · ${esc(f.sport === "nba" ? "NBA" : leagueName(g.league))}</small></span><button class="btn ghost sm" data-gfollow="${f.sport}:${g.id}">Remove</button></div>`).join("")}</div>`
@@ -4441,8 +4441,9 @@ function alertTick() {
     const L = it.legs.filter(l => (l.pid || l.k) && l.gid && findGame(l.sport, l.gid)), info = L.map(l => ({ l, i: legInfo0(l) })), hit = info.filter(x => x.i.st === "hit").length;
     for (const { l, i } of info) {
       const lk = l.pid ? `p${l.pid}${l.stat}${l.target}` : `k${l.gid}${l.k}`, nm = legText(l);
-      if (i.st === "hit") add(lk + ":hit", `✓ ${nm}`, L.length > 1 ? `${hit} of ${L.length} landed · ${it.title}` : "Landed");
-      if (l.pid && i.st === "live") { const r = legValue(l), need = r.v == null ? null : l.target - r.v; if (need != null && need > 0 && need <= (l.stat === "PTS" || l.stat === "PRA" ? 2 : 1)) add(lk + ":close", `🔥 ${l.name} needs ${need} more ${need === 1 ? l.label.replace(/s$/, "") : l.label}`, `${l.target}+ ${l.label} · ${it.title}`); }
+      if (i.st === "hit") { const left = info.filter(x => x.i.st !== "hit" && x.i.st !== "void").map(x => legText(x.l));
+        add(lk + ":hit", `✓ ${nm} landed`, L.length < 2 ? "Landed" : !left.length ? `All ${L.length} legs in · ${it.title}` : `${hit} of ${L.length} in · still need: ${left.slice(0, 3).join(", ")}${left.length > 3 ? ` +${left.length - 3} more` : ""}`); }
+      if (false && l.pid && i.st === "live") { const r = legValue(l), need = r.v == null ? null : l.target - r.v; if (need != null && need > 0 && need <= (l.stat === "PTS" || l.stat === "PRA" ? 2 : 1)) add(lk + ":close", `🔥 ${l.name} needs ${need} more ${need === 1 ? l.label.replace(/s$/, "") : l.label}`, `${l.target}+ ${l.label} · ${it.title}`); }
       if (i.st === "miss") add(lk + ":miss", `✗ ${nm} missed`, it.title);
     }
     if (it.result === "won") add("won", `🎉 Winner! ${it.title}`, `Returned ${money(it.ret)}`);
