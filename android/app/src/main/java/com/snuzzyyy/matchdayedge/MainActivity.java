@@ -9,6 +9,7 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.ClipData;
+import android.content.Context;
 import android.content.ContentValues;
 import android.graphics.BitmapFactory;
 import android.provider.MediaStore;
@@ -43,7 +44,7 @@ public class MainActivity extends Activity {
         s.setDomStorageEnabled(true);
         s.setDatabaseEnabled(true);
         s.setCacheMode(WebSettings.LOAD_DEFAULT);
-        s.setUserAgentString(s.getUserAgentString() + " MatchdayEdgeApp/1.6");
+        s.setUserAgentString(s.getUserAgentString() + " MatchdayEdgeApp/1.7");
         // Lets the site open the phone's own share menu (WhatsApp, Messages, Snapchat...)
         web.addJavascriptInterface(new Object() {
             @JavascriptInterface
@@ -65,6 +66,15 @@ public class MainActivity extends Activity {
             @JavascriptInterface
             public void notify(String title, String body, String tag) {
                 showAlert(title, body, tag);
+            }
+            // Timed alerts (5 minutes before, kick-off): Android fires these even when the app is closed
+            @JavascriptInterface
+            public void schedule(String key, double at, String title, String body) {
+                AlarmReceiver.schedule(MainActivity.this, key, (long) at, title, body);
+            }
+            @JavascriptInterface
+            public void unschedule(String key) {
+                AlarmReceiver.cancel(MainActivity.this, key);
             }
             // Pictures made by the site (tweet cards): save to the phone's photos, or share with text
             @JavascriptInterface
@@ -154,19 +164,22 @@ public class MainActivity extends Activity {
         }
     }
 
-    private void showAlert(String title, String body, String tag) {
-        NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+    private void showAlert(String title, String body, String tag) { postAlert(this, title, body, tag); }
+
+    /** Shows a phone notification; also used by AlarmReceiver when the app is closed. */
+    static void postAlert(Context ctx, String title, String body, String tag) {
+        NotificationManager nm = (NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE);
         if (nm == null) return;
         if (Build.VERSION.SDK_INT >= 26 && nm.getNotificationChannel("bets") == null) {
             NotificationChannel ch = new NotificationChannel("bets", "Bet alerts", NotificationManager.IMPORTANCE_HIGH);
             ch.setDescription("When a leg lands, a player is close, or a bet settles");
             nm.createNotificationChannel(ch);
         }
-        Intent open = new Intent(this, MainActivity.class);
+        Intent open = new Intent(ctx, MainActivity.class);
         open.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         open.putExtra("hash", "#mybets");
-        PendingIntent pi = PendingIntent.getActivity(this, 0, open, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
-        Notification.Builder b = Build.VERSION.SDK_INT >= 26 ? new Notification.Builder(this, "bets") : new Notification.Builder(this);
+        PendingIntent pi = PendingIntent.getActivity(ctx, 0, open, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+        Notification.Builder b = Build.VERSION.SDK_INT >= 26 ? new Notification.Builder(ctx, "bets") : new Notification.Builder(ctx);
         b.setSmallIcon(R.drawable.ic_notify).setContentTitle(title).setContentText(body)
          .setStyle(new Notification.BigTextStyle().bigText(body)).setAutoCancel(true).setContentIntent(pi).setColor(Color.parseColor("#FF7A2F"));
         try { nm.notify(tag == null ? (int) System.currentTimeMillis() : tag.hashCode(), b.build()); } catch (Exception ignored) { }
