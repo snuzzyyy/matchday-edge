@@ -3684,12 +3684,16 @@ const nbaLine = (v, short) => [v.pts && `${v.pts} PTS`, v.reb >= 5 && `${v.reb} 
 const fbLine = v => [v.goals >= 4 ? `${v.goals} goals` : v.goals >= 3 ? "hat-trick" : v.goals === 2 ? "brace" : v.goals === 1 ? "goal" : "", v.ast ? `${v.ast} assist${v.ast > 1 ? "s" : ""}` : "", !v.goals && v.sot >= 3 ? `${v.sot} shots on target` : "", v.saves >= 5 ? `${v.saves} saves` : ""].filter(Boolean).join(" + ");
 const fbIcon = v => v.goals >= 3 ? "🎩" : v.goals === 2 ? "⚽⚽" : v.goals === 1 ? "⚽" : v.ast ? "🅰️" : v.saves >= 5 ? "🧤" : "🎯";
 /* build the tweet(s) and the image card for the current settings */
+/* Preview mode lets you tick several games (or all) for a night's previews */
+const twMulti = T => T.kind === "game" && T.gameMode === "preview";
+const twTime = iso => { const w = whenLabel(iso); return /\d{1,2}:\d{2}/.test(w) ? w : w + " " + hm(iso); };
+const prevBest = g => [...g.model.markets].filter(m => !SKIP.has(m.k) && !m.prop && m.p <= .93 && priceOf(m) >= 1.2).sort((x, y) => y.p - x.p)[0];
 function twBuild(T) {
-  const all = twGames(T), sel = T.kind === "game" || T.kind === "player" ? all.filter(x => x.sp + x.g.id === T.game).slice(0, 1) : all.filter(x => twOn(T, x));
+  const all = twGames(T), sel = twMulti(T) ? all.filter(x => (T.pick || {})[x.sp + x.g.id] && isPre(x.g)) : T.kind === "game" || T.kind === "player" ? all.filter(x => x.sp + x.g.id === T.game).slice(0, 1) : all.filter(x => twOn(T, x));
   const E = (e, t) => T.emoji ? `${e} ${t}` : t, s = T.seed, sports = [...new Set(sel.map(x => x.sp))];
   const tags = !T.tags ? "" : [...new Set(sel.map(x => x.sp === "nba" ? "#NBA" : TW_TAGS[x.g.league] || "#Football"))].slice(0, 2).join(" ");
   const wd = new Date().getDay(), when = T.win <= 14 ? "Tonight's" : T.win <= 24 ? "Today's" : wd === 0 || wd === 1 ? "This weekend's" : "The latest";
-  let head = "", body = [], ask = "", card = null, adult = false, empty = "", accaTags = null;
+  let head = "", body = [], ask = "", card = null, adult = false, empty = "", accaTags = null, multi = false;
   if (!sel.length) return { tweets: [], card: null, empty: T.kind === "live" ? "Nothing in play right now." : T.kind === "acca" || T.gameMode === "preview" ? "No games coming up in that window." : "No finished games in that window yet. Try a longer window." };
   if (T.kind === "top") {
     const P = twPerformers(T, sel), rows = [];
@@ -3713,6 +3717,15 @@ function twBuild(T) {
     ask = T.kind === "live" ? twPick(["Who are you cheering on? 👇", "What are you watching? 👇"], s) : twPick(["Any of these land you an acca? 👇", "Best result of the night? 👇", "Who surprised you? 👇"], s);
     card = { type: "results", live: T.kind === "live", title: T.kind === "live" ? "LIVE NOW" : "RESULTS", sub: [...by.keys()].slice(0, 3).join(" · ").toUpperCase(), leagues: by.size,
       games: sel.slice(0, 8).map(x => { const L = x.sp === "nba" ? x.g.away : x.g.home, R = x.sp === "nba" ? x.g.home : x.g.away; return { status: T.kind === "live" ? clockLabel(x.sp, x.g) : x.sp === "nba" ? "FINAL" : "FT", lg: x.sp === "nba" ? "NBA" : leagueName(x.g.league), teams: [L, R].map(t => ({ logo: t.logo, color: t.color, abbr: t.abbr || t.name, name: t.name, score: t.score })) }; }), more: Math.max(0, sel.length - 8), rows: sel.slice(0, 8).map(x => { const L = x.sp === "nba" ? x.g.away : x.g.home, R = x.sp === "nba" ? x.g.home : x.g.away; return [`${L.name}  ${L.score}–${R.score}  ${R.name}`, T.kind === "live" ? clockLabel(x.sp, x.g) : x.sp === "nba" ? "Final" : "FT", ""]; }) };
+  } else if (T.kind === "game" && sel.length > 1) {   /* several previews: one line per game, a thread if it runs long */
+    adult = true; multi = true;
+    const day = T.pre === "tomorrow" ? "Tomorrow's" : T.pre === "48h" ? "Upcoming" : sel.every(x => /^Tonight/.test(whenLabel(kick(x.g)))) ? "Tonight's" : "Today's";
+    head = E("👀", `${day} ${sports.length === 1 ? (sports[0] === "nba" ? "NBA" : "football") + " " : ""}previews`);
+    body = sel.map(({ sp, g }) => { const b = prevBest(g); return `${T.emoji ? (sp === "nba" ? "🏀 " : "⚽ ") : "- "}${vs(sp, g)} (${hm(kick(g))})${b ? `: ${b.label} ${pct(b.p)}` : ""}`; });
+    ask = twPick(["Which one are you on? 👇", "Who are you backing tonight? 👇", "Best bet on the card? 👇"], s);
+    card = { type: "previews", title: `${day.toUpperCase()} PREVIEWS`, sub: `${sports.length === 1 ? (sports[0] === "nba" ? "NBA" : "FOOTBALL") + " · " : ""}${sel.length} GAMES`, more: Math.max(0, sel.length - 6),
+      games: sel.slice(0, 6).map(({ sp, g }) => { const L = sp === "nba" ? g.away : g.home, R = sp === "nba" ? g.home : g.away, b = prevBest(g);
+        return { sep: sp === "nba" ? "@" : "v", time: twTime(kick(g)), lg: sp === "nba" ? "NBA" : leagueName(g.league), pick: b ? b.label : "", p: b ? pct(b.p) : "", teams: [L, R].map(t => ({ logo: t.logo, color: t.color, abbr: t.abbr || t.name, name: t.name })) }; }) };
   } else if (T.kind === "game") {
     const { sp, g } = sel[0], h = g.home, a = g.away, L = sp === "nba" ? a : h, R = sp === "nba" ? h : a;
     if (isPre(g)) {
@@ -3771,9 +3784,9 @@ function twBuild(T) {
   const showAdult = T.adult == null ? adult : T.adult;
   let foot = [T.ask && ask, T.tags && accaTags != null ? accaTags : tags, showAdult && "18+ BeGambleAware"].filter(Boolean);
   const join = b => [head, "", ...b, "", ...foot].join("\n").replace(/\n{3,}/g, "\n\n").replace(/ {2,}/g, " ").replace(/ +:/g, ":").trim();
-  if (T.kind !== "results" && T.kind !== "live") for (const drop of [ask, T.tags && accaTags != null ? accaTags : tags]) if (twLen(join(body)) > 280 && drop) foot = foot.filter(x => x !== drop);   /* keep it to one tweet: lose the question, then the hashtags */
+  if (T.kind !== "results" && T.kind !== "live" && !multi) for (const drop of [ask, T.tags && accaTags != null ? accaTags : tags]) if (twLen(join(body)) > 280 && drop) foot = foot.filter(x => x !== drop);   /* keep it to one tweet: lose the question, then the hashtags */
   /* fit to 280: lists of players or bets drop their weakest rows to stay as one tweet; results become a numbered thread */
-  if (T.kind !== "results" && T.kind !== "live" && T.kind !== "acca") while (twLen(join(body)) > 280 && body.filter(Boolean).length > 3) body = body.slice(0, -1);
+  if (T.kind !== "results" && T.kind !== "live" && T.kind !== "acca" && !multi) while (twLen(join(body)) > 280 && body.filter(Boolean).length > 3) body = body.slice(0, -1);
   const tweets = [], all1 = join(body);
   if (twLen(all1) <= 280) tweets.push(all1);
   else { let cur = [head, ""]; for (const line of body) { const next = [...cur, line].join("\n"); if (twLen(next) > 262 && cur.length > 2) { const carry = []; while (cur.length > 2 && (/:$/.test(cur[cur.length - 1]) || cur[cur.length - 1] === "")) carry.unshift(cur.pop()); tweets.push(cur.join("\n").trim()); cur = [...carry.filter(Boolean), line]; } else cur.push(line); }
@@ -3840,6 +3853,19 @@ async function twCard(card) {
         x.textAlign = "right"; x.font = `italic 800 ${sf}px 'Barlow Condensed'`; x.fillStyle = lose ? "#7f8aa3" : win ? orange(cy - sf / 2, cy + sf / 2) : "#f4f6fb"; x.fillText(String(t.score ?? ""), X + W - 120, cy + sf * .36); x.textAlign = "left"; }
       x.fillStyle = "rgba(255,255,255,.1)"; x.fillRect(X + W - 100, Y + 14, 1.5, H - 28);
       x.textAlign = "center"; x.font = "800 18px Figtree"; x.fillStyle = card.live ? "#f87171" : "#c9d1e3"; x.fillText(fit(m.status, 80), X + W - 50, Y + H / 2 - 2); x.font = "600 13px Figtree"; x.fillStyle = "#7f8aa3"; x.fillText(fit(m.lg.toUpperCase(), 84), X + W - 50, Y + H / 2 + 20); x.textAlign = "left"; }
+    if (card.more) { x.font = "700 22px Figtree"; x.fillStyle = "#ff9a52"; x.fillText(`+${card.more} more in the thread`, 80, 808); }
+  } else if (card.type === "previews") {
+    pill(card.sub);
+    x.font = "italic 800 84px 'Barlow Condensed'"; x.fillStyle = "#fff"; x.fillText(card.title, 80, 238);
+    const G = card.games, n = G.length, cols = n <= 3 ? 1 : 2, rows = Math.ceil(n / cols), gap = 16, AH = card.more ? 500 : 530, W = (1440 - gap * (cols - 1)) / cols, H = Math.min(cols === 1 ? 160 : 160, (AH - gap * (rows - 1)) / rows), AY = 272 + (AH - (H * rows + gap * (rows - 1))) / 2;
+    for (let i = 0; i < n; i++) { const m = G[i], X = 80 + (i % cols) * (W + gap), Y = AY + Math.floor(i / cols) * (H + gap), R = Math.min(30, H * .2), ty = Y + 22 + R;
+      panel(X, Y, W, H, 18);
+      await teamBadge(m.teams[0], X + 24 + R, ty, R); x.textAlign = "center"; x.font = "italic 800 30px 'Barlow Condensed'"; x.fillStyle = "#ff8a3d"; x.fillText(m.sep, X + 24 + 2 * R + 22, ty + 10); x.textAlign = "left"; await teamBadge(m.teams[1], X + 24 + 3 * R + 44, ty, R);
+      const nx = X + 24 + 4 * R + 62; x.font = `800 ${cols === 1 ? 30 : 25}px Figtree`; x.fillStyle = "#f4f6fb"; x.fillText(fit(`${m.teams[0].name} ${m.sep} ${m.teams[1].name}`, W - (nx - X) - 24), nx, ty - 2);
+      x.font = `600 ${cols === 1 ? 20 : 17}px Figtree`; x.fillStyle = "#8f9ab3"; x.fillText(fit(`${m.lg} · ${m.time}`, W - (nx - X) - 24), nx, ty + 24);
+      if (m.pick) { const py = Y + H - 26; x.fillStyle = "rgba(0,0,0,.28)"; rr(X + 16, py - 30, W - 32, 44, 12); x.fill();
+        x.textAlign = "right"; x.font = `italic 800 ${cols === 1 ? 32 : 28}px 'Barlow Condensed'`; x.fillStyle = orange(py - 28, py + 8); x.fillText(m.p, X + W - 30, py + 2); const pw = x.measureText(m.p).width; x.textAlign = "left";
+        x.font = `700 ${cols === 1 ? 22 : 19}px Figtree`; x.fillStyle = "#eef1f8"; x.fillText(fit("🎯 " + m.pick, W - 80 - pw), X + 30, py); } }
     if (card.more) { x.font = "700 22px Figtree"; x.fillStyle = "#ff9a52"; x.fillText(`+${card.more} more in the thread`, 80, 808); }
   } else if (card.type === "player") {
     pill("PLAYER SPOTLIGHT");
@@ -3949,16 +3975,17 @@ async function twSaveImage(share, i) {
 }
 function viewTweets() {
   if (!isOwner()) return `<div class="empty"><b>Not available</b><span>This page is only for the Accabox owner.</span></div>`;
-  const T = twState(), all = twGames(T), single = T.kind === "game" || T.kind === "player";
+  const T = twState(), all = twGames(T), multi = twMulti(T), single = !multi && (T.kind === "game" || T.kind === "player");
   if (single && (!T.game || !all.some(x => x.sp + x.g.id === T.game))) T.game = all.length ? all[0].sp + all[0].g.id : null;
-  const chosen = single ? all.filter(x => x.sp + x.g.id === T.game) : all.filter(x => twOn(T, x));
+  if (multi && !all.some(x => (T.pick || {})[x.sp + x.g.id]) && all.length) T.pick = { [T.game && all.some(x => x.sp + x.g.id === T.game) ? T.game : all[0].sp + all[0].g.id]: true };
+  const chosen = multi ? all.filter(x => T.pick[x.sp + x.g.id]) : single ? all.filter(x => x.sp + x.g.id === T.game) : all.filter(x => twOn(T, x));
   const needFb = chosen.filter(x => x.sp === "football" && x.g.status.state !== "pre" && !x.g.lineups);
   const R = twBuild(T);
   if (R.card && S._twSig !== JSON.stringify(R.card)) { S._twSig = JSON.stringify(R.card); S._twImg = null; twCard(R.card).then(u => { S._twImg = u; render(); }); }
   const seg = (name, cur, opts, attr) => `<div class="seg3 ${opts.length === 2 ? "two" : ""}" role="group" aria-label="${name}">${opts.map(([k, l]) => `<button ${attr}="${k}" aria-pressed="${String(cur) === String(k)}">${l}</button>`).join("")}</div>`;
   const chip = (attr, k, l, on) => `<button class="chip" ${attr}="${k}" aria-pressed="${!!on}">${l}</button>`;
   const pre = T.kind === "acca" || (T.kind === "game" && T.gameMode === "preview");
-  const gameRows = all.length ? `<div class="tw-games">${all.map(x => { const id = x.sp + x.g.id, on = single ? T.game === id : twOn(T, x); return `<button class="tw-g" data-twgame="${id}" aria-pressed="${on}"><span class="tw-tick">${on ? "✓" : ""}</span><span class="tw-gt"><b>${esc(x.g.status.state === "pre" ? vs(x.sp, x.g) : twScore(x.sp, x.g))}</b><small>${x.sp === "nba" ? "NBA" : esc(leagueName(x.g.league))} · ${x.g.status.state === "pre" ? esc(whenLabel(kick(x.g)) + " " + hm(kick(x.g))) : isLive(x.g) ? esc(clockLabel(x.sp, x.g)) : "Finished"}</small></span></button>`; }).join("")}</div>` : `<div class="empty">${R.empty || "No games in that window."}</div>`;
+  const gameRows = all.length ? `<div class="tw-games">${all.map(x => { const id = x.sp + x.g.id, on = multi ? !!(T.pick || {})[id] : single ? T.game === id : twOn(T, x); return `<button class="tw-g" data-twgame="${id}" aria-pressed="${on}"><span class="tw-tick">${on ? "✓" : ""}</span><span class="tw-gt"><b>${esc(x.g.status.state === "pre" ? vs(x.sp, x.g) : twScore(x.sp, x.g))}</b><small>${x.sp === "nba" ? "NBA" : esc(leagueName(x.g.league))} · ${x.g.status.state === "pre" ? esc(twTime(kick(x.g))) : isLive(x.g) ? esc(clockLabel(x.sp, x.g)) : "Finished"}</small></span></button>`; }).join("")}</div>` : `<div class="empty">${R.empty || "No games in that window."}</div>`;
   const players = T.kind === "player" && chosen.length ? (() => { const P = twPerformers(T, chosen), L = [...P.nba, ...P.fb].slice(0, 30); return L.length ? `<div class="field"><label for="twPlayer">Player</label><select id="twPlayer" data-twplayer>${L.map(v => `<option ${v.name === T.player ? "selected" : ""}>${esc(v.name)}</option>`).join("")}</select></div>` : ""; })() : "";
   return `<div class="hd"><div><h1>Tweet maker <span class="bdg owner">OWNER</span></h1><p class="sub">Only you can see this. Pick what to tweet about and it writes it from the latest stats.</p></div></div>
   <div class="tw-wrap"><section class="tw-ctrl">
@@ -3967,7 +3994,7 @@ function viewTweets() {
       ${T.kind === "game" ? seg("Game", T.gameMode || "recap", [["recap", "Result / live"], ["preview", "Preview"]], "data-twgmode") : ""}</div>
     <div class="tw-step"><b>3 · When</b><div class="chips">${pre ? [["today", "Today"], ["tomorrow", "Tomorrow"], ["48h", "Next 48 hrs"]].map(([k, l]) => chip("data-twpre", k, l, T.pre === k)).join("") : T.kind === "live" ? `<span class="sub" style="margin:0">Games on right now</span>` : [[14, "Tonight"], [24, "Last 24 hrs"], [48, "Last 48 hrs"]].map(([k, l]) => chip("data-twwin", k, l, T.win === k)).join("")}</div></div>
     ${T.kind === "acca" ? `<div class="tw-step"><b>Level and legs</b>${seg("Level", T.level, Object.entries(RISK).map(([k, r]) => [k, r.name]), "data-twlevel")}<div class="chips">${[2, 3, 4, 5].map(n => chip("data-twlegs", n, n + " legs", T.legs === n)).join("")}</div></div>` : ""}
-    <div class="tw-step"><div class="tw-gh"><b>4 · ${single ? "Pick a game" : "Games"}</b>${!single && all.length ? `<span><button class="linkbtn" data-twall="1">All</button> · <button class="linkbtn" data-twall="0">None</button></span>` : ""}</div>${gameRows}
+    <div class="tw-step"><div class="tw-gh"><b>4 · ${single ? "Pick a game" : multi ? `Pick games (${chosen.length})` : "Games"}</b>${!single && all.length ? `<span><button class="linkbtn" data-twall="1">All</button> · <button class="linkbtn" data-twall="0">None</button></span>` : ""}</div>${gameRows}
       ${needFb.length ? `<button class="btn ghost sm tw-load" data-twload>⬇ Load player stats (${needFb.length} game${needFb.length > 1 ? "s" : ""}): assists, shots, saves</button>` : ""}${players}</div>
     <div class="tw-step"><b>Style</b><div class="chips">${chip("data-twopt", "emoji", "Emojis", T.emoji)}${chip("data-twopt", "tags", "Hashtags", T.tags)}${chip("data-twopt", "ask", "Question for followers", T.ask)}${chip("data-twopt", "adult", "18+ line", T.adult == null ? pre || T.kind === "game" && T.gameMode === "preview" : T.adult)}</div></div>
   </section>
@@ -4852,7 +4879,9 @@ document.addEventListener("click", async e => {
     else if (d.twlevel) { T.level = d.twlevel; reset(); } else if (d.twlegs) { T.legs = +d.twlegs; reset(); }
     else if (d.twgmode) { T.gameMode = d.twgmode; T.game = null; reset(); }
     else if (d.twopt) { const k = d.twopt; if (k === "adult") { const cur = T.adult == null ? T.kind === "acca" || T.gameMode === "preview" : T.adult; T.adult = !cur; } else T[k] = !T[k]; reset(); }
+    else if (d.twgame && twMulti(T)) { T.pick = { ...(T.pick || {}), [d.twgame]: !(T.pick || {})[d.twgame] }; reset(); }
     else if (d.twgame) { if (T.kind === "game" || T.kind === "player") { T.game = d.twgame; T.player = null; const [sp] = d.twgame.match(/^(football|nba)/); const id = d.twgame.slice(sp.length); if (sp === "football") loadDetail("football:" + id); } else T.off[d.twgame] = !T.off[d.twgame]; reset(); }
+    else if (d.twall !== undefined && twMulti(T)) { T.pick = d.twall === "1" ? Object.fromEntries(twGames(T).map(x => [x.sp + x.g.id, true])) : { [(twGames(T)[0] || { sp: "", g: { id: "" } }).sp + (twGames(T)[0] || { g: { id: "" } }).g.id]: true }; reset(); }
     else if (d.twall !== undefined) { const on = d.twall === "1"; for (const x of twGames(T)) T.off[x.sp + x.g.id] = !on; reset(); }
     else if (d.twshuffle !== undefined) { T.seed++; reset(); }
     else if (d.twload !== undefined) { const L = twGames(T).filter(x => x.sp === "football" && !x.g.lineups && (T.kind === "game" || T.kind === "player" ? x.sp + x.g.id === T.game : twOn(T, x))); toast(`Loading player stats for ${L.length} game${L.length > 1 ? "s" : ""}…`); for (const x of L) { x.g._luAt = 0; loadDetail("football:" + x.g.id); } }
