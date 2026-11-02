@@ -2373,15 +2373,15 @@ function drawerHTML(sport, g) {
   sec.markets = (sec.markets || "") + `<section class="section"><h2>${pre ? "All markets" : g.status.state === "post" ? "How the markets settled" : "Markets right now"}</h2>${marketsTable(sport, g)}<p class="note">${pre ? "" : "<b>Chance now</b> works from the current score, corners and cards plus the time left, so it changes as the game goes on. "}Chance = our model's estimate. <b>Fair</b> = the price that chance is worth. Prices marked with a percentage come from the market feed where available, otherwise they show the fair price, so check your bookie before you bet.</p></section>`;
   const ended = g.status.state === "post";
   const marketsSec = `<section class="section"><h2>${pre ? "All markets" : ended ? "How the markets settled" : "Markets right now"}</h2>${marketGroups(sport, g)}<p class="note">${pre ? "Tap a price to add it to your slip." : ended ? "" : "<b>Chance now</b> works from the current score and stats plus the time left. Tap + to add an in-play bet at its fair price."}</p></section>`;
-  if (S.gtabG !== g.id) { S.gtabG = g.id; S.gtab = "over"; }   /* a new game opens on Overview */
+  if (S.gtabG !== g.id) { S.gtabG = g.id; S.gtab = live || ended ? "stats" : "over"; }   /* a game that's on (or finished) opens on its stats and line-ups; one still to come opens on Overview */
   const statRows = g.stats ? (sport === "nba" ? g.stats.map(s => statRow({ ...s, h: s.a, a: s.h })) : g.stats.map(statRow)) : [];
   const quick = (live || ended) && statRows.length > 4 ? `<section class="section"><h2>${live ? "Key stats" : "Key stats"}${asOf(g)}</h2>${statRows.slice(0, 4).join("")}<button class="linkbtn g-more" data-gtab="stats">All stats ›</button></section>` : (live || ended) ? sec.stats || "" : "";
-  const T = [["over", "Overview"], ["bets", ended ? "Markets" : "Bets"], ["stats", "Stats"], ["players", sport === "nba" ? "Players" : "Line-ups"]];
+  const T = live || ended ? [["stats", live ? "Live" : "Stats"], ["over", "Overview"], ["bets", ended ? "Markets" : "Bets"], ["players", sport === "nba" ? "Players" : "Line-ups"]] : [["over", "Overview"], ["bets", "Bets"], ["stats", "Stats"], ["players", sport === "nba" ? "Players" : "Line-ups"]];
   const tab = T.some(t => t[0] === S.gtab) ? S.gtab : "over";
   const cols = (left, right) => { const Lh = left.filter(Boolean).join(""), Rh = right.filter(Boolean).join(""); return Rh && Lh ? `<div class="g-cols"><div class="g-col">${Lh}</div><div class="g-col">${Rh}</div></div>` : `<div class="g-cols one"><div class="g-col">${Lh || Rh || `<div class="empty">Nothing here yet for this game.</div>`}</div></div>`; };
   const pop = ended ? "" : popularHTML(sport, g, true);
   body = tab === "bets" ? cols([ended ? "" : bestForGame(sport, g)], [marketsSec])
-    : tab === "stats" ? cols([sec.stats, sec.quarters, sec.timeline], [sec.leaders, sec.form])
+    : tab === "stats" ? (live || ended ? cols([sec.stats, sec.quarters, sec.leaders], [sec.lineups, sec.timeline]) : cols([sec.stats, sec.quarters, sec.timeline], [sec.leaders, sec.form]))
     : tab === "players" ? cols([sec.lineups], [sec.injuries])
     : cols([sec.win, live ? anglesHTML(sport, g) : "", quick], [pop || (ended ? "" : `<section class="section"><h2>Bets</h2><p class="sub">No ready-made bets for this game yet.</p><button class="btn sm" data-gtab="bets">See all markets</button></section>`)]);
   const tabs = `<nav class="gtabs" aria-label="Game sections">${T.map(([k, n]) => `<button data-gtab="${k}" aria-current="${k === tab ? "page" : "false"}">${n}</button>`).join("")}</nav>`;
