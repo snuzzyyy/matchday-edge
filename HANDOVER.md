@@ -234,6 +234,7 @@ No server of our own. ESPN is free, has no key and is about 1–3 minutes behind
 - **Copied marks:** copying a bet inserts a `tail` reaction (allowed by chat.sql); shown as "📋 Copied by N" and names in the bet sheet.
 - **Feed extras:** `friendsWeekHTML` (top earner, most wins, best odds, last 7 days), `liveFriendsHTML` (friends' bets in play, legs landed + chance).
 - **Friends' board periods:** `leaderboard_since(days)` RPC (chat.sql), chips `data-bdays` 7/30/0; falls back to `leaderboard()` if the RPC is missing.
+- **Bet categories (audited 2 Nov 2026):** level accas always land in their RISK range (Safest ≤2.5, Balanced 2.5–4, Bigger odds 5+). Game-page "Popular bets" use strict bands: Around evens 1.8–2.5, Around 2/1 2.75–3.75, Around 5/1 5–8, picking the one closest to the named price. "Bigger punch" is four legs at 1.66–2.65 each, one per game, max two of a kind. Multi-sport themes are dropped unless they hold both sports (`multiTheme` → `multiTheme0`). Stats: manual legs count towards legs and type, `T:` keys are "Team stats", mixed-sport bets are "Multi-sport", odds bands are Under evens / Evens to 3/1 / Over 3/1 to 9/1 / Over 9/1.
 - **You vs friend:** `h2hHTML(uid)` in `mateSheet` (last 30 days).
 - **Friend notifications:** `socialPoll()` every 60 s: reactions, comments and copies on your bets, friends' wins, friends' new bets (`apref` keys social, copy, fwin, fbet; fbet off by default). Seen keys in `mde:socSeen`; the first run never alerts.
 - Profiles: `mateSheet`, and `profileShowcase` (stats, form, biggest win, badges, teams).

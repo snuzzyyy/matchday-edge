@@ -1528,7 +1528,12 @@ function buildPreset(kind, win, sp = S.sport) {
   const props = (stats, lo, hi, n) => bestPer(A.filter(c => c.m.prop && stats.includes(c.m.prop.stat) && c.m.p >= lo && c.m.p <= hi), n, c => c.m.p, 2);
   if (kind === "safe") return bestPerMatch(pool.filter(c => c.m.p >= .76), 4, c => c.m.p);
   if (kind === "goals") return bestPerMatch(pool.filter(c => /^(O15|BTTS|HO05|AO05|TO-10|TO-6)$/.test(c.m.k) && c.m.p >= .7), 5, c => c.m.p);
-  if (kind === "five") return bestPerMatch(pool.filter(c => c.m.p >= .62), 6, c => c.m.p * Math.min(priceOf(c.m), 1.9));
+  if (kind === "five") {   /* four legs at around evens or bigger (4/6 to 13/8 each), one per game, no more than two of the same kind */
+    const out = [], kinds = {};
+    for (const c of C.filter(c => priceOf(c.m) >= 1.66 && priceOf(c.m) <= 2.65 && c.m.p >= .42).sort((a, b) => b.m.p * priceOf(b.m) - a.m.p * priceOf(a.m))) {
+      const kd = SG_GROUP(c.m.k); if (out.some(x => x.g === c.g) || (kinds[kd] || 0) >= 2) continue; kinds[kd] = (kinds[kd] || 0) + 1; out.push(c); if (out.length >= 4) break; }
+    return out;
+  }
   if (kind === "corners") return bestPerMatch(pool.filter(c => /^(C|Y)/.test(c.m.k) && c.m.p >= .66), 4, c => c.m.p);
   if (kind === "mix") return mixPick(A, MIX[sp]);
   if (kind === "scorers") return sp === "nba" ? props(["PTS"], .55, .85, 4) : bestPer(A.filter(c => c.m.prop && c.m.prop.stat === "totalGoals" && c.m.p >= .25), 3, c => c.m.p);
@@ -1539,8 +1544,8 @@ function buildPreset(kind, win, sp = S.sport) {
   return [];
 }
 const THEMES = {
-  football: [["safe", "Safe four", "Up to four bankers from different games."], ["mix", "Mix it up", "A result, goals, corners, cards and a player bet."], ["scorers", "Goalscorers", "The likeliest scorers in the games coming up."], ["sot", "Shots on target", "Players who hit the target most."], ["fouled", "Fouls won", "Players who get fouled a lot."], ["goals", "Goals galore", "Over 1.5s, both teams to score and teams to score."], ["corners", "Corners & cards", "Stat markets backed by recent averages."], ["five", "Bigger punch", "Up to six legs at bigger prices."]],
-  nba: [["safe", "Safe four", "Up to four bankers from different games."], ["mix", "Mix it up", "A winner, a handicap, a total and player bets."], ["scorers", "Big scorers", "Players to hit their points line."], ["boards", "Boards & dimes", "Rebounds and assists from the players who rack them up."], ["threes", "From downtown", "Players to hit their threes."], ["goals", "Points galore", "Games to go over a lowered points line."], ["five", "Bigger punch", "Up to six legs at bigger prices."]]
+  football: [["safe", "Safe four", "Up to four bankers from different games."], ["mix", "Mix it up", "A result, goals, corners, cards and a player bet."], ["scorers", "Goalscorers", "The likeliest scorers in the games coming up."], ["sot", "Shots on target", "Players who hit the target most."], ["fouled", "Fouls won", "Players who get fouled a lot."], ["goals", "Goals galore", "Over 1.5s, both teams to score and teams to score."], ["corners", "Corners & cards", "Stat markets backed by recent averages."], ["five", "Bigger punch", "Four legs around evens or bigger, for a proper price."]],
+  nba: [["safe", "Safe four", "Up to four bankers from different games."], ["mix", "Mix it up", "A winner, a handicap, a total and player bets."], ["scorers", "Big scorers", "Players to hit their points line."], ["boards", "Boards & dimes", "Rebounds and assists from the players who rack them up."], ["threes", "From downtown", "Players to hit their threes."], ["goals", "Points galore", "Games to go over a lowered points line."], ["five", "Bigger punch", "Four legs around evens or bigger, for a proper price."]]
 };
 /* ---------- multi-sport: football and NBA in one acca ---------- */
 const multiWin = () => S.multiWin || (["today", "tomorrow", "48h"].find(w => upcoming("football", w).some(isPre) && upcoming("nba", w).some(isPre)) || "48h");
@@ -1553,6 +1558,9 @@ function multiPreset(n) {   // the best n games across both sports for your leve
   return pick.flatMap(x => J.get(x.sp + x.g.id) ? [{ sport: x.sp, g: x.g, m: J.get(x.sp + x.g.id) }] : []);
 }
 function multiTheme(kind) {
+  const L = multiTheme0(kind); return new Set(L.map(x => x.sport)).size === 2 ? L : [];   /* it says multi-sport, so it must hold both */
+}
+function multiTheme0(kind) {
   const w = multiWin(), both = f => ["football", "nba"].flatMap(f);
   if (kind === "bankers") return both(sp => bestPer(candAll(sp, w).filter(c => c.m.p >= .76 && c.m.p <= .9 && priceOf(c.m) >= 1.1), 2, c => c.m.p));
   if (kind === "players") return [...buildPreset("sot", w, "football").slice(0, 2), ...buildPreset("scorers", w, "nba").slice(0, 2)];
@@ -2197,8 +2205,9 @@ function popularHTML(sport, g, compact) {
   const live = isLive(g), price = live ? m => livePrice(m.p) : priceOf;
   const opts = live ? liveMarkets(sport, g).filter(m => m.state === "open" && !SKIP.has(m.k) && m.p <= .97) : legOptions(sport, g).map(x => x.m);
   const B = withBundles(opts, price).filter(b => b.bundle), used = new Set(), picks = [];
-  for (const [t, name] of [[2, "Around evens"], [3, "Around 2/1"], [6, "Around 5/1"]]) {
-    const c = B.filter(b => { const d = bundlePrice(price)(b); return d >= t * .8 && d <= t * 1.35 && !used.has(b.k); }).sort((x, y) => y.p - x.p)[0];
+  for (const [t, name, lo, hi] of [[2, "Around evens", 1.8, 2.5], [3, "Around 2/1", 2.75, 3.75], [6, "Around 5/1", 5, 8]]) {   /* 4/5 to 6/4, 7/4 to 11/4, 4/1 to 7/1 */
+    const sc = b => b.p - .5 * Math.abs(Math.log(bundlePrice(price)(b) / t));
+    const c = B.filter(b => { const d = bundlePrice(price)(b); return d >= lo && d <= hi && !used.has(b.k); }).sort((x, y) => sc(y) - sc(x))[0];
     if (c) { used.add(c.k); picks.push({ name, b: c, d: bundlePrice(price)(c) }); }
   }
   const keys = sport === "nba" ? ["ML1", "ML2", "SP1", "SP2", "TO", "TU"] : ["1", "X", "2", "O25", "U25", "BTTS"], sing = keys.map(k => opts.find(m => m.k === k)).filter(Boolean);
@@ -2954,12 +2963,12 @@ function allTeams() {
 }
 // ---------- plan & perks ----------
 // ---------- Stats: where your profit actually comes from ----------
-const LEG_TYPE = l => { if (l.pid) return "Player " + (l.label || "props"); const k = String(l.k || "");
+const LEG_TYPE = l => { if (l.pid) return "Player " + (l.label || "props"); if (l.manual) return "Typed in by hand"; const k = String(l.k || ""); if (/^T:/.test(k)) return "Team stats";
   return /^(1|X|2|ML1|ML2)$/.test(k) ? "Match result" : /^(1X|X2|12)$/.test(k) ? "Double chance" : /^DNB/.test(k) ? "Draw no bet" : /^BTTS/.test(k) ? "Both teams to score" : /^(HO|AO)/.test(k) ? "Team goals"
     : /^(O|U)\d/.test(k) ? "Total goals" : /^C/.test(k) ? "Corners" : /^Y/.test(k) ? "Cards" : /^(SP|FAVH)/.test(k) ? "Handicap" : /^T/.test(k) ? "Total points" : "Other"; };
-function betType(b) { const L = (b.legs || []).filter(l => l.pid || l.k); if (!L.length) return "Typed in by hand"; const t = [...new Set(L.map(LEG_TYPE))]; return t.length === 1 ? t[0] : "Mixed"; }
-const legBand = b => { const n = (b.legs || []).filter(l => l.pid || l.k).length || (b.legs || []).length || 1; return n === 1 ? "Singles" : n === 2 ? "Doubles" : n === 3 ? "Trebles" : "4+ legs"; };
-const oddsBand = d => d < 2 ? "Under evens" : d < 4 ? "Evens to 3/1" : d < 10 ? "3/1 to 9/1" : "9/1 and bigger";
+function betType(b) { const L = (b.legs || []).filter(l => l.pid || l.k || l.manual); if (!L.length) return "Typed in by hand"; const t = [...new Set(L.map(LEG_TYPE))]; return t.length === 1 ? t[0] : "Mixed"; }
+const legBand = b => { const n = (b.legs || []).filter(l => l.pid || l.k || l.manual).length || 1; return n === 1 ? "Singles" : n === 2 ? "Doubles" : n === 3 ? "Trebles" : "4+ legs"; };
+const oddsBand = d => d < 2 ? "Under evens" : d <= 4.001 ? "Evens to 3/1" : d <= 10.001 ? "Over 3/1 to 9/1" : "Over 9/1";
 function statGroups(list, keyFn, order) {
   const m = new Map(); for (const b of list) { const k = keyFn(b); if (!m.has(k)) m.set(k, []); m.get(k).push(b); }
   const rows = [...m].map(([k, bs]) => { const st = bs.reduce((a, b) => a + +b.stake, 0), pl = bs.reduce((a, b) => a + (+b.returns || 0) - +b.stake, 0), dec = bs.filter(b => b.result !== "void"), w = dec.filter(b => b.result === "won").length;
@@ -2998,8 +3007,8 @@ function viewStats() {
   ${profitChart(all)}
   ${statTable("By bet type", types, "Accas mixing different bet types count as Mixed.")}
   ${statTable("By number of legs", statGroups(all, legBand, ["Singles", "Doubles", "Trebles", "4+ legs"]))}
-  ${statTable("By odds", statGroups(all, b => oddsBand(+b.odds_dec), ["Under evens", "Evens to 3/1", "3/1 to 9/1", "9/1 and bigger"]))}
-  ${statTable("By sport", statGroups(all, b => ({ football: "Football", nba: "NBA" })[b.sport || ((b.legs || [])[0] || {}).sport] || "Other"))}
+  ${statTable("By odds", statGroups(all, b => oddsBand(+b.odds_dec), ["Under evens", "Evens to 3/1", "Over 3/1 to 9/1", "Over 9/1"]))}
+  ${statTable("By sport", statGroups(all, b => { const sp = [...new Set((b.legs || []).map(l => l.sport).filter(Boolean))]; return sp.length > 1 ? "Multi-sport" : ({ football: "Football", nba: "NBA" })[sp[0] || b.sport] || "Other"; }))}
   ${statTable("By month", months)}`;
 }
 function viewPerks() {
