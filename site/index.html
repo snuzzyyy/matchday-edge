@@ -1007,6 +1007,16 @@ textarea{background:var(--bg-2);border:1px solid var(--line-2);border-radius:10p
 .fmt-big button b{font-size:12.5px}
 .fmt-big button small{font-size:10.5px;font-weight:600;opacity:.75}
 .toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:700;z-index:90;font-size:13px}
+.bell{display:grid;place-items:center;width:30px;height:30px;margin-top:6px;border-radius:50%;color:var(--dim);background:none;border:1px solid transparent;cursor:pointer;padding:0}.bell svg{width:16px;height:16px}.bell:hover{color:var(--fg-2);border-color:var(--line)}.bell[aria-pressed=true]{color:var(--tang);background:rgba(255,122,47,.12);border-color:rgba(255,122,47,.35)}.bell[aria-pressed=true] svg,.gbell[aria-pressed=true] svg{fill:currentColor}
+.fx .tm{display:flex;flex-direction:column;align-items:flex-start}
+.lc-wrap{position:relative;display:grid}.lc-wrap .lhead{padding-right:36px}.lc-wrap>.bell{position:absolute;top:8px;right:8px;margin:0;background:var(--surface-2,var(--surface));border-color:var(--line)}
+.gbell{display:inline-flex;align-items:center;gap:6px;margin-left:auto;flex:none;padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--fg-2);font:inherit;font-size:13px;font-weight:700;cursor:pointer}.gbell svg{width:15px;height:15px}.gbell[aria-pressed=true]{color:var(--tang);border-color:rgba(255,122,47,.45);background:rgba(255,122,47,.12)}
+.drawer .gtop .eyebrow{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.hd-btns{display:flex;gap:8px;flex-wrap:wrap}.nf-btn{display:inline-flex;align-items:center;gap:6px}.nf-btn svg{width:15px;height:15px}.nf-n{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--tang);color:#fff;font-size:11px;font-weight:800}
+.nf-grp{display:grid;gap:8px}.nf-grp h3{margin:0;font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}.nf-grp.off{opacity:.45;pointer-events:none}.nf-grp .chips{flex-wrap:wrap}
+.nf-list{display:grid;background:var(--surface);border:1px solid var(--line);border-radius:14px;margin-top:4px}.nf-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;padding:10px 12px;border-top:1px solid var(--line)}.nf-row:first-child{border-top:0}.nf-row b{display:block;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.nf-row small{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:5px}
+.nf-empty{display:flex;gap:10px;align-items:flex-start;padding:12px;border:1px dashed var(--line-2);border-radius:12px;font-size:13px;color:var(--fg-2);margin-top:4px}.nf-empty svg{width:18px;height:18px;flex:none;color:var(--tang);margin-top:1px}
+button.setrow{width:100%;text-align:left;font:inherit;color:inherit;background:none;border:0;border-top:1px solid var(--line);cursor:pointer}
 </style>
 
 <header class="top">
@@ -1295,9 +1305,10 @@ function liveCard(sport, g) {
   }
   const clk = live ? `<span class="clock"><span class="dot red"></span>${esc(clockLabel(sport, g))}</span>` : `<span class="clock ft">${esc(g.status.detail)}</span>`;
   const lg = sport === "nba" ? (g.venue || "NBA") : leagueName(g.league);
-  return `<button class="lcard ${live ? "is-live" : ""}" data-open="${sport}:${g.id}"><div class="lhead"><span>${esc(lg)}</span>${clk}</div>
+  const card = `<button class="lcard ${live ? "is-live" : ""}" data-open="${sport}:${g.id}"><div class="lhead"><span>${esc(lg)}</span>${clk}</div>
     <div class="lteams">${sport === "nba" ? row(a, as, hs) + row(h, hs, as) : row(h, hs, as) + row(a, as, hs)}</div>
     ${mini ? `<div class="mini">${mini}</div>` : ""}${pace}${tick}</button>`;
+  return live ? `<div class="lc-wrap">${card}${bellBtn(sport, g)}</div>` : card;
 }
 const clockMins = c => { if (!c) return 12; const t = String(c); if (!t.includes(":")) return Math.min(12, (parseFloat(t) || 0) / 60); const [m, s] = t.split(":"); return (+m || 0) + (+s || 0) / 60; };
 const lowerBetter = k => /foul|turnover|offside|yellow|red/i.test(k);
@@ -1316,7 +1327,7 @@ function viewLive() {
   const now = Date.now();
   const recent = all.filter(g => g.status.state === "post" && now - new Date(kick(g)) < 864e5 * 1.2).sort((a, b) => new Date(kick(b)) - new Date(kick(a))).slice(0, 12);
   const next = all.filter(isPre).slice(0, 6);
-  return `<div class="strips">${promo()}${liveBetCount() ? `<a class="strip" href="#mybets"><span class="ic-dot"><span class="dot red"></span></span><span><b>Your bets in play</b><small>${liveBetCount()} live now · follow them in My Bets</small></span><span aria-hidden="true">›</span></a>` : ""}</div><div class="hd"><div><h1>${sp === "nba" ? "NBA" : "Football"} live</h1><p class="sub">Updates every 10 seconds. Tap a game for stats and markets.</p></div>${(S.tracked || []).length ? "" : `<button class="btn ghost sm" data-import>+ Import a bet to track</button>`}</div>
+  return `<div class="strips">${promo()}${liveBetCount() ? `<a class="strip" href="#mybets"><span class="ic-dot"><span class="dot red"></span></span><span><b>Your bets in play</b><small>${liveBetCount()} live now · follow them in My Bets</small></span><span aria-hidden="true">›</span></a>` : ""}</div><div class="hd"><div><h1>${sp === "nba" ? "NBA" : "Football"} live</h1><p class="sub">Updates every 10 seconds. Tap a game for stats and markets.</p></div><div class="hd-btns"><button class="btn ghost sm nf-btn" data-notif>${BELL_SVG}Notifications${gFollows().length ? ` <span class="nf-n">${gFollows().length}</span>` : ""}</button>${(S.tracked || []).length ? "" : `<button class="btn ghost sm" data-import>+ Import a bet to track</button>`}</div></div>
   ${live.length ? `<section class="section"><div class="live-grid">${live.map(g => liveCard(sp, g)).join("")}</div></section>`
     : `<div class="empty art"><img src="${art("empty-live.webp")}" alt="" loading="lazy"><b>Nothing in play right now</b><span>${next[0] ? `Next up: <b>${esc(vs(sp, next[0]))}</b> at ${hm(kick(next[0]))} (${dayLabel(dayKey(kick(next[0])))[0].toLowerCase()}).` : "Check back when games kick off."}</span></div>`}
   ${next.length && live.length ? `<section class="section"><h2>Starting soon</h2>${fixtureBlocks(sp, next, false)}</section>` : ""}
@@ -1341,7 +1352,7 @@ function fxRow(sport, g) {
     : `<div class="prices">${oddBtn(sport, g, "1")}${oddBtn(sport, g, "X")}${oddBtn(sport, g, "2")}</div>`;
   const chev = `<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg>`;
   const right = post ? "<span></span>" : live ? `<span class="lgn">${esc(sport === "nba" ? "NBA" : leagueName(g.league))}</span>` : prices;
-  return `<div class="fx ${live ? "live-row" : ""}"><div class="tm num">${tm}</div><button class="teams" data-open="${sport}:${g.id}">${sport === "nba" ? tline(a) + tline(h) : tline(h) + tline(a)}${chev}</button>${right}</div>`;
+  return `<div class="fx ${live ? "live-row" : ""}"><div class="tm num">${tm}${post ? "" : bellBtn(sport, g)}</div><button class="teams" data-open="${sport}:${g.id}">${sport === "nba" ? tline(a) + tline(h) : tline(h) + tline(a)}${chev}</button>${right}</div>`;
 }
 function lvRow(sport, g) {
   const h = g.home, a = g.away, hs = +h.score || 0, as = +a.score || 0;
@@ -2240,7 +2251,7 @@ function drawerHTML(sport, g) {
     : tab === "players" ? cols([sec.lineups], [sec.injuries])
     : cols([sec.win, live ? anglesHTML(sport, g) : "", quick], [pop || (ended ? "" : `<section class="section"><h2>Bets</h2><p class="sub">No ready-made bets for this game yet.</p><button class="btn sm" data-gtab="bets">See all markets</button></section>`)]);
   const tabs = `<nav class="gtabs" aria-label="Game sections">${T.map(([k, n]) => `<button data-gtab="${k}" aria-current="${k === tab ? "page" : "false"}">${n}</button>`).join("")}</nav>`;
-  return `<div class="scrim" data-close></div><aside class="drawer full" role="dialog" aria-modal="true" aria-label="${esc(vs(sport, g))}"><div class="gtop"><button class="gback" data-close aria-label="Back">‹ Back</button><span class="eyebrow">${esc(sport === "nba" ? "NBA" : leagueName(g.league))}${g.venue ? " · " + esc(g.venue) : ""}</span>${tabs}</div><div class="dr-in">${hero}${body}</div></aside>`;
+  return `<div class="scrim" data-close></div><aside class="drawer full" role="dialog" aria-modal="true" aria-label="${esc(vs(sport, g))}"><div class="gtop"><button class="gback" data-close aria-label="Back">‹ Back</button><span class="eyebrow">${esc(sport === "nba" ? "NBA" : leagueName(g.league))}${g.venue ? " · " + esc(g.venue) : ""}</span>${ended ? "" : bellBtn(sport, g, true)}${tabs}</div><div class="dr-in">${hero}${body}</div></aside>`;
 }
 function injuryCard(name) {
   const f = feed(`${SB}/basketball/nba/injuries`, 20 * 60e3);
@@ -3192,7 +3203,7 @@ function profileView() {
     <div class="setrow"><span>${avatarHTML(P, 40)}</span><span><b>Profile photo</b><small>Or tap your picture at the top</small></span><span class="rowbtns"><button type="button" class="btn ghost sm" data-pickphoto>${P.avatar_url ? "Change" : "Add"}</button>${P.avatar_url ? `<button class="btn ghost sm" data-noavatar>Remove</button>` : ""}</span></div></div></section>
   ${walletSection(sw)}
   ${HW_SEASON ? `<section class="section"><h2>Theme</h2><div class="setcard">${sw("spookyOpt", spooky(), "🎃 Halloween theme", "Haunted artwork and badges until 7 November")}</div></section>` : ""}
-  <section class="section"><h2>Alerts</h2><div class="setcard">${sw("alertOpt", alertsOn(), "Bet alerts", ALERT_APP() ? "A notification when a leg lands, a player is one away, or a bet settles" : IOS && !STANDALONE ? "Add the app to your Home Screen to get notifications" : "A notification when a leg lands, a player is one away, or a bet settles")}</div></section>
+  <section class="section"><h2>Notifications</h2><div class="setcard">${sw("alertOpt", alertsOn(), "Notifications", IOS && !STANDALONE && !ALERT_APP() ? "Add the app to your Home Screen to get notifications" : "Your bets landing and settling, plus goals and scores from games you follow")}<button class="setrow" data-notif><span class="ic-dot">${BELL_SVG}</span><span><b>Choose what you get</b><small>${gFollows().length ? `Following ${gFollows().length} game${gFollows().length === 1 ? "" : "s"}` : "Pick the alerts and the games you follow"}</small></span><span class="rchev" aria-hidden="true">›</span></button></div></section>
   <section class="section"><h2>Privacy</h2><div class="setcard">
     ${sw("shareOpt", P.share_bets !== false, "Friends can see my bets", "They can react to them and tail them")}
     ${sw("lbOpt", P.show_on_leaderboard !== false, "Show me on leaderboards", "Your friends' board and the app-wide Top players")}
@@ -3398,7 +3409,7 @@ document.addEventListener("click", async e => {
     if (r.error) toast("Couldn't save the bet."); else { S.bets.unshift(r.data); walletAdjust(-(+r.data.stake)); toast("Saved to My Bets"); }
   }
 });
-document.addEventListener("change", async e => { if (e.target.id === "alertOpt") { if (e.target.checked) { const ok = await askAlerts(); store.set("alerts", true); store.set("alertKnown", []); toast(ok ? "Bet alerts on" : "Bet alerts on inside the app"); alertTick(); sendAlert("Bet alerts are on", "You'll hear when your legs land", "test"); } else { store.set("alerts", false); toast("Bet alerts off"); } } });
+document.addEventListener("change", async e => { if (e.target.id === "alertOpt" || e.target.id === "alertOpt2") { if (e.target.checked) { const ok = await askAlerts(); store.set("alerts", true); store.set("alertKnown", []); toast(ok ? "Notifications on" : "Notifications on inside the app"); alertTick(); sendAlert("Notifications are on", "You'll hear about your bets and the games you follow", "test"); } else { store.set("alerts", false); toast("Notifications off"); } render(); } });
 document.addEventListener("change", e => { if (e.target.id === "sgOpt") { store.set("sgAuto", e.target.checked); S.accaPick = {}; S.accaLivePick = {}; render(); } if (e.target.id === "spookyOpt") { store.set("spooky", e.target.checked); applySpooky(); $("#main")._h = null; render(); } if ((e.target.id === "discOpt" || e.target.id === "pubOpt") && sb && S.user) { const k = e.target.id === "discOpt" ? "discoverable" : "bets_public"; saveProfile({ [k]: e.target.checked }); toast(k === "discoverable" ? (e.target.checked ? "People can find you" : "Hidden from search") : (e.target.checked ? "Your bets are public" : "Your bets are private again")); } if (e.target.id === "walletPub" && sb && S.user && S.wallet) { S.wallet.is_public = e.target.checked; sb.from("wallets").update({ is_public: e.target.checked }).eq("user_id", S.user.id); toast(e.target.checked ? "Friends can see your balance" : "Your balance is private"); render(); } if (e.target.id === "avatarPick" && sb && S.user) { S._picked = true; uploadAvatar(e.target.files[0]); e.target.value = ""; } if (e.target.id === "shareOpt" && sb && S.user) { saveProfile({ share_bets: e.target.checked }); toast(e.target.checked ? "Friends can see your bets" : "Your bets are now private"); } if (e.target.id === "lbOpt" && sb && S.user) { saveProfile({ show_on_leaderboard: e.target.checked }); sb.rpc("leaderboard").then(x => { if (x.data) { S.board = x.data; render(); } }); } });
 
 /* ---------- iPhone: suggest adding to the home screen (Safari only, once) ---------- */
@@ -3530,8 +3541,75 @@ function sendAlert(title, body, tag) {
   if (document.visibilityState === "visible") toast(`${title}${body ? " · " + body : ""}`);
   if (!notifyAllowed() || (document.visibilityState === "visible" && !ALERT_APP())) return;
   try { if (ALERT_APP()) MDEApp.notify(title, body || "", tag || title);
-    else if (swReg) swReg.showNotification(title, { body, tag, icon: "icon-192.png", badge: "icon-192.png" });
+    else if (swReg) swReg.showNotification(title, { body, tag, icon: "icon-192.png", badge: "icon-192.png" }).catch(() => {});
     else new Notification(title, { body, tag, icon: "icon-192.png" }); } catch {}
+}
+/* notifications: which kinds you want, and games you follow (the bell on the Live page and the game page) */
+const AP_DEF = { land: true, close: true, miss: true, result: true, ko: true, goal: true, red: true, ht: true, tight: true, ft: true };
+const apref = k => ({ ...AP_DEF, ...store.get("alertPrefs", {}) })[k] !== false;
+const gFollows = () => store.get("gfollow", []);
+const isFollowed = (sp, id) => gFollows().some(f => f.sport === sp && f.gid === String(id));
+const BELL_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>`;
+function bellBtn(sp, g, text) {
+  const on = isFollowed(sp, g.id);
+  return `<button class="${text ? "gbell" : "bell"}" data-gfollow="${sp}:${g.id}" aria-pressed="${on}" aria-label="${on ? "Stop notifications for" : "Notify me about"} ${esc(vs(sp, g))}" title="${on ? "You'll get notifications for this game" : "Get notifications for this game"}">${BELL_SVG}${text ? `<span>${on ? "Notifying" : "Notify me"}</span>` : ""}</button>`;
+}
+async function enableAlerts() { const ok = await askAlerts(); store.set("alerts", true); store.set("alertKnown", []); return ok; }
+async function toggleFollow(key) {
+  const [sp, id] = key.split(":"), g = findGame(sp, id); if (!g) return;
+  let F = gFollows();
+  if (isFollowed(sp, id)) { store.set("gfollow", F.filter(f => !(f.sport === sp && f.gid === id))); toast(`Notifications off for ${vs(sp, g)}`); render(); return; }
+  F = [...F, { sport: sp, gid: id, at: Date.now() }].slice(-30); store.set("gfollow", F);
+  const G = store.get("gstate", {}); delete G[id]; store.set("gstate", G);
+  render();
+  if (!alertsOn()) await enableAlerts();
+  toast(`🔔 You'll get notifications for ${vs(sp, g)}`); alertTick();
+}
+const followActive = () => gFollows().some(f => { const g = findGame(f.sport, f.gid); return g && (isLive(g) || g._fin || (isPre(g) && +new Date(kick(g)) - Date.now() < 5 * 60e3)); });
+function gameAlerts() {   /* kick-off, goals, red cards, breaks, close finishes and full-time for the games you follow */
+  const F = gFollows(); if (!F.length) return [];
+  const G = store.get("gstate", {}), out = [], keep = [];
+  for (const f of F) {
+    const g = findGame(f.sport, f.gid);
+    if (!g) { if (Date.now() - f.at < 2 * 864e5) keep.push(f); continue; }
+    const sp = f.sport, h = +g.home.score || 0, a = +g.away.score || 0, ev = g.events || [];
+    const goals = ev.filter(e => /Goal|Penalty - Scored/i.test(e.type) && !/Missed|Saved/i.test(e.type)), reds = ev.filter(e => /Red Card/i.test(e.type));
+    const det = String(g.status.detail || ""), now = { s: g.status.state, h, a, gc: goals.length, rc: reds.length, k: [] };
+    const was = G[f.gid];
+    if (!was) { G[f.gid] = { ...now, k: g.status.state === "post" ? ["ft"] : [] }; keep.push(f); continue; }
+    const once = (k, kind, title, body) => { if (was.k.includes(k)) return; was.k.push(k); if (apref(kind)) out.push([title, body, `g${f.gid}:${k}`]); };
+    const lg = sp === "nba" ? "NBA" : leagueName(g.league);
+    if (was.s === "pre" && g.status.state !== "pre") once("ko", "ko", `${sp === "nba" ? "🏀 Tip-off" : "⚽ Kick-off"}: ${vs(sp, g)}`, lg);
+    if (sp === "football" && (h > was.h || a > was.a)) {
+      const newGoals = goals.slice(was.gc), last = newGoals[newGoals.length - 1];
+      if (apref("goal")) out.push([`⚽ GOAL! ${scoreLine(sp, g)}`, last ? `${last.who || "Goal"} ${last.min}${/Own/i.test(last.type) ? " (own goal)" : ""}` : lg, `g${f.gid}:goal${h}-${a}`]);
+    } else if (sp === "football" && (h < was.h || a < was.a) && apref("goal")) out.push([`Goal ruled out: ${scoreLine(sp, g)}`, lg, `g${f.gid}:void${h}-${a}`]);
+    if (sp === "football" && reds.length > (was.rc || 0)) for (const r of reds.slice(was.rc || 0)) if (apref("red")) out.push([`🟥 Red card: ${r.who || "a player"} (${r.side === "h" ? g.home.name : g.away.name})`, `${scoreLine(sp, g)} · ${r.min}`, `g${f.gid}:red${r.who}${r.min}`]);
+    if (g.status.state === "in") {
+      if (sp === "football" && /^HT$|half.?time/i.test(det)) once("ht", "ht", `Half-time: ${scoreLine(sp, g)}`, lg);
+      if (sp === "nba" && /^(End of|Halftime)/i.test(det)) once("q" + (g.status.period || 0), "ht", `${/half/i.test(det) ? "Half-time" : det.replace(/^End of /, "End of the ").replace(/ Quarter$/i, " quarter")}: ${scoreLine(sp, g)}`, lg);
+      if (sp === "nba" && (g.status.period || 0) >= 4 && clockMins(g.status.clock) <= 3 && Math.abs(h - a) <= 5 && !/^End/i.test(det)) once("tight", "tight", `🔥 Close finish: ${scoreLine(sp, g)}`, `${clockLabel(sp, g)} left`);
+    }
+    if (g.status.state === "post") once("ft", "ft", `${sp === "nba" ? "Final" : "Full-time"}: ${scoreLine(sp, g)}`, lg);
+    G[f.gid] = { ...now, k: was.k };
+    if (!(g.status.state === "post" && Date.now() - +new Date(kick(g)) > 8 * 3600e3)) keep.push(f);
+  }
+  for (const id of Object.keys(G)) if (!keep.some(f => f.gid === id)) delete G[id];
+  store.set("gstate", G); if (keep.length !== F.length) store.set("gfollow", keep);
+  return out;
+}
+function notifSheet() {
+  const on = alertsOn(), F = gFollows().map(f => ({ f, g: findGame(f.sport, f.gid) })).filter(x => x.g);
+  const chip = (k, t) => `<button class="chip" data-apref="${k}" aria-pressed="${apref(k)}">${t}</button>`;
+  const desc = IOS && !STANDALONE && !ALERT_APP() ? "Add the app to your Home Screen to get notifications" : on ? (notifyAllowed() ? "On for this device" : "On inside the app. Allow notifications in your phone settings to get them outside it") : "Off. Switch on to pick what you get";
+  return `<div class="scrim top" data-notifx></div><div class="ijsheet nf-sheet" role="dialog" aria-modal="true" aria-label="Notifications"><button class="close sm ij-x" data-notifx aria-label="Close">✕</button>
+    <div><h2>Notifications</h2><p class="sub" style="margin:4px 0 0">Choose what you hear about: your bets, and the games you follow.</p></div>
+    <div class="setcard"><label class="setrow sw"><span><b>Notifications</b><small>${desc}</small></span><input type="checkbox" id="alertOpt2" ${on ? "checked" : ""}><span class="sw-ui" aria-hidden="true"></span></label></div>
+    <div class="nf-grp ${on ? "" : "off"}"><h3>Your bets</h3><div class="chips">${chip("land", "Legs landing")}${chip("close", "Nearly there")}${chip("miss", "Legs missing")}${chip("result", "Won or lost")}</div></div>
+    <div class="nf-grp ${on ? "" : "off"}"><h3>Games you follow</h3><div class="chips">${chip("ko", "Kick-off")}${chip("goal", "Goals")}${chip("red", "Red cards")}${chip("ht", "Half-time & quarters")}${chip("tight", "Close NBA finishes")}${chip("ft", "Full-time")}</div>
+      ${F.length ? `<div class="nf-list">${F.map(({ f, g }) => `<div class="nf-row">${logo(f.sport, f.sport === "nba" ? g.away : g.home)}<span><b>${esc(vs(f.sport, g))}</b><small>${isLive(g) ? `<span class="dot red"></span> Live · ${esc(clockLabel(f.sport, g))}` : g.status.state === "post" ? "Finished" : esc(whenLabel(kick(g)))} · ${esc(f.sport === "nba" ? "NBA" : leagueName(g.league))}</small></span><button class="btn ghost sm" data-gfollow="${f.sport}:${g.id}">Remove</button></div>`).join("")}</div>`
+        : `<div class="nf-empty">${BELL_SVG}<span>Tap the bell next to any game on the Live page, or <b>Notify me</b> on a game's page, to follow it.</span></div>`}</div>
+    <p class="colkey" style="margin:0">Notifications arrive while Matchday Edge is open or running in the background.</p></div>`;
 }
 function alertTick() {
   if (!alertsOn() || !S.data) return;
@@ -3553,7 +3631,8 @@ function alertTick() {
     if (isNew) first.push(it.id);
   }
   store.set("alerted", [...seen].slice(-600)); store.set("alertKnown", [...known, ...first].slice(-300));
-  for (const [t, b, k] of fresh.slice(0, 4)) sendAlert(t, b, k);
+  const kind = k => /:hit$/.test(k) ? "land" : /:close$/.test(k) ? "close" : /:miss$/.test(k) ? "miss" : "result";
+  for (const [t, b, k] of [...fresh.filter(x => apref(kind(x[2]))), ...gameAlerts()].slice(0, 5)) sendAlert(t, b, k);
 }
 setInterval(alertTick, 15e3);
 let autoAt = 0;
@@ -3597,6 +3676,7 @@ function render() {
   if (S.mateOpen && S.user) L.insertAdjacentHTML("beforeend", mateSheet(S.mateOpen));
   if (S.shareOpen && S.user) L.insertAdjacentHTML("beforeend", shareSheet());
   if (S.betView && S.user) L.insertAdjacentHTML("beforeend", betViewSheet(S.betView));
+  if (S.notifOpen) L.insertAdjacentHTML("beforeend", notifSheet());
   if (S.photoHelp) L.insertAdjacentHTML("beforeend", `<div class="scrim top" data-photohelpx></div><div class="ijsheet" role="dialog" aria-modal="true" aria-label="Profile photo"><button class="close sm ij-x" data-photohelpx aria-label="Close">✕</button>
     <div><h2>Your photos didn't open</h2><p class="sub" style="margin:4px 0 0">The Matchday Edge app on your phone is an older version that can't open your gallery. Two easy fixes:</p></div>
     <ol class="helpsteps"><li><b>Quickest:</b> open the website in Chrome, sign in and set your photo there. It shows in the app straight away.<button class="btn sm" data-copysite style="margin-top:8px">Copy the website link</button></li>
@@ -3611,7 +3691,7 @@ function render() {
 }
 
 document.addEventListener("click", async e => {
-  const t = e.target.closest("button,[data-close]"); if (!t) return;
+  const t = e.target.closest("button,[data-close],[data-notifx]"); if (!t) return;
   const d = t.dataset;
   if (d.sport) { S.sport = d.sport; S.league = "all"; S.newsFilter = "all"; store.set("sport", S.sport); render(); }
   else if (d.fmt) { S.fmt = d.fmt; store.set("fmt", S.fmt); render(); }
@@ -3729,6 +3809,10 @@ document.addEventListener("click", async e => {
   else if (d.tipmode) { S.tipMode = d.tipmode; store.set("tipMode", d.tipmode); render(); }
   else if (d.chalodds2) { S.chalOdds = d.chalodds2; store.set("chalOdds", S.chalOdds); render(); }
   else if (d.accawin) { S.accaWin = d.accawin; render(); }
+  else if (d.gfollow) { await toggleFollow(d.gfollow); }
+  else if (d.notif !== undefined) { S.notifOpen = true; render(); }
+  else if (d.notifx !== undefined) { S.notifOpen = false; render(); }
+  else if (d.apref) { const P = store.get("alertPrefs", {}); P[d.apref] = !apref(d.apref); store.set("alertPrefs", P); render(); }
   else if (d.gtab) { S.gtab = d.gtab; render(); const dr = $(".drawer"); if (dr) { const hero = dr.querySelector(".score-hero"), top = dr.querySelector(".gtop"); dr.scrollTo(0, Math.min(dr.scrollTop, hero ? hero.offsetTop + hero.offsetHeight - (top ? top.offsetHeight : 0) : 0)); } }
   else if (d.boxside) { const [gid, sd] = d.boxside.split("|"); S.boxSide[gid] = sd; render(); }
   else if (d.multiwin) { S.multiWin = d.multiwin; render(); }
@@ -3870,7 +3954,7 @@ async function loadDetail(key) {
 let ticking = false;
 for (const ev of ["input", "keydown", "focusin", "pointerdown"]) document.addEventListener(ev, () => { S._typedAt = Date.now(); }, true);
 async function liveTick() {
-  if (ticking || !S.data || (document.visibilityState === "hidden" && !(alertsOn() && liveBetCount()))) return; ticking = true;
+  if (ticking || !S.data || (document.visibilityState === "hidden" && !(alertsOn() && (liveBetCount() || followActive())))) return; ticking = true;
   try {
     const now = Date.now(), due = g => g.status.state === "in" || g._fin || (g.status.state === "pre" && +new Date(kick(g)) <= now + 60e3 && now - +new Date(kick(g)) < 4 * 3600e3);
     const paths = new Set([...S.data.football.filter(due).map(g => "soccer/" + g.league), ...(S.data.nba.some(due) ? ["basketball/nba"] : [])]);
