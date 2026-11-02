@@ -1134,6 +1134,8 @@ button.setrow{width:100%;text-align:left;font:inherit;color:inherit;background:n
   .livelay .pitchwrap{max-width:360px}.livelay .statrow{grid-template-columns:52px minmax(0,1fr) 52px}.livelay .statrow .v{font-size:20px}
   .livelay .pop-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 .livelay .statrow{padding:3px 0}
+.x[data-armed="1"]{width:auto!important;height:auto!important;min-width:0;padding:5px 10px!important;border-radius:999px!important;background:var(--loss)!important;color:#fff!important;font-size:12px!important;font-weight:800;white-space:nowrap;line-height:1.2}
+.lgl-hint{color:var(--muted)!important;font-size:11.5px!important}
 </style>
 
 <header class="top">
@@ -2893,6 +2895,21 @@ function playerTag(l) {
   if (isPre(g)) return P ? (P.starter ? tag("start", "✓ Starting") : tag("bench", "On the bench")) : LU.players.length >= 11 ? tag("out", "Not in squad") : "";
   if (!P) return ""; if (P.rc && P.rc.length) return tag("out", "Sent off"); if (P.subOut) return tag("off", "Subbed off"); return onPitch(P) ? tag("on", "On pitch") : tag("bench", "On the bench");
 }
+/* plain English for the bets with jargon in the name */
+function betHint(l) {
+  const lab = String(l.label || ""), k = String(l.k || "");
+  let m;
+  if ((m = lab.match(/^(.+) draw no bet$/i))) return `Wins if ${m[1]} win · stake back if it's a draw`;
+  if ((m = lab.match(/^(.+) or draw$/i))) return `Wins if ${m[1]} win or draw`;
+  if (/^both teams to score: no$/i.test(lab)) return "Wins if at least one team doesn't score";
+  if (/^both teams to score$/i.test(lab)) return "Wins if both teams score a goal";
+  if ((m = lab.match(/^(.+?) \+([\d.]+)(?: handicap)?$/))) return `Wins if ${m[1]} win, or lose by ${Math.floor(+m[2])} or fewer`;
+  if ((m = lab.match(/^(.+?) -([\d.]+)(?: handicap)?$/))) return `Wins if ${m[1]} win by ${Math.ceil(+m[2])} or more`;
+  if ((m = lab.match(/^(.+) to score$/i)) && !l.pid) return `Wins if ${m[1]} score at least once`;
+  if ((m = lab.match(/^(.+) over ([\d.]+) goals$/i))) return `Wins if ${m[1]} score ${Math.floor(+m[2]) + 1} or more`;
+  if (l.pid && l.stat === "goalOrAssist") return "Wins if they score or set up a goal";
+  return "";
+}
 function legLine(l, k, legs) {
   const info = legInfo0(k && l.pid && !l.group && legs[k - 1].pid === l.pid ? { ...l, _sub: true } : l), st = info.st, g = findGame(l.sport, l.gid), live = g && !isPre(g);
   const title = l.group ? `${surnames(l)} ${l.target}+ ${l.label}` : String(legText(l) || "").replace(/ \(in-play\)$/, "");
@@ -2904,7 +2921,7 @@ function legLine(l, k, legs) {
   const oc = playerTag(l);
   const right = st === "hit" ? "✓" : st === "miss" ? "✗" : st === "void" ? "Void" : c != null ? `<span style="color:${tierColor(c)}">${pct(c)}</span>` : "";
   const showBar = live && bar != null && st !== "void" && !/chance now/.test(h);
-  return `<div class="lgl ${st}"><span class="lgl-ic" aria-hidden="true"></span><div class="lgl-m"><b>${esc(title)}</b>${oc}${showBar ? `<div class="lgl-bar"><i style="width:${bar}%"></i></div>` : ""}${prog ? `<small>${esc(prog)}</small>` : ""}${extra}</div><span class="lgl-r">${right}</span></div>`;
+  return `<div class="lgl ${st}"><span class="lgl-ic" aria-hidden="true"></span><div class="lgl-m"><b>${esc(title)}</b>${betHint(l) && !prog ? `<small class="lgl-hint">${esc(betHint(l))}</small>` : ""}${oc}${showBar ? `<div class="lgl-bar"><i style="width:${bar}%"></i></div>` : ""}${prog ? `<small>${esc(prog)}</small>` : ""}${extra}</div><span class="lgl-r">${right}</span></div>`;
 }
 function legGroups(legs, infos) {
   const out = [], at = new Map();
@@ -4129,7 +4146,7 @@ document.addEventListener("click", async e => {
     settleBet(b, res);
   }
   else if (d.delbet) {
-    if (t.dataset.armed !== "1") { t.dataset.armed = "1"; t.textContent = "Tap again to delete"; setTimeout(() => { if (t.isConnected) { t.dataset.armed = ""; t.textContent = t.classList.contains("x") ? "✕" : "Delete this bet"; } }, 3000); return; }
+    if (t.dataset.armed !== "1") { t.dataset.armed = "1"; t.textContent = t.classList.contains("x") ? "Delete?" : "Tap again to delete"; setTimeout(() => { if (t.isConnected) { t.dataset.armed = ""; t.textContent = t.classList.contains("x") ? "✕" : "Delete this bet"; } }, 3000); return; }
     const id = d.delbet, db = S.bets.find(x => x.id === id), fb = (S.feedBets || []).find(x => x.id === id);
     S.betView = null; S.bets = S.bets.filter(x => x.id !== id); S.feedBets = (S.feedBets || []).filter(x => x.id !== id); render();
     const r = await sb.from("bets").delete().eq("id", id);
