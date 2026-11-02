@@ -4178,7 +4178,7 @@ function sendAlert(title, body, tag) {
     else new Notification(title, { body, tag, icon: "icon-192.png" }); } catch {}
 }
 /* notifications: which kinds you want, and games you follow (the bell on the Live page and the game page) */
-const AP_DEF = { soon: true, land: true, close: true, miss: true, result: true, ko: true, goal: true, red: true, ht: true, tight: true, ft: true, social: true, copy: true, fwin: true, fbet: false };
+const AP_DEF = { betko: true, soon: true, land: true, close: true, miss: true, result: true, ko: true, goal: true, red: true, ht: true, tight: true, ft: true, social: true, copy: true, fwin: true, fbet: false };
 const apref = k => ({ ...AP_DEF, ...store.get("alertPrefs", {}) })[k] !== false;
 const gFollows = () => store.get("gfollow", []);
 const isFollowed = (sp, id) => gFollows().some(f => f.sport === sp && f.gid === String(id));
@@ -4238,7 +4238,7 @@ function notifSheet() {
   return `<div class="scrim top" data-notifx></div><div class="ijsheet nf-sheet" role="dialog" aria-modal="true" aria-label="Notifications"><button class="close sm ij-x" data-notifx aria-label="Close">✕</button>
     <div><h2>Notifications</h2><p class="sub" style="margin:4px 0 0">Choose what you hear about: your bets, your friends, and the games you follow.</p></div>
     <div class="setcard"><label class="setrow sw"><span><b>Notifications</b><small>${desc}</small></span><input type="checkbox" id="alertOpt2" ${on ? "checked" : ""}><span class="sw-ui" aria-hidden="true"></span></label></div>
-    <div class="nf-grp ${on ? "" : "off"}"><h3>Your bets</h3><div class="chips">${chip("soon", "5 mins before kick-off")}${chip("land", "Legs landing")}${chip("close", "Nearly there")}${chip("miss", "Legs missing")}${chip("result", "Won or lost")}</div></div>
+    <div class="nf-grp ${on ? "" : "off"}"><h3>Your bets</h3><div class="chips">${chip("soon", "5 mins before kick-off")}${chip("betko", "Kick-off")}${chip("land", "Legs landing")}${chip("close", "Nearly there")}${chip("miss", "Legs missing")}${chip("result", "Won or lost")}</div></div>
     <div class="nf-grp ${on ? "" : "off"}"><h3>Friends</h3><div class="chips">${chip("social", "Reactions & comments")}${chip("copy", "Copies of your bets")}${chip("fwin", "Friends' wins")}${chip("fbet", "Friends' new bets")}</div></div>
     <div class="nf-grp ${on ? "" : "off"}"><h3>Games you follow</h3><div class="chips">${chip("ko", "Kick-off")}${chip("goal", "Goals")}${chip("red", "Red cards")}${chip("ht", "Half-time & quarters")}${chip("tight", "Close NBA finishes")}${chip("ft", "Full-time")}</div>
       ${F.length ? `<div class="nf-list">${F.map(({ f, g }) => `<div class="nf-row">${logo(f.sport, f.sport === "nba" ? g.away : g.home)}<span><b>${esc(vs(f.sport, g))}</b><small>${isLive(g) ? `<span class="dot red"></span> Live · ${esc(clockLabel(f.sport, g))}` : g.status.state === "post" ? "Finished" : esc(whenLabel(kick(g)))} · ${esc(f.sport === "nba" ? "NBA" : leagueName(g.league))}</small></span><button class="btn ghost sm" data-gfollow="${f.sport}:${g.id}">Remove</button></div>`).join("")}</div>`
@@ -4247,7 +4247,7 @@ function notifSheet() {
 }
 function alertTick() {
   if (!alertsOn() || !S.data) return;
-  const seen = new Set(store.get("alerted", [])), known = new Set(store.get("alertKnown", [])), fresh = [], first = [];
+  const seen = new Set(store.get("alerted", [])), known = new Set(store.get("alertKnown", [])), fresh = [], first = [], koGames = {};
   /* a heads-up about 5 minutes before a bet's first game kicks off (sent even for a bet saved moments ago) */
   const soonCheck = (it, L) => { const G = [...new Map(L.map(l => [l.sport + l.gid, [l.sport, findGame(l.sport, l.gid)]])).values()].filter(([, g]) => g);
     if (!G.length || G.some(([, g]) => !isPre(g))) return; const [sp, g] = G.sort((a, b) => new Date(kick(a[1])) - new Date(kick(b[1])))[0], mins = (new Date(kick(g)) - Date.now()) / 6e4;
@@ -4268,11 +4268,15 @@ function alertTick() {
     if (it.result === "lost") add("lost", `Bet lost: ${it.title}`, "Better luck next time");
     if (it.result == null && L.length && hit === L.length) add("won", `🎉 All legs landed: ${it.title}`, "Check your bookie for the payout");
     if (isNew) first.push(it.id);
-    if (it.result == null || it.result === "open") soonCheck(it, L);
+    if (it.result == null || it.result === "open") { soonCheck(it, L); for (const l of L) { const g = findGame(l.sport, l.gid); if (g) (koGames[l.sport + g.id] = koGames[l.sport + g.id] || { sp: l.sport, g, bets: new Set() }).bets.add(it.title); } }
   }
+  /* kick-off of any game in your bets (followed games already get their own kick-off alert) */
+  for (const { sp, g, bets } of Object.values(koGames)) { const key = "ko:" + sp + g.id, since = (Date.now() - new Date(kick(g))) / 6e4;
+    if (isPre(g) || seen.has(key) || isFollowed(sp, g.id)) continue; seen.add(key); if (since > 20) continue;
+    fresh.push([`${sp === "nba" ? "🏀 Tip-off" : "⚽ Kick-off"}: ${vs(sp, g)}`, `Your bet${bets.size > 1 ? "s" : ""}: ${[...bets].slice(0, 2).join(", ")}${bets.size > 2 ? ` +${bets.size - 2}` : ""}`, key]); }
   for (const C of chalList()) if (C.active && (C.active.legs || []).length) soonCheck({ id: "c" + C.id + "-" + C.rung, title: `£1K step ${C.rung + 1}: ${C.active.label}` }, C.active.legs.filter(l => l.gid && findGame(l.sport, l.gid)));
   store.set("alerted", [...seen].slice(-600)); store.set("alertKnown", [...known, ...first].slice(-300));
-  const kind = k => /:soon$/.test(k) ? "soon" : /:hit$/.test(k) ? "land" : /:close$/.test(k) ? "close" : /:miss$/.test(k) ? "miss" : "result";
+  const kind = k => /^ko:/.test(k) ? "betko" : /:soon$/.test(k) ? "soon" : /:hit$/.test(k) ? "land" : /:close$/.test(k) ? "close" : /:miss$/.test(k) ? "miss" : "result";
   for (const [t, b, k] of [...fresh.filter(x => apref(kind(x[2]))), ...gameAlerts()].slice(0, 5)) sendAlert(t, b, k);
 }
 setInterval(alertTick, 15e3);
