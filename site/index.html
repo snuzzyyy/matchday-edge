@@ -1031,6 +1031,14 @@ button.setrow{width:100%;text-align:left;font:inherit;color:inherit;background:n
 .h2h{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 12px;display:grid;gap:2px}.h2h-hd{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;padding-bottom:6px;border-bottom:1px solid var(--line);margin-bottom:4px}.h2h-hd>span{display:flex;align-items:center;gap:7px;font-size:14px;min-width:0}.h2h-hd>span:last-child{justify-content:flex-end}.h2h-hd small{font-size:11.5px;color:var(--muted)}
 .h2h-r{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;padding:5px 0}.h2h-r small{font-size:12px;color:var(--muted);text-align:center}.h2h-r>span:last-child{text-align:right}.h2h-r b{font-family:var(--display);font-size:18px}.h2h-r .h2h-w b::after{content:" ▲";font-size:10px;color:var(--win);vertical-align:middle}
 .lad-key{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center;margin:10px 0 0;font-size:11.5px;color:var(--muted)}.lad-key span{display:inline-flex;align-items:center;gap:5px}.lad-key i{width:10px;height:10px;border-radius:3px;background:var(--surface-3)}.lad-key i.k-done{background:var(--win)}.lad-key i.k-now{background:var(--tang)}.lad-key .lad-what{flex-basis:100%}
+.abl-pick{display:flex;align-items:center;gap:10px;min-width:0}.abl-namewrap{position:relative;flex:1;min-width:0}.abl-name{display:block;font-weight:700;font-size:15px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:4px 0 5px;border-bottom:1px dashed var(--line-2)}
+.abl-namewrap select{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;padding:0;border:0}
+.reroll{flex:none;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;padding:0;cursor:pointer;color:var(--fg);border:1.5px solid transparent;background:linear-gradient(var(--surface-2),var(--surface-2)) padding-box,linear-gradient(135deg,var(--blue),var(--tang)) border-box;box-shadow:0 4px 14px -6px rgba(255,122,47,.5);transition:transform .15s}
+.reroll svg{width:18px;height:18px;transition:transform .3s}.reroll:hover svg{transform:rotate(-60deg)}.reroll:active{transform:scale(.9)}
+.ab-leg.rolled{animation:rollglow 1.1s ease-out}.ab-leg.rolled .reroll svg{animation:rollspin .6s cubic-bezier(.3,.7,.3,1)}.ab-leg.rolled .abl-name,.ab-leg.rolled .abl-p{animation:rollin .45s cubic-bezier(.2,.8,.2,1)}
+@keyframes rollspin{from{transform:rotate(-360deg)}to{transform:rotate(0)}}@keyframes rollin{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes rollglow{0%{border-color:var(--tang);box-shadow:0 0 0 0 rgba(255,122,47,.6)}35%{border-color:var(--tang);box-shadow:0 0 26px -4px rgba(255,122,47,.6)}100%{box-shadow:0 0 0 0 rgba(255,122,47,0)}}
+@media (prefers-reduced-motion:reduce){.ab-leg.rolled,.ab-leg.rolled *{animation:none!important}}
 </style>
 
 <header class="top">
@@ -1700,8 +1708,27 @@ function withExtras(legs, store, find, price, opts) {
   });
   return out;
 }
+/* the bet in an acca row: its name (tap it to choose from the full list) and a ↻ button that swaps in the next best pick */
+const ROLL_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 4v5h-5"/></svg>`;
+const pickBox = (label, sel, roll) => `<div class="abl-pick"><span class="abl-namewrap"><span class="abl-name">${esc(label)}</span>${sel}</span><button class="reroll" data-reroll="${roll}" aria-label="Swap ${esc(label)} for another pick" title="Swap for another pick">${ROLL_SVG}</button></div>`;
+const rolledCls = (gid, k) => S._rolled === gid + "|" + k ? " rolled" : "";
+function reroll(live, gid, old) {
+  const sp = S.sport, g = findGame(sp, gid); if (!g) return;
+  const price = live ? (m => livePrice(m.p)) : priceOf, all = live ? liveAccaLeg(sp, g).o : legOptions(sp, g).map(x => x.m);
+  const others = ((live ? S._accaLiveLegs : S._accaLegs) || []).filter(x => x.g.id === gid).map(x => x.m.k).filter(k => k !== old);
+  const cur = all.find(m => m.k === old); if (!cur) return;
+  const R = (S.rollSeen = S.rollSeen || {}), key = (live ? "l" : "p") + gid, cp = price(cur); R[key] = [...new Set([...(R[key] || []), old])];
+  let pool = riskOpts(all, price).filter(m => m.k !== old && !others.some(k => k === m.k || conflicts(k, m.k)) && m.p >= .2 && price(m) >= 1.04);
+  const near = pool.filter(m => price(m) >= cp / 1.8 && price(m) <= cp * 1.8); if (near.length) pool = near;   /* keep it at about the same price, so the acca stays at your level */
+  let next = pool.filter(m => !R[key].includes(m.k)); if (!next.length) { R[key] = [old]; next = pool; }
+  if (!next.length) { toast("No other bets like this in that game"); return; }
+  const sc = m => Math.abs(Math.log(price(m) / cp)) - .6 * m.p, nk = [...next].sort((a, b) => sc(a) - sc(b))[0];
+  for (const id of new Set(((live ? S._accaLiveLegs : S._accaLegs) || []).map(x => x.g.id))) if (id !== gid) pinGame(live, id, ks => ks);   /* only the leg you tapped changes */
+  pinGame(live, gid, ks => ks.map(x => x === old ? nk.k : x)); R[key].push(nk.k);
+  const tag = gid + "|" + nk.k; S._rolled = tag; render(); setTimeout(() => { if (S._rolled === tag) S._rolled = null; }, 1400);
+}
 const extraRow = (x, price, rmAttr, opts, chosen, swapAttr, now) => { const other = chosen.filter(k => k !== x.m.k), list = [x.m, ...opts.filter(m => m.k !== x.m.k && !other.some(k => k === m.k || conflicts(k, m.k)))];
-  return `<div class="ab-leg extra"><div class="abl-main"><div class="abl-match">＋ Same game${x.auto ? " · picked for you" : ""}</div><label class="sr" for="${swapAttr}-${x.g.id}-${esc(x.m.k)}">Swap ${esc(x.m.label)}</label><select class="abl-swap" id="${swapAttr}-${x.g.id}-${esc(x.m.k)}" ${swapAttr}="${x.g.id}|${x.m.k}">${optsHTML(list, x.m.k, price, now)}</select></div><div class="abl-p"><b>${odds(price(x.m))}</b><small>${pct(x.m.p)}</small></div><button class="x" ${rmAttr}="${x.g.id}|${x.m.k}" aria-label="Remove ${esc(x.m.label)}">✕</button></div>`; };
+  return `<div class="ab-leg extra${rolledCls(x.g.id, x.m.k)}"><div class="abl-main"><div class="abl-match">＋ Same game${x.auto ? " · picked for you" : ""}</div><label class="sr" for="${swapAttr}-${x.g.id}-${esc(x.m.k)}">Choose instead of ${esc(x.m.label)}</label>${pickBox(x.m.label, `<select class="abl-swap" id="${swapAttr}-${x.g.id}-${esc(x.m.k)}" ${swapAttr}="${x.g.id}|${x.m.k}">${optsHTML(list, x.m.k, price, now)}</select>`, `${swapAttr === "data-accalxswap" ? "live" : "pre"}|${x.g.id}|${x.m.k}`)}</div><div class="abl-p"><b>${odds(price(x.m))}</b><small>${pct(x.m.p)}</small></div><button class="x" ${rmAttr}="${x.g.id}|${x.m.k}" aria-label="Remove ${esc(x.m.label)}">✕</button></div>`; };
 const addMoreSel = (g, chosen, opts, price, attr) => {
   const free = opts.filter(m => !chosen.some(k => k === m.k || conflicts(k, m.k)));
   // the one we'd add: likeliest bet from a different kind (result / goals / corners / cards), not one that just repeats another
@@ -1764,8 +1791,8 @@ function viewAccaLive() {
   const type = legs.length === 1 ? "Single" : legs.length === 2 ? "Double" : legs.length === 3 ? "Treble" : legs.length + "-fold acca";
   const sc = g => { const L = sp === "nba" ? g.away : g.home, R = sp === "nba" ? g.home : g.away; return `${esc(L.name)} ${esc(L.score)}–${esc(R.score)} ${esc(R.name)}`; };
   const summary = legs.length ? `<section class="accabox"><div class="ab-hd"><h2>Your in-play acca</h2><button class="more" data-accaliveclear>Clear</button></div>
-    <div class="ab-legs">${legs.map(({ g, m, o, extra }, i) => extra ? extraRow(legs[i], x => livePrice(x.p), "data-accalxrm", o, legs.filter(y => y.g === g).map(y => y.m.k), "data-accalxswap", " now") + (legs[i + 1] && legs[i + 1].g === g ? "" : addMoreSel(g, legs.filter(y => y.g === g).map(y => y.m.k), o, x => livePrice(x.p), "data-accalxadd")) : `<div class="ab-leg"><div class="abl-main"><div class="abl-match"><span class="dot red"></span> ${sc(g)} · ${esc(clockLabel(sp, g))}</div>
-      <label class="sr" for="lalt-${g.id}">Bet for ${esc(vs(sp, g))}</label><select id="lalt-${g.id}" data-accalivealt="${g.id}">${optsHTML(o, m.k, x => livePrice(x.p), " now")}</select></div>
+    <div class="ab-legs">${legs.map(({ g, m, o, extra }, i) => extra ? extraRow(legs[i], x => livePrice(x.p), "data-accalxrm", o, legs.filter(y => y.g === g).map(y => y.m.k), "data-accalxswap", " now") + (legs[i + 1] && legs[i + 1].g === g ? "" : addMoreSel(g, legs.filter(y => y.g === g).map(y => y.m.k), o, x => livePrice(x.p), "data-accalxadd")) : `<div class="ab-leg${rolledCls(g.id, m.k)}"><div class="abl-main"><div class="abl-match"><span class="dot red"></span> ${sc(g)} · ${esc(clockLabel(sp, g))}</div>
+      <label class="sr" for="lalt-${g.id}">Choose the bet for ${esc(vs(sp, g))}</label>${pickBox(m.label, `<select id="lalt-${g.id}" data-accalivealt="${g.id}">${optsHTML(o, m.k, x => livePrice(x.p), " now")}</select>`, `live|${g.id}|${m.k}`)}</div>
       <div class="abl-p"><b>${odds(livePrice(m.p))}</b><small>${pct(m.p)}</small></div><button class="x" data-accalive="${g.id}" aria-label="Remove ${esc(vs(sp, g))}">✕</button></div>${legs[i + 1] && legs[i + 1].g === g ? "" : addMoreSel(g, [m.k], o, x => livePrice(x.p), "data-accalxadd")}`).join("")}</div>${sameGameNote(legs)}
     ${AO.html}<div class="sum3"><div><small>${type.replace(" acca", "")} ${AO.mine ? "· your odds" : "est. odds"}</small><b>${odds(dec)}</b></div><div><small>Chance it lands</small><b>${pct(p)}</b></div><div><small>£${S.stake} returns</small><b class="ret">${money(S.stake * dec)}</b></div></div>
     <div class="meter"><i style="width:${Math.max(p * 100, 2)}%"></i></div>${legs.length >= 2 ? bandNote(dec) : ""}
@@ -1788,8 +1815,8 @@ function viewAcca() {
   const AO = accOdds(false, dec0, legs.map(x => x.g.id + ":" + x.m.k).join("|")), dec = AO.mine || dec0, est = !AO.mine && legs.some(x => !x.m.dec); S._accaSigPre = legs.map(x => x.g.id + ":" + x.m.k).join("|");
   const type = legs.length === 1 ? "Single" : legs.length === 2 ? "Double" : legs.length === 3 ? "Treble" : legs.length + "-fold acca";
   const summary = legs.length ? `<section class="accabox"><div class="ab-hd"><h2>Your acca</h2><button class="more" data-accaclear>Clear</button></div>
-    <div class="ab-legs">${legs.map(({ g, m, extra }, i) => extra ? extraRow(legs[i], priceOf, "data-accaxrm", legOptions(sp, g).map(y => y.m), legs.filter(y => y.g === g).map(y => y.m.k), "data-accaxswap") + (legs[i + 1] && legs[i + 1].g === g ? "" : addMoreSel(g, legs.filter(y => y.g === g).map(y => y.m.k), legOptions(sp, g).map(y => y.m), priceOf, "data-accaxadd")) : `<div class="ab-leg"><div class="abl-main"><div class="abl-match">${esc(vs(sp, g))} · ${whenLabel(kick(g))}</div>
-      <label class="sr" for="alt-${g.id}">Bet for ${esc(vs(sp, g))}</label><select id="alt-${g.id}" data-accaalt="${g.id}">${optsHTML(legOptions(sp, g).map(x => x.m), m.k, priceOf)}</select></div>
+    <div class="ab-legs">${legs.map(({ g, m, extra }, i) => extra ? extraRow(legs[i], priceOf, "data-accaxrm", legOptions(sp, g).map(y => y.m), legs.filter(y => y.g === g).map(y => y.m.k), "data-accaxswap") + (legs[i + 1] && legs[i + 1].g === g ? "" : addMoreSel(g, legs.filter(y => y.g === g).map(y => y.m.k), legOptions(sp, g).map(y => y.m), priceOf, "data-accaxadd")) : `<div class="ab-leg${rolledCls(g.id, m.k)}"><div class="abl-main"><div class="abl-match">${esc(vs(sp, g))} · ${whenLabel(kick(g))}</div>
+      <label class="sr" for="alt-${g.id}">Choose the bet for ${esc(vs(sp, g))}</label>${pickBox(m.label, `<select id="alt-${g.id}" data-accaalt="${g.id}">${optsHTML(legOptions(sp, g).map(x => x.m), m.k, priceOf)}</select>`, `pre|${g.id}|${m.k}`)}</div>
       <div class="abl-p"><b>${odds(priceOf(m))}</b><small>${pct(m.p)}</small></div><button class="x" data-accag="${g.id}" aria-label="Remove ${esc(vs(sp, g))}">✕</button></div>${legs[i + 1] && legs[i + 1].g === g ? "" : addMoreSel(g, [m.k], legOptions(sp, g).map(y => y.m), priceOf, "data-accaxadd")}`).join("")}</div>${sameGameNote(legs)}
     ${AO.html}<div class="sum3"><div><small>${type.replace(" acca", "")} ${AO.mine ? "· your odds" : "odds" + (est ? " · est." : "")}</small><b>${odds(dec)}</b></div><div><small>Chance it lands</small><b>${pct(p)}</b></div><div><small>£${S.stake} returns</small><b class="ret">${money(S.stake * dec)}</b></div></div>
     <div class="meter"><i style="width:${Math.max(p * 100, 2)}%"></i></div>${legs.length >= 2 ? bandNote(dec) : ""}
@@ -3977,6 +4004,7 @@ document.addEventListener("click", async e => {
   else if (d.tipmode) { S.tipMode = d.tipmode; store.set("tipMode", d.tipmode); render(); }
   else if (d.chalodds2) { S.chalOdds = d.chalodds2; store.set("chalOdds", S.chalOdds); render(); }
   else if (d.accawin) { S.accaWin = d.accawin; render(); }
+  else if (d.reroll) { const [mode, gid, old] = d.reroll.split("|"); reroll(mode === "live", gid, old); }
   else if (d.gfollow) { await toggleFollow(d.gfollow); }
   else if (d.notif !== undefined) { S.notifOpen = true; render(); }
   else if (d.notifx !== undefined) { S.notifOpen = false; render(); }
