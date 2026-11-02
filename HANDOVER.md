@@ -394,6 +394,11 @@ No server of our own. ESPN is free, has no key and is about 1–3 minutes behind
 - `gameAccas(opts, price)` (bands in `GA_LEVELS`) builds Low / Medium / High bet builders per game. `gaPicks` caches the pre-match picks in `mde:ga` so the same three are tracked once the game starts (`gaTracked`: leg lines, segbar, chance now; finished games show the result). Overview is one wide column (`.ovw`).
 - My Bets: Live / Upcoming / Settled tabs (`S.mbTab`, `data-mbtab`).
 
+## Social (was Friends)
+- Nav label "Social". Tabs (`S.friendTab`): Timeline (`feedView("timeline")`: `S.feedBets` + `S.pubBets` (unfiltered bets query; RLS returns public ones) + Accabox bot winners), Friends (friends' feed, week, live, £1K), Leaderboards (`S.lbScope` friends → `boardView`, everyone → `topView`), People. Posts render via `feedPost`; one centred column (`.soc`).
+- Declutter (Nov 2): Live results are one-line `resRow`s (8, then "Show all"), compact idle box, iPhone install tip only on Live, £1K banner only before the first challenge, 4 suggestions, 4 locked badges.
+- Player bet legs show `playerTag()`: pre-match Starting / On the bench / Not in squad (line-ups fetched within 90 min of kick-off), live On pitch / On the bench / Subbed off / Sent off; NBA On court / On the bench.
+
 ## Accabox bot (feed)
 - `supabase/bot.sql`: `bot_accas` (id `day|sport|level|n`, legs, odds, chance, result). Only `result='won'` rows are readable by users; owner/dev can read all. Inserts only via `bot_snapshot(rows)` (owner/dev badge, first save wins).
 - `botSnapshot()` runs in owner/dev apps every 15 min: for every game kicking off in the next 36 h, the game page's three accas (`gameAccas`: Low evens–6/4, Medium 6/4–4/1, High 5/1+; id `day|sport|gid|level`). settle.py `settle_bot()` settles them with `outcome()`; unsure after 3 days → void. Feed (`loadSocial` → `S.botWins`, last 4 days) shows winners as Accabox posts (`botPost`).

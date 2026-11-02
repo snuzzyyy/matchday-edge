@@ -1116,6 +1116,17 @@ button.setrow{width:100%;text-align:left;font:inherit;color:inherit;background:n
 @media (min-width:1100px){.g-cols.one.ovw{max-width:1180px}.ovw .pop-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.ovw .gbets{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .pop-card{border-top:3px solid var(--line-2)}.pop-grid .pop-card:nth-child(1){border-top-color:var(--win)}.pop-grid .pop-card:nth-child(2){border-top-color:var(--tang)}.pop-grid .pop-card:nth-child(3){border-top-color:#f43f5e}
 .ga-legs{display:grid}.ga-legs .lgl{padding:5px 0}.ga-st{font-weight:800;font-size:12.5px}.ga-st.won{color:var(--win)}.ga-st.lost{color:var(--loss)}.pop-card.ga-trk.won{border-color:rgba(34,197,94,.45)}.pop-card.ga-trk.lost{opacity:.75}
+.idle{display:flex;gap:12px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px}.idle-ic{width:36px;height:36px;border-radius:50%;background:var(--surface-3);display:grid;place-items:center;flex:none;font-size:14px}.idle>span:last-child{display:grid;gap:2px;font-size:13px;color:var(--fg-2)}.idle b{font-size:14.5px;color:var(--fg)}
+.res-list{display:grid;background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}@media (min-width:900px){.res-list{grid-template-columns:1fr 1fr}.res-list .res-row:nth-child(2){border-top:0}.res-list .res-row:nth-child(odd){border-right:1px solid var(--line)}}
+.res-row{display:grid;grid-template-columns:52px minmax(0,1fr) auto minmax(0,1fr) 26px;align-items:center;gap:8px;padding:10px 12px;border:0;border-top:1px solid var(--line);background:none;color:var(--fg);font:inherit;text-align:left;cursor:pointer}.res-row:first-child{border-top:0}
+.res-lg{font-size:10.5px;font-weight:800;letter-spacing:.04em;color:var(--muted);text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.res-t{display:flex;align-items:center;justify-content:flex-end;gap:7px;font-size:13.5px;font-weight:600;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.res-t.r{justify-content:flex-start}.res-t .logo,.res-t .mono{width:20px!important;height:20px!important;font-size:8px!important}
+.res-s{font-family:var(--display);font-size:19px;white-space:nowrap;min-width:46px;text-align:center}.res-l{color:var(--muted)}.res-ft{font-size:11px;font-weight:800;color:var(--muted);text-align:right}
+.iostip{padding:10px 12px!important}.iostip img{width:34px!important;height:34px!important}
+.soc{max-width:720px;margin:0 auto;display:grid;gap:16px}.soc .feed.soc-feed{display:grid;gap:12px;columns:auto}.soc-tabs{grid-template-columns:repeat(4,1fr)}.soc-tabs button{font-size:13.5px;padding-left:2px;padding-right:2px}.soc-lb{max-width:320px}
+.soc .fweek,.soc .fl-row{margin-bottom:0}
+.ptag{justify-self:start;display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:800;padding:2px 8px;border-radius:999px;background:var(--surface-3);color:var(--fg-2)}.ptag i{width:6px;height:6px;border-radius:50%;background:currentColor;animation:segpulse 1.6s ease-in-out infinite}
+.ptag.on,.ptag.start{background:rgba(34,197,94,.15);color:#4ade80}.ptag.bench{background:rgba(245,158,11,.15);color:#fbbf24}.ptag.out{background:rgba(239,68,68,.15);color:#f87171}.ptag.off,.ptag.wait{color:var(--muted)}
 </style>
 
 <header class="top">
@@ -1156,7 +1167,7 @@ const store = { get(k, d) { try { const v = localStorage.getItem("mde:" + k); re
 
 const S = { comments: {}, data: null, logos: {}, sport: store.get("sport", "football"), fmt: store.get("fmt", "frac"), slip: store.get("slip", []),
             stake: store.get("stake", 5), slipTot: store.get("slipTot", null), chalOdds: store.get("chalOdds", "over"), boxSide: {}, league: "all", win: "today", drawer: null, slipOpen: false };
-const VIEWS = [["live", "Live", "Live"], ["fixtures", "Fixtures", "Games"], ["acca", "Accas", "Accas"], ["multi", "Multi-sport", "Multi"], ["bets", "Best Bets", "Tips"], ["mybets", "My Bets", "My Bets"], ["friends", "Friends", "Friends"], ["tables", "Tables", "Tables"], ["news", "News", "News"], ["challenge", "£1K Challenge", "£1K"]];
+const VIEWS = [["live", "Live", "Live"], ["fixtures", "Fixtures", "Games"], ["acca", "Accas", "Accas"], ["multi", "Multi-sport", "Multi"], ["bets", "Best Bets", "Tips"], ["mybets", "My Bets", "My Bets"], ["friends", "Social", "Social"], ["tables", "Tables", "Tables"], ["news", "News", "News"], ["challenge", "£1K Challenge", "£1K"]];
 const TAB_ICONS = (() => { const svg = p => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`; return {
   live: svg('<circle cx="12" cy="12" r="2.2"/><path d="M7.8 7.8a6 6 0 000 8.4M16.2 7.8a6 6 0 010 8.4M5 5a10 10 0 000 14M19 5a10 10 0 010 14"/>'),
   fixtures: svg('<rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/>'),
@@ -1168,7 +1179,7 @@ const TAB_ICONS = (() => { const svg = p => `<svg viewBox="0 0 24 24" fill="none
   news: svg('<path d="M5 4.5h11.5V19a1.5 1.5 0 001.5 1.5H6.5A1.5 1.5 0 015 19z"/><path d="M16.5 8.5H19a1 1 0 011 1V19a1.5 1.5 0 01-1.5 1.5M8 8.5h5.5M8 12h5.5M8 15.5h3.5"/>'),
   challenge: svg('<path d="M8 4h8v5a4 4 0 01-8 0z"/><path d="M8 6H5a2 2 0 002 4h1M16 6h3a2 2 0 01-2 4h-1M12 13v3.5M8.5 20h7M9.5 20l.5-3.5h4l.5 3.5"/>')
 }; })();
-const NAV = [["live", "Live", ["live"], "live"], ["games", "Games", ["fixtures", "tables", "news"], "fixtures"], ["betsg", "Bets", ["bets", "acca", "multi", "mybets", "stats"], "bets"], ["challenge", "£1K Challenge", ["challenge"], "challenge"], ["friends", "Friends", ["friends"], "friends"]];
+const NAV = [["live", "Live", ["live"], "live"], ["games", "Games", ["fixtures", "tables", "news"], "fixtures"], ["betsg", "Bets", ["bets", "acca", "multi", "mybets", "stats"], "bets"], ["challenge", "£1K Challenge", ["challenge"], "challenge"], ["friends", "Social", ["friends"], "friends"]];
 const SUBNAME = { fixtures: "Fixtures", tables: "Tables", news: "News", bets: "Tips", acca: "Accas", multi: "Multi-sport", mybets: "My Bets", stats: "Stats" };
 const navOf = v => NAV.find(n => n[2].includes(v));
 S.lastSub = store.get("lastSub", {});
@@ -1377,6 +1388,11 @@ function renderChrome() {
 }
 
 /* ---------- live ---------- */
+/* a finished game in one line: tap for the full stats */
+function resRow(sp, g) {
+  const L = sp === "nba" ? g.away : g.home, R = sp === "nba" ? g.home : g.away, lw = +L.score > +R.score, rw = +R.score > +L.score;
+  return `<button class="res-row" data-open="${sp}:${g.id}"><span class="res-lg">${sp === "nba" ? "NBA" : esc((S.data.leagues.find(l => l.id === g.league) || {}).short || leagueName(g.league))}</span><span class="res-t ${rw ? "res-l" : ""}">${esc(L.name)}${logo(sp, L)}</span><b class="res-s"><span class="${rw ? "res-l" : ""}">${esc(L.score)}</span>–<span class="${lw ? "res-l" : ""}">${esc(R.score)}</span></b><span class="res-t r ${lw ? "res-l" : ""}">${logo(sp, R)}${esc(R.name)}</span><span class="res-ft">FT</span></button>`;
+}
 function liveCard(sport, g) {
   const h = g.home, a = g.away, hs = +h.score || 0, as = +a.score || 0, live = isLive(g);
   const row = (t, s, o) => `<div class="lrow ${s > o ? "lead" : s < o ? "trail" : ""}">${logo(sport, t)}<span class="nm">${esc(t.name)}</span><span class="sc">${esc(t.score ?? "")}</span></div>`;
@@ -1424,14 +1440,14 @@ function viewLive() {
   const sp = S.sport, all = games(sp);
   const live = all.filter(isLive);
   const now = Date.now();
-  const recent = all.filter(g => g.status.state === "post" && now - new Date(kick(g)) < 864e5 * 1.2).sort((a, b) => new Date(kick(b)) - new Date(kick(a))).slice(0, 12);
+  const recent = all.filter(g => g.status.state === "post" && now - new Date(kick(g)) < 864e5 * 1.2).sort((a, b) => new Date(kick(b)) - new Date(kick(a))).slice(0, 40);
   const next = all.filter(isPre).slice(0, 6);
   return `<div class="strips">${appUpdateStrip()}${promo()}${liveBetCount() ? `<a class="strip" href="#mybets"><span class="ic-dot"><span class="dot red"></span></span><span><b>Your bets in play</b><small>${liveBetCount()} live now · follow them in My Bets</small></span><span aria-hidden="true">›</span></a>` : ""}</div><div class="hd"><div><h1>${sp === "nba" ? "NBA" : "Football"} live</h1><p class="sub">Updates every 10 seconds. Tap a game for stats and markets.</p></div><div class="hd-btns"><button class="btn ghost sm nf-btn" data-notif>${BELL_SVG}Notifications${gFollows().length ? ` <span class="nf-n">${gFollows().length}</span>` : ""}</button>${(S.tracked || []).length ? "" : `<button class="btn ghost sm" data-import>+ Import a bet to track</button>`}</div></div>
   ${live.length ? `<section class="section"><div class="live-grid">${live.map(g => liveCard(sp, g)).join("")}</div></section>`
-    : `<div class="empty art"><img src="${art("empty-live.webp")}" alt="" loading="lazy"><b>Nothing in play right now</b><span>${next[0] ? `Next up: <b>${esc(vs(sp, next[0]))}</b> at ${hm(kick(next[0]))} (${dayLabel(dayKey(kick(next[0])))[0].toLowerCase()}).` : "Check back when games kick off."}</span></div>`}
+    : `<div class="idle"><span class="idle-ic" aria-hidden="true">⏸</span><span><b>Nothing in play right now</b><span>${next[0] ? `Next up: <b>${esc(vs(sp, next[0]))}</b> at ${hm(kick(next[0]))} (${dayLabel(dayKey(kick(next[0])))[0].toLowerCase()}).` : "Check back when games kick off."}</span></span></div>`}
   ${next.length && live.length ? `<section class="section"><h2>Starting soon</h2>${fixtureBlocks(sp, next, false)}</section>` : ""}
   ${!live.length && next.length ? `<section class="section"><h2>Up next</h2>${fixtureBlocks(sp, next, false)}</section>` : ""}
-  ${recent.length ? `<section class="section"><h2>Latest results</h2><div class="live-grid">${recent.map(g => liveCard(sp, g)).join("")}</div></section>` : ""}`;
+  ${recent.length ? `<section class="section"><h2>Latest results</h2><div class="res-list">${recent.slice(0, S.allRes ? 40 : 8).map(g => resRow(sp, g)).join("")}</div>${recent.length > 8 && !S.allRes ? `<button class="linkbtn" data-allres>Show all ${recent.length} results</button>` : ""}</section>` : ""}`;
 }
 
 /* ---------- fixtures ---------- */
@@ -1635,8 +1651,8 @@ function buildPreset(kind, win, sp = S.sport) {
   S._thm[key] = { at: Date.now(), v }; return v;
 }
 const THEMES = {
-  football: [["safe", "Four", "Four games, one bet each, at your level."], ["mix", "Mix it up", "A result, goals, corners, cards and a player bet."], ["scorers", "Goalscorers", "The likeliest scorers in the games coming up."], ["sot", "Shots on target", "Players who hit the target most."], ["fouled", "Fouls won", "Players who get fouled a lot."], ["goals", "Goals galore", "Over 1.5s, both teams to score and teams to score."], ["corners", "Corners & cards", "Stat markets backed by recent averages."]],
-  nba: [["safe", "Four", "Four games, one bet each, at your level."], ["mix", "Mix it up", "A winner, a handicap, a total and player bets."], ["scorers", "Big scorers", "Players to hit their points line."], ["boards", "Boards & dimes", "Rebounds and assists from the players who rack them up."], ["threes", "From downtown", "Players to hit their threes."], ["goals", "Points galore", "Games to go over a lowered points line."]]
+  football: [["mix", "Mix it up", "A result, goals, corners, cards and a player bet."], ["scorers", "Goalscorers", "The likeliest scorers in the games coming up."], ["sot", "Shots on target", "Players who hit the target most."], ["fouled", "Fouls won", "Players who get fouled a lot."], ["goals", "Goals galore", "Over 1.5s, both teams to score and teams to score."], ["corners", "Corners & cards", "Stat markets backed by recent averages."]],
+  nba: [["mix", "Mix it up", "A winner, a handicap, a total and player bets."], ["scorers", "Big scorers", "Players to hit their points line."], ["boards", "Boards & dimes", "Rebounds and assists from the players who rack them up."], ["threes", "From downtown", "Players to hit their threes."], ["goals", "Points galore", "Games to go over a lowered points line."]]
 };
 /* ---------- multi-sport: football and NBA in one acca ---------- */
 const multiWin = () => S.multiWin || (["today", "tomorrow", "48h"].find(w => upcoming("football", w).some(isPre) && upcoming("nba", w).some(isPre)) || "48h");
@@ -1969,7 +1985,7 @@ function challengeOptions() {   // bets at around evens from football and the NB
     for (const d of dd) { if (used.has(d.a.g.id) || used.has(d.b.g.id)) continue; used.add(d.a.g.id); used.add(d.b.g.id); doubles.push(d); if (++n >= 2) break; }
   }
   singles.sort((a, b) => b.m.p - a.m.p); doubles.sort((x, y) => y.p - x.p);
-  return { singles: singles.slice(0, 6), doubles: doubles.slice(0, 3) };
+  return { singles: singles.slice(0, 4), doubles: doubles.slice(0, 2) };
 }
 const today = () => new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 const CH_DEFAULT = () => ({ start: 1, target: 1000, rungs: 10, rung: 0, bank: 1, attempts: 1, started: today(), history: [], active: null, past: [] });
@@ -2094,7 +2110,7 @@ function viewChallenge() {
   if (none) return `<div class="hd"><div><h1>£1 → £1K challenge</h1><p class="sub">Turn £1 into £1K, one bet at around evens at a time. Use football or NBA bets, and run up to ${CH_MAX} challenges at once.</p></div></div>
     <img class="banner" src="${art("challenge-banner.webp")}" alt="A glowing staircase of ten steps rising to the top">${chalSummary()}<section class="section"><h2>Previous challenges</h2>${past}</section>`;
   return `<div class="hd"><div><h1>£1 → £1K challenge</h1><p class="sub">Turn £1 into £1K, one bet at around evens at a time. Use football or NBA bets${mine ? `, and run up to ${CH_MAX} challenges at once.` : "."} ${mine ? "" : "Sign in to run your own ladder."}</p></div></div>
-  <img class="banner" src="${art("challenge-banner.webp")}" alt="A glowing staircase of ten steps rising to the top">
+  ${L.length ? "" : `<img class="banner" src="${art("challenge-banner.webp")}" alt="A glowing staircase of ten steps rising to the top">`}
   ${mine ? chalSummary() : ""}
   <section class="chal-hero">
     <div class="chal-top"><div><div class="eyebrow">${mine ? `Challenge ${n} · ` : ""}Attempt ${C.attempts || 1} · ${done ? "complete" : `step ${C.rung + 1} of ${C.rungs}`}</div><div class="bankv">${fmtBank(C.bank)}<small>${done ? "🏆" : `→ ${money(rungs[C.rung + 1])} next`}</small></div></div>
@@ -2858,6 +2874,18 @@ function betChance(legs) { let p = 1, unknown = 0; for (const l of legs) { const
 /* ---------- a leg in a bet card: badges, kick-off countdown before, a mini scoreboard and progress during, the result after ---------- */
 const untilTxt = iso => { const m = Math.round((new Date(iso) - Date.now()) / 6e4); return m <= 0 ? "starting" : m < 60 ? `in ${m}m` : m < 1440 ? `in ${Math.floor(m / 60)}h${m % 60 ? ` ${m % 60}m` : ""}` : `in ${Math.round(m / 1440)}d`; };
 /* legs grouped by game: the game once (badges, kick-off countdown or live score), then one tidy line per bet */
+/* is the player in a bet starting / on the pitch? */
+function playerTag(l) {
+  if (!l.pid || l.group) return ""; const g = findGame(l.sport, l.gid); if (!g || g.status.state === "post") return "";
+  const tag = (cls, t) => `<span class="ptag ${cls}">${cls === "on" ? "<i></i>" : ""}${t}</span>`;
+  if (l.sport === "nba") { const P = (((g.box || {})[l.side] || {}).players || []).find(p => String(p.id) === String(l.pid)); if (!P || isPre(g)) return ""; return P.on ? tag("on", "On court") : P.dnp ? tag("out", "Not playing") : tag("bench", "On the bench"); }
+  const LU = (g.lineups || {})[l.side];
+  if (isPre(g) && !LU && +new Date(kick(g)) - Date.now() < 90 * 60e3) loadDetail("football:" + g.id);   /* line-ups come out about an hour before */
+  if (!LU) return isPre(g) ? tag("wait", "Line-ups not out yet") : "";
+  const P = LU.players.find(p => String(p.id) === String(l.pid));
+  if (isPre(g)) return P ? (P.starter ? tag("start", "✓ Starting") : tag("bench", "On the bench")) : LU.players.length >= 11 ? tag("out", "Not in squad") : "";
+  if (!P) return ""; if (P.rc && P.rc.length) return tag("out", "Sent off"); if (P.subOut) return tag("off", "Subbed off"); return onPitch(P) ? tag("on", "On pitch") : tag("bench", "On the bench");
+}
 function legLine(l, k, legs) {
   const info = legInfo0(k && l.pid && !l.group && legs[k - 1].pid === l.pid ? { ...l, _sub: true } : l), st = info.st, g = findGame(l.sport, l.gid), live = g && !isPre(g);
   const title = l.group ? `${surnames(l)} ${l.target}+ ${l.label}` : String(legText(l) || "").replace(/ \(in-play\)$/, "");
@@ -2866,10 +2894,10 @@ function legLine(l, k, legs) {
   const txt = x => String(x || "").replace(/<[^>]+>/g, "").replace(/✓ Landed|✗ Lost|✗ Missed/g, "").trim();
   const prog = live && num ? [txt(num[1]), txt(num[2])].filter(x => x && !/chance now|Waiting/.test(x)).join(" · ") : "";
   const xi = Math.min(...["<div class=\"tl-teams\">", "<div class=\"tl-pps\">"].map(t => h.indexOf(t)).filter(n => n >= 0)), extra = live && isFinite(xi) ? h.slice(xi, -6) : "";
-  const oc = live ? (h.match(/<span class="oc-pill">[\s\S]*?<\/span>/) || [""])[0] : "";
+  const oc = playerTag(l);
   const right = st === "hit" ? "✓" : st === "miss" ? "✗" : st === "void" ? "Void" : c != null ? `<span style="color:${tierColor(c)}">${pct(c)}</span>` : "";
   const showBar = live && bar != null && st !== "void" && !/chance now/.test(h);
-  return `<div class="lgl ${st}"><span class="lgl-ic" aria-hidden="true"></span><div class="lgl-m"><b>${esc(title)}${oc ? " " + oc : ""}</b>${showBar ? `<div class="lgl-bar"><i style="width:${bar}%"></i></div>` : ""}${prog ? `<small>${esc(prog)}</small>` : ""}${extra}</div><span class="lgl-r">${right}</span></div>`;
+  return `<div class="lgl ${st}"><span class="lgl-ic" aria-hidden="true"></span><div class="lgl-m"><b>${esc(title)}</b>${oc}${showBar ? `<div class="lgl-bar"><i style="width:${bar}%"></i></div>` : ""}${prog ? `<small>${esc(prog)}</small>` : ""}${extra}</div><span class="lgl-r">${right}</span></div>`;
 }
 function legGroups(legs, infos) {
   const out = [], at = new Map();
@@ -3259,12 +3287,14 @@ function viewAccount(mode = "account") {
   }
   const P = S.profile || {}, nFr = Object.keys(S.friends || {}).length;
   if (mode === "friends") {
-    const ft = ["feed", "top", "board", "friends"].includes(S.friendTab) ? S.friendTab : "feed";
-    const tabsF = [["feed", "Feed"], ["top", "Top players"], ["board", "Friends' board"], ["friends", "People"]];
-    return `<div class="hd"><div><h1>Friends</h1><p class="sub">Their bets, reactions and the leaderboard.</p></div>${S.socialReady ? `<button class="btn sm" data-invite>Invite friends</button>` : ""}</div>
+    const ft = ["timeline", "feed", "board", "friends"].includes(S.friendTab) ? S.friendTab : "timeline";
+    const tabsF = [["timeline", "Timeline"], ["feed", "Friends"], ["board", "Leaderboards"], ["friends", "People"]];
+    const subs = { timeline: "Winning accas from Accabox and public bets from everyone.", feed: "Your friends' bets, wins and £1K progress.", board: "Who's up: your friends, and the best on Accabox.", friends: "Add friends, find people and follow them." };
+    const lb = S.lbScope === "all" ? "all" : "friends";
+    return `<div class="soc"><div class="hd"><div><h1>Social</h1><p class="sub">${subs[ft]}</p></div>${S.socialReady && (ft === "feed" || ft === "friends") ? `<button class="btn sm" data-invite>Invite friends</button>` : ""}</div>
     ${S.socialReady === false ? `<div class="warn">Photos and friends need a quick database update. Ask Claude for the steps.</div>` : ""}
-    <div class="subtabs" role="tablist">${tabsF.map(([k, l]) => `<button role="tab" data-ftab="${k}" aria-selected="${ft === k}">${l}</button>`).join("")}</div>
-    ${ft === "feed" ? feedView() : ft === "top" ? topView() : ft === "board" ? boardView() : friendsView()}`;
+    <div class="seg3 soc-tabs" role="tablist">${tabsF.map(([k, l]) => `<button role="tab" data-ftab="${k}" aria-pressed="${ft === k}">${l}</button>`).join("")}</div>
+    ${ft === "timeline" ? feedView("timeline") : ft === "feed" ? feedView("friends") : ft === "board" ? `<div class="seg3 two soc-lb" role="group"><button data-lbscope="friends" aria-pressed="${lb === "friends"}">Friends</button><button data-lbscope="all" aria-pressed="${lb === "all"}">Everyone</button></div>${lb === "all" ? topView() : boardView()}` : friendsView()}</div>`;
   }
 
   return `<section class="prof"><div class="prof-top"><button type="button" class="avwrap" data-pickphoto aria-label="Change profile photo">${avatarHTML(P, 72)}<span class="avcam" aria-hidden="true">📷</span></button>
@@ -3395,6 +3425,10 @@ async function loadSocial() {
   ]);
   S.friends = Object.fromEntries((pr.data || []).map(p => [p.id, p]));
   S.feedBets = bt.data || [];
+  { const known = new Set([S.user.id, ...ids, ...S.following]), pb = await sb.from("bets").select("*").order("placed_at", { ascending: false }).limit(120);   /* everyone who has made their bets public (row security decides what comes back) */
+    S.pubBets = (pb.data || []).filter(b => !known.has(b.user_id));
+    const need = [...new Set(S.pubBets.map(b => b.user_id))].filter(id => !S.people[id] || !S.people[id].display_name);
+    if (need.length) { const pp = await sb.rpc("people", { ids: need }); if (pp.data) for (const x of pp.data) S.people[x.id] = { ...(S.people[x.id] || {}), ...x }; } }
   S.friendChal = Object.fromEntries((ch.data || []).map(c => [c.user_id, c.data]));
   const fw = ids.length && S.walletReady ? await sb.from("wallets").select("user_id,amount,is_public").in("user_id", ids) : { data: [] };
   S.friendWallets = Object.fromEntries((fw.data || []).filter(w => w.is_public).map(w => [w.user_id, w]));
@@ -3421,21 +3455,25 @@ function reactBar(b) {
   return `<div class="rx">${REACTS.map(([k, e]) => { const n = list.filter(r => r.emoji === k).length, mine = list.some(r => r.emoji === k && r.user_id === me); return `<button class="rxb ${mine ? "on" : ""}" data-react="${b.id}|${k}" aria-pressed="${mine}" aria-label="React ${k}">${e}${n ? `<span>${n}</span>` : ""}</button>`; }).join("")}</div>`;
 }
 function canTail(b) { return b.result === "open" && b.user_id !== S.user.id && (b.legs || []).some(l => { const g = l.gid && findGame(l.sport, l.gid); return g && isPre(g) && (l.k || l.pid); }); }
-function feedItems() {
-  const items = [];
-  for (const b of S.feedBets || []) {
+function feedItems(scope = "timeline") {
+  const items = [], fr = S.friends || {}, me = S.user && S.user.id;
+  const src = scope === "friends" ? (S.feedBets || []).filter(b => b.user_id === me || fr[b.user_id]) : [...(S.feedBets || []), ...(S.pubBets || [])];
+  for (const b of src) {
     const who = person(b.user_id), legs = (b.legs || []).length, kind = legs > 3 ? legs + "-fold acca" : legs === 3 ? "treble" : legs === 2 ? "double" : "bet";
     if (b.result === "open") items.push({ t: b.placed_at, b, html: `<b>${esc(who.display_name)}</b>${badgesHTML(who, 1)} placed a ${kind}`, tone: "" });
     else { const pl = betPL(b); items.push({ t: b.settled_at || b.placed_at, b, html: b.result === "won" ? `<b>${esc(who.display_name)}</b>${badgesHTML(who, 1)} won <span class="pos">+${gbp(pl)}</span>` : b.result === "lost" ? (cashStake(b) ? `<b>${esc(who.display_name)}</b>${badgesHTML(who, 1)} lost <span class="neg">${gbp(-cashStake(b))}</span>` : `<b>${esc(who.display_name)}</b>${badgesHTML(who, 1)} lost a free bet`) : `<b>${esc(who.display_name)}</b>'s bet was void`, tone: b.result }); }
   }
-  for (const [uid, D] of Object.entries(S.friendChal || {})) {
+  if (scope === "friends") for (const [uid, D] of Object.entries(S.friendChal || {})) {
     const who = person(uid); for (const C of normChal(D).ladders || []) {
     for (const h of (C.history || [])) if (h.at) items.push({ t: h.at, html: h.result === "W" ? `<b>${esc(who.display_name)}</b> won a £1K challenge step and now has <span class="pos">${fmtBank(h.ret)}</span>` : h.result === "L" ? `<b>${esc(who.display_name)}</b>'s £1K challenge ended on ${fmtBank(h.stake)}` : `<b>${esc(who.display_name)}</b> moved money on their £1K challenge`, sub: `${esc(h.bet)} @ ${esc(h.odds)}`, uid });
   }
   }
-  for (const w of S.botWins || []) items.push({ t: w.settled_at, bot: w, html: `<b>Accabox</b><span class="bot-tick" title="Official Accabox account">✓</span> ${w.sport === "nba" ? "🏀" : "⚽"} landed ${/acca ·/.test(w.title) ? "the" : "a"} <b>${esc(w.title)}</b> at <span class="pos">${odds(+w.odds_dec)}</span> 🎉` });
+  if (scope === "timeline") for (const w of S.botWins || []) items.push({ t: w.settled_at, bot: w, html: `<b>Accabox</b><span class="bot-tick" title="Official Accabox account">✓</span> ${w.sport === "nba" ? "🏀" : "⚽"} landed ${/acca ·/.test(w.title) ? "the" : "a"} <b>${esc(w.title)}</b> at <span class="pos">${odds(+w.odds_dec)}</span> 🎉` });
   return items.sort((a, b) => new Date(b.t) - new Date(a.t)).slice(0, 60);
 }
+function feedPost(it) { if (it.bot) return botPost(it); const b = it.b, who = person(b ? b.user_id : it.uid);
+    return `<article class="fi ${it.tone || ""}"><button class="fi-av" data-mate="${b ? b.user_id : it.uid}" aria-label="View ${esc(who.display_name)}">${avatarHTML(who, 40)}</button><div class="fi-body"><div class="fi-top"><span>${it.html}</span><time>${ago2(it.t)}</time></div>
+      ${b ? `${betTile(b)}${socialActs(b)}` : `<div class="fi-meta">${it.sub || ""}</div>`}</div></article>`;  }
 function botPost(it) {
   const w = it.bot, L = (w.legs || []).filter(l => l.label || l.pid), dec = +w.odds_dec;
   return `<article class="fi bot won"><span class="fi-av bot-av"><img src="mark.png" alt="Accabox"></span><div class="fi-body"><div class="fi-top"><span>${it.html}</span><time>${ago2(it.t)}</time></div>
@@ -3443,14 +3481,13 @@ function botPost(it) {
       <ul class="bot-legs">${L.map(l => `<li><span class="bot-ok">✓</span><span><b>${esc(String(legText(l) || "").replace(/ \(in-play\)$/, ""))}</b><small>${esc(l.match || l.team || "")}</small></span></li>`).join("")}</ul>
       <div class="bot-ft"><span>£10 returned <b class="pos">${money(10 * dec)}</b></span><span>Built by Accabox before kick-off · we had it at ${pct(+w.chance || 0)}</span></div></div></div></article>`;
 }
-function feedView() {
-  if (S.socialReady === undefined) return `<div class="loadbox">Loading your friends…</div>`;
-  const nFr = Object.keys(S.friends || {}).length, items = feedItems();
+function feedView(scope = "friends") {
+  if (S.socialReady === undefined) return `<div class="loadbox">Loading…</div>`;
+  const nFr = Object.keys(S.friends || {}).length, items = feedItems(scope);
+  if (scope === "timeline") return items.length ? `<div class="feed soc-feed">${items.map(feedPost).join("")}</div>` : `<div class="empty art"><img src="${art("empty-bets.webp")}" alt="" loading="lazy"><b>Nothing on the timeline yet</b><span>Accabox's winning accas and everyone's public bets show up here.</span></div>`;
   const invite = `<div class="invite"><div><b>${nFr ? "Bring more friends in" : "Add your friends"}</b><span>Share your invite link. When they sign up, you're connected automatically.</span></div><button class="btn sm" data-invite>Share invite link</button></div>`;
   if (!items.length) return `${invite}<div class="empty art"><img src="${art("empty-bets.webp")}" alt="" loading="lazy"><b>Nothing here yet</b><span>${nFr ? "When you or your friends save and settle bets, they show up here." : "Once your friends join, their bets and wins show up here."}</span></div>`;
-  return `${!nFr ? invite : ""}${friendsWeekHTML()}${liveFriendsHTML()}${nFr || (S.botWins || []).length ? `<h2 class="feed-h">Latest</h2>` : ""}<div class="feed">${items.map(it => { if (it.bot) return botPost(it); const b = it.b, who = person(b ? b.user_id : it.uid);
-    return `<article class="fi ${it.tone || ""}"><button class="fi-av" data-mate="${b ? b.user_id : it.uid}" aria-label="View ${esc(who.display_name)}">${avatarHTML(who, 40)}</button><div class="fi-body"><div class="fi-top"><span>${it.html}</span><time>${ago2(it.t)}</time></div>
-      ${b ? `${betTile(b)}${socialActs(b)}` : `<div class="fi-meta">${it.sub || ""}</div>`}</div></article>`; }).join("")}</div>${nFr ? invite : ""}`;
+  return `${!nFr ? invite : ""}${friendsWeekHTML()}${liveFriendsHTML()}${nFr || (S.botWins || []).length ? `<h2 class="feed-h">Latest</h2>` : ""}<div class="feed soc-feed">${items.map(feedPost).join("")}</div>${nFr ? invite : ""}`;
 }
 function boardView() {
   const P = S.profile || {}, meId = S.user.id, days = S.boardDays ?? 7;
@@ -3929,7 +3966,7 @@ function profileShowcase(uid) {
     ["👑", "£1K legend", "Finish a £1 → £1K challenge", completed, ""],
     ...(me ? [["🤝", "Squad", "Add 3 friends", nFriends >= 3, n(nFriends, 3)]] : [])];
   const got = A.filter(a => a[3]), locked = A.filter(a => !a[3]);
-  const shown = S.allBadges === uid ? locked : locked.slice(0, Math.max(4, 8 - got.length));
+  const shown = S.allBadges === uid ? locked : locked.slice(0, 4);
   const teams = (p.fav_teams || []).map(f => ({ f, n: nextMatchFor(f) }));
   const empty = !bets.length;
   return `<section class="showcase">
@@ -4046,6 +4083,7 @@ document.addEventListener("click", async e => {
   else if (d.signout !== undefined) { await sb.auth.signOut(); S.authMsg = null; toast("Signed out"); }
   else if (d.betfilter) { S.betFilter = d.betfilter; render(); }
   else if (d.acct) { S.acctTab = d.acct; render(); }
+  else if (d.lbscope) { S.lbScope = d.lbscope; render(); }
   else if (d.ftab) { S.friendTab = d.ftab; render(); loadSocial(); }
   else if (d.mate) { S.mateOpen = d.mate; render(); const uid = d.mate;
     if (S.user && uid !== S.user.id && !(S.friends || {})[uid] && S.followReady) {
@@ -4130,9 +4168,9 @@ function subnav(v) {
   return `<nav class="subnav" aria-label="${g[1]}">${g[2].map(id => `<a href="#${id}" ${id === v ? 'aria-current="page"' : ""}>${SUBNAME[id]}${badge(id)}</a>`).join("")}</nav>`;
 }
 function iosTip() {
-  if (!IOS || STANDALONE || store.get("iosTipX", false)) return "";
+  if (!IOS || STANDALONE || store.get("iosTipX", false) || view() !== "live") return "";
   const inApp = /FBAN|FBAV|Instagram|WhatsApp|Snapchat|GSA\/|CriOS|FxiOS|EdgiOS/.test(navigator.userAgent);
-  return `<div class="iostip"><img src="apple-touch-icon.png" alt=""><div><b>Get the app on your iPhone</b><span>${inApp ? `Open this page in <b>Safari</b> first, then tap Share and <b>Add to Home Screen</b>.` : `Tap the <b>Share</b> button <span class="shr" aria-hidden="true"></span> (on newer iPhones tap <b>•••</b> first), then <b>Add to Home Screen</b>.`}</span></div><button class="x" data-iosx aria-label="Hide">✕</button></div>`;
+  return `<div class="iostip"><img src="apple-touch-icon.png" alt=""><div><b>Get the app</b><span>${inApp ? `Open this page in <b>Safari</b> first, then tap Share and <b>Add to Home Screen</b>.` : `Tap <b>Share</b> <span class="shr" aria-hidden="true"></span> (or <b>•••</b>), then <b>Add to Home Screen</b>.`}</span></div><button class="x" data-iosx aria-label="Hide">✕</button></div>`;
 }
 /* ---------- £1K challenge: cash out / take money out ---------- */
 function cashSheet() {
@@ -4631,6 +4669,7 @@ document.addEventListener("click", async e => {
   }
   else if (d.allbadges) { S.allBadges = d.allbadges; render(); }
   else if (d.mbtab) { S.mbTab = d.mbtab; render(); scrollTo({ top: 0 }); }
+  else if (d.allres !== undefined) { S.allRes = true; render(); }
   else if (d.freebet) {   /* mark (or unmark) a saved bet as placed with a free bet: fixes its returns and your balance */
     const b = (S.bets || []).find(x => String(x.id) === d.freebet); if (!b) return;
     const before = credit(b) - cashStake(b), nf = freeOf(b) ? 0 : +b.stake, b2 = { ...b, free_stake: nf }, upd = { free_stake: nf };
