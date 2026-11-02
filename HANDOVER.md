@@ -386,7 +386,8 @@ No server of our own. ESPN is free, has no key and is about 1–3 minutes behind
 ## Tweet maker (owner only)
 - `#tweets` (`viewTweets`, link in Account only when `isOwner()` = profile badge `owner`). Sport (football/NBA/both), type (`TW_KINDS`: top performers, results, one game recap/preview, player spotlight, acca of the day, live now), window, game picker, style toggles.
 - `twBuild()` writes the text from real data: NBA box scores (`g.box`), football goals from `g.events`, assists/shots/saves after "Load player stats" (`loadDetail` → `g.lineups`), previews from `g.model`, accas from `levelPreset`. Fits to 280 (`twLen`, emojis count 2) by dropping weakest rows / question / hashtags; results become a numbered thread. Editable text, Copy, Post on X (intent link).
-- `twCard()` draws a 1600×900 PNG card on a canvas (brand colours, `mark.png`); Save image / press-and-hold on phones.
+- `twCard()` draws a 1600×900 PNG card on a canvas (brand colours, `mark.png`). `twSaveImage()`: Android app 1.6+ uses the bridge `MDEApp.saveImage(b64, name)` (MediaStore, Pictures/Accabox) and `MDEApp.shareImage(b64, name, text)` (share sheet with picture + tweet text); browsers use Web Share with files on phones, else a download. `APP_LATEST` drives the in-app Update banner.
+- **Badges:** 23 in `profileShowcase` (earned first, locked with progress, "Show all" via `S.allBadges`).
 
 ## Rename to Accabox (2 Nov 2026)
 - Name shown everywhere is **Accabox** (header wordmark `Acca<b>box</b>`, title, manifest, share texts, download page, Android label from app 1.5).

@@ -214,8 +214,8 @@ a.prof-bdg{text-decoration:none}
 .fdot.w{background:rgba(34,216,143,.16);color:var(--win)}.fdot.l{background:rgba(255,83,112,.14);color:var(--loss)}
 .bigwin{cursor:pointer;background:radial-gradient(90% 160% at 100% 0%,rgba(34,216,143,.16),transparent 60%),var(--surface)}
 .bw-main{display:flex;align-items:baseline;gap:10px;min-width:0}.bw-amt{font-family:var(--display);font-size:28px;font-weight:700;color:var(--win)}.bw-lab{font-size:13.5px;color:var(--fg-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.achs{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
-.ach{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;background:var(--bg-2);border:1px dashed var(--line-2);opacity:.55}
+.achs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}@media (min-width:700px){.achs{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.ach{display:grid;justify-items:center;text-align:center;gap:2px;padding:10px 8px;border-radius:12px;background:var(--bg-2);border:1px dashed var(--line-2);opacity:.6;min-width:0}
 .ach.on{opacity:1;border-style:solid;border-color:rgba(255,190,60,.45);background:radial-gradient(120% 160% at 0% 0%,rgba(255,190,60,.14),transparent 60%),var(--bg-2)}
 .ach i{font-style:normal;font-size:20px}.ach b{display:block;font-size:13px}.ach small{display:block;font-size:11px;color:var(--muted)}
 .tn-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;width:100%;background:none;border:0;border-top:1px solid var(--line);padding:9px 0 0;color:var(--fg);font:inherit;text-align:left;cursor:pointer}
@@ -1064,6 +1064,9 @@ button.setrow{width:100%;text-align:left;font:inherit;color:inherit;background:n
 .tw-foot{display:flex;justify-content:space-between;align-items:center;gap:10px;border-top:1px solid #2f3336;padding-top:10px}.tw-acts{display:flex;gap:8px}
 .tw-count{font-size:13px;font-weight:700;color:#71767b}.tw-count.near{color:#ffd400}.tw-count.over{color:#f4212e}
 .tw-img img{width:100%;border-radius:14px;border:1px solid var(--line);display:block}
+.ach i{font-size:26px;line-height:1.2;margin-bottom:2px}.ach:not(.on) i{filter:grayscale(1)}.ach b{font-size:13.5px}.ach small{font-size:11.5px;line-height:1.3}.ach em{font-style:normal;font-size:11px;font-weight:700;color:var(--tang-2,#ff9a5c);margin-top:3px;background:rgba(255,122,47,.1);border-radius:999px;padding:1px 8px}
+.bmeter{height:6px;border-radius:6px;background:var(--surface-3);overflow:hidden;margin:2px 0 10px}.bmeter i{display:block;height:100%;border-radius:6px;background:linear-gradient(90deg,#ffbe3c,#ff7a2f)}
+.ach-h{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:14px 0 8px}.ach-more{margin-top:10px}
 </style>
 
 <header class="top">
@@ -3486,6 +3489,18 @@ async function twCard(card) {
   x.font = "500 22px Figtree"; x.fillStyle = "#7f8aa3"; x.textAlign = "right"; x.fillText(card.adult ? "18+ · Please gamble responsibly · BeGambleAware.org" : "Stats from Accabox", 1520, 852); x.textAlign = "left";
   return c.toDataURL("image/png");
 }
+/* save or share the image card: the Android app saves it to Photos; browsers download it or use the phone's share menu */
+async function twSaveImage(share, i) {
+  const url = S._twImg; if (!url) return; const name = `accabox-${twState().kind}-${Date.now()}.png`, ta = document.querySelector(`[data-twedit="${i || 0}"]`), text = share && ta ? ta.value : "";
+  if (window.MDEApp && MDEApp.saveImage) {
+    const b64 = url.split(",")[1], r = share && MDEApp.shareImage ? MDEApp.shareImage(b64, name, text) : MDEApp.saveImage(b64, name);
+    if (r !== "ok") toast("Couldn't save the picture. Check the app is allowed to save photos"); return; }
+  if (/MatchdayEdgeApp/.test(navigator.userAgent)) { toast("Update the app to save pictures: tap Update on the Live page"); return; }
+  const blob = await (await fetch(url)).blob(), file = new File([blob], name, { type: "image/png" }), phone = /Android|iPhone|iPad/i.test(navigator.userAgent);
+  if ((share || phone) && navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share(share ? { files: [file], text } : { files: [file] }); return; } catch (e) { if (e && e.name === "AbortError") return; } }
+  if (share && text) copyText(text, "Tweet copied. The picture is downloading");
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 3000); if (!share) toast("Picture saved to your downloads");
+}
 function viewTweets() {
   if (!isOwner()) return `<div class="empty"><b>Not available</b><span>This page is only for the Accabox owner.</span></div>`;
   const T = twState(), all = twGames(T), single = T.kind === "game" || T.kind === "player";
@@ -3517,7 +3532,7 @@ function viewTweets() {
         <textarea class="tw-text" data-twedit="${i}" rows="${Math.min(14, t.split("\n").length + 1)}" spellcheck="true">${esc(t)}</textarea>
         <div class="tw-foot"><span class="tw-count ${n > 280 ? "over" : n > 260 ? "near" : ""}">${n}/280</span><span class="tw-acts"><button class="btn ghost sm" data-twcopy="${i}">Copy</button><a class="btn sm" href="https://x.com/intent/post?text=${encodeURIComponent(t)}" target="_blank" rel="noopener">Post on X</a></span></div></article>`; }).join("")
       : `<div class="empty">${R.empty || "Pick some games."}</div>`}
-    ${R.card ? `<div class="tw-img"><div class="tw-oh"><h3>Image to attach</h3>${S._twImg ? `<a class="btn ghost sm" download="accabox-${T.kind}.png" href="${S._twImg}">Save image</a>` : ""}</div>${S._twImg ? `<img src="${S._twImg}" alt="Tweet image">` : `<div class="loadbox">Drawing the image…</div>`}<p class="colkey" style="margin:6px 0 0">On a phone, press and hold the image to save it.</p></div>` : ""}
+    ${R.card ? `<div class="tw-img"><div class="tw-oh"><h3>Image to attach</h3>${S._twImg ? `<span class="tw-acts"><button class="btn ghost sm" data-twsave>⬇ Save image</button><button class="btn sm" data-twshare="0">Share with tweet</button></span>` : ""}</div>${S._twImg ? `<img src="${S._twImg}" alt="Tweet image">` : `<div class="loadbox">Drawing the image…</div>`}<p class="colkey" style="margin:6px 0 0">“Share with tweet” opens your share menu with the picture and the text together: pick X and both are filled in.</p></div>` : ""}
   </section></div>`;
 }
 function viewMyBets() {
@@ -3583,17 +3598,52 @@ function profileShowcase(uid) {
   let streak = 0; for (const b of done) { if (b.result === "won") streak++; else break; }
   const bestOdds = won.reduce((m, b) => Math.max(m, +b.odds_dec), 0), big = [...won].sort((a, b) => betPL(b) - betPL(a))[0];
   const chLs = normChal(me ? S.chalAll : (S.friendChal || {})[uid]).ladders || [], topStep = Math.max(0, ...chLs.map(c => Math.max(c.rung || 0, ...(c.past || []).map(x => x.reached || 0))));
-  const A = [["🎯", "First win", "Win a bet", won.length > 0], ["🔥", "Hot streak", "Win 3 in a row", streak >= 3 || done.some((b, i) => done.slice(i, i + 3).length === 3 && done.slice(i, i + 3).every(x => x.result === "won"))],
-    ["🧩", "Acca hero", "Win a 3+ leg bet", won.some(b => (b.legs || []).length >= 3)], ["🚀", "Long shot", "Win at 3/1 or bigger", bestOdds >= 4],
-    ["📈", "In profit", "Be up after 5+ bets", settled.length >= 5 && profit > 0], ["🪜", "Climber", "Reach step 3 of the £1K", topStep >= 2], ["🗓️", "Regular", "Save 10 bets", bets.length >= 10]];
-  const got = A.filter(a => a[3]), locked = A.filter(a => !a[3]).slice(0, Math.max(0, 4 - got.length));
+  /* badges: [icon, name, how to earn it, earned?, progress while locked] */
+  const chrono = [...done].reverse(); let run = 0, maxRun = 0, lossRun = 0, comeback = false;
+  for (const b of chrono) { if (b.result === "won") { if (lossRun >= 3) comeback = true; run++; maxRun = Math.max(maxRun, run); lossRun = 0; } else { run = 0; lossRun++; } }
+  const legsOf = b => (b.legs || []).filter(l => l.pid || l.k || l.manual), nLegs = b => legsOf(b).length || 1, maxLegsWon = won.reduce((m, b) => Math.max(m, nLegs(b)), 0);
+  const sportsOf = b => new Set(legsOf(b).map(l => l.sport).filter(Boolean)), sameGame = b => { const g = legsOf(b).filter(l => l.gid).map(l => l.gid); return g.length > new Set(g).size; };
+  const wonSport = sp => won.some(b => sportsOf(b).has(sp) || (!sportsOf(b).size && b.sport === sp));
+  const decided = done.length, wr = decided ? won.length / decided : 0, bigRet = won.reduce((m, b) => Math.max(m, +b.returns || 0), 0);
+  const completed = chLs.some(c => (c.rung || 0) >= (c.rungs || 10) || (c.past || []).some(x => x.outcome === "completed"));
+  const nFriends = me ? Object.keys(S.friends || {}).length : null;
+  const n = (v, of, unit) => `${Math.min(v, of)}/${of}${unit ? " " + unit : ""}`;
+  const A = [
+    ["🎯", "First win", "Win a bet", won.length > 0, ""],
+    ["⚽", "Golazo", "Win a football bet", wonSport("football"), ""],
+    ["🏀", "Hoops", "Win an NBA bet", wonSport("nba"), ""],
+    ["🔥", "Hot streak", "Win 3 in a row", maxRun >= 3, n(maxRun, 3)],
+    ["☄️", "On fire", "Win 5 in a row", maxRun >= 5, n(maxRun, 5)],
+    ["🧩", "Acca hero", "Win a 3+ leg bet", maxLegsWon >= 3, maxLegsWon ? `best ${maxLegsWon} legs` : ""],
+    ["🏗️", "Big acca", "Win a 5+ leg bet", maxLegsWon >= 5, maxLegsWon ? `best ${maxLegsWon} legs` : ""],
+    ["🚀", "Long shot", "Win at 3/1 or bigger", bestOdds >= 4, bestOdds ? `best ${odds(bestOdds)}` : ""],
+    ["🌙", "Moonshot", "Win at 10/1 or bigger", bestOdds >= 11, bestOdds ? `best ${odds(bestOdds)}` : ""],
+    ["🧱", "Builder", "Win a same-game bet builder", won.some(sameGame), ""],
+    ["👟", "Player picker", "Win a bet with a player leg", won.some(b => legsOf(b).some(l => l.pid)), ""],
+    ["🌍", "Two sports", "Win a football + NBA acca", won.some(b => sportsOf(b).size > 1), ""],
+    ["🎁", "Free roll", "Win with a free bet", won.some(b => freeOf(b) > 0), ""],
+    ["💰", "Big return", "Get £50+ back from one bet", bigRet >= 50, bigRet ? `best ${money(bigRet)}` : ""],
+    ["🔁", "Comeback", "Win right after 3 losses", comeback, ""],
+    ["📈", "In profit", "Be up after 5+ bets", settled.length >= 5 && profit > 0, settled.length < 5 ? n(settled.length, 5, "bets") : profit <= 0 ? `${gbp(profit)} so far` : ""],
+    ["🧠", "Sharp", "60%+ wins over 10+ bets", decided >= 10 && wr >= .6, decided < 10 ? n(decided, 10, "bets") : `${Math.round(wr * 100)}% wins`],
+    ["🗓️", "Regular", "Save 10 bets", bets.length >= 10, n(bets.length, 10)],
+    ["🏅", "Veteran", "Save 50 bets", bets.length >= 50, n(bets.length, 50)],
+    ["🪜", "Climber", "Reach step 3 of the £1K", topStep >= 2, chLs.length ? `step ${Math.min(topStep + 1, 3)}/3` : ""],
+    ["⛰️", "Halfway", "Reach step 5 of the £1K", topStep >= 4, chLs.length ? `step ${Math.min(topStep + 1, 5)}/5` : ""],
+    ["👑", "£1K legend", "Finish a £1 → £1K challenge", completed, ""],
+    ...(me ? [["🤝", "Squad", "Add 3 friends", nFriends >= 3, n(nFriends, 3)]] : [])];
+  const got = A.filter(a => a[3]), locked = A.filter(a => !a[3]);
+  const shown = S.allBadges === uid ? locked : locked.slice(0, Math.max(4, 8 - got.length));
   const teams = (p.fav_teams || []).map(f => ({ f, n: nextMatchFor(f) }));
   const empty = !bets.length;
   return `<section class="showcase">
     ${bets.length ? `<div class="pnlrow"><div><small>Bets</small><b>${bets.length}</b></div><div><small>Win rate</small><b>${done.length ? Math.round(won.length / done.length * 100) + "%" : "–"}</b></div><div><small>Profit</small><b class="${profit > 0 ? "pos" : profit < 0 ? "neg" : ""}">${settled.length ? gbp(profit) : "–"}</b></div><div><small>Best odds won</small><b>${bestOdds ? odds(bestOdds) : "–"}</b></div></div>` : ""}
     ${done.length ? `<div class="sc-card"><div class="sc-head"><b>Form</b><small>${streak >= 2 ? `🔥 ${streak} wins in a row` : `Last ${Math.min(10, done.length)} results`}</small></div><div class="formdots">${done.slice(0, 10).map(b => `<span class="fdot ${b.result === "won" ? "w" : "l"}" title="${esc(b.label)}">${b.result === "won" ? "W" : "L"}</span>`).join("")}</div></div>` : ""}
-    ${big ? `<button class="sc-card bigwin" data-betview="${big.id}"><div class="sc-head"><b>Biggest win</b><small>${odds(+big.odds_dec)}</small></div><div class="bw-main"><span class="bw-amt">+${money(+big.returns - +big.stake)}</span><span class="bw-lab">${esc(betTitle(big.legs, big.label))}</span></div></button>` : ""}
-    <div class="sc-card"><div class="sc-head"><b>Badges</b><small>${got.length} of ${A.length} earned</small></div><div class="achs">${got.map(a => `<span class="ach on"><i>${a[0]}</i><span><b>${a[1]}</b><small>${a[2]}</small></span></span>`).join("")}${locked.map(a => `<span class="ach"><i>${a[0]}</i><span><b>${a[1]}</b><small>${a[2]}</small></span></span>`).join("")}</div></div>
+    ${big ? `<button class="sc-card bigwin" data-betview="${big.id}"><div class="sc-head"><b>Biggest win</b><small>${odds(+big.odds_dec)}</small></div><div class="bw-main"><span class="bw-amt">+${money(betPL(big))}</span><span class="bw-lab">${esc(betTitle(big.legs, big.label))}</span></div></button>` : ""}
+    <div class="sc-card"><div class="sc-head"><b>Badges</b><small>${got.length} of ${A.length} earned</small></div><div class="bmeter"><i style="width:${Math.round(got.length / A.length * 100)}%"></i></div>
+      ${got.length ? `<div class="achs">${got.map(a => `<span class="ach on" title="${esc(a[2])}"><i>${a[0]}</i><b>${a[1]}</b><small>${a[2]}</small></span>`).join("")}</div>` : ""}
+      ${shown.length ? `<div class="ach-h">${me ? "Still to earn" : "Not earned yet"}</div><div class="achs">${shown.map(a => `<span class="ach" title="${esc(a[2])}"><i>${a[0]}</i><b>${a[1]}</b><small>${a[2]}</small>${a[4] ? `<em>${esc(a[4])}</em>` : ""}</span>`).join("")}</div>` : ""}
+      ${locked.length > shown.length ? `<button class="linkbtn ach-more" data-allbadges="${uid}">Show all ${locked.length} to earn ›</button>` : ""}</div>
     ${teams.length ? `<div class="sc-card"><div class="sc-head"><b>${me ? "Your teams" : "Their teams"}</b></div>${teams.map(({ f, n }) => n ? `<button class="tn-row" data-open="${f.sport}:${n.g.id}">${logo(f.sport, { id: f.id, name: f.name, abbr: f.name.slice(0, 3), color: "#334155" })}<span><b>${esc(f.name)}</b><small class="${n.live ? "live" : ""}">${n.live ? '<span class="dot red"></span>' : ""}${esc(n.txt)}</small></span><span aria-hidden="true">›</span></button>` : `<div class="tn-row">${logo(f.sport, { id: f.id, name: f.name, abbr: f.name.slice(0, 3), color: "#334155" })}<span><b>${esc(f.name)}</b><small>No game in the next few days</small></span><span></span></div>`).join("")}</div>` : ""}
     ${empty && me ? `<div class="sc-card sc-empty"><b>Your profile fills up as you bet</b><small>Save or import a bet and your form, best wins and badges appear here.</small></div>` : ""}
   </section>`;
@@ -3848,10 +3898,10 @@ function walletSection(sw) {
     ${W ? sw("walletPub", !!W.is_public, "Show my balance to friends", "Off unless you switch it on") : `<div class="setrow favwrap"><small>Enter what's in your bookie account. Saving a bet takes the stake off, and a win adds the returns.</small></div>`}</div></section>`;
 }
 /* the Android app is a wrapper; when a newer one is out (new name, new features), say so inside the old one */
-const APP_LATEST = [1, 5];
+const APP_LATEST = [1, 6];
 const appUpdateStrip = () => { const m = navigator.userAgent.match(/MatchdayEdgeApp\/(\d+)\.(\d+)/); if (!m) return ""; const v = [+m[1], +m[2]];
   if (v[0] > APP_LATEST[0] || (v[0] === APP_LATEST[0] && v[1] >= APP_LATEST[1])) return "";
-  return `<a class="strip upd" href="https://snuzzyyy.github.io/matchday-edge/app.html" target="_blank" rel="noopener"><span class="ic-dot">⬇️</span><span><b>Update to Accabox ${APP_LATEST.join(".")}</b><small>The app's new name and icon label. Installs over the top, your bets stay.</small></span><span class="upd-btn">Update</span></a>`; };
+  return `<a class="strip upd" href="https://snuzzyyy.github.io/matchday-edge/app.html" target="_blank" rel="noopener"><span class="ic-dot">⬇️</span><span><b>Update to Accabox ${APP_LATEST.join(".")}</b><small>The new Accabox name, plus saving and sharing pictures. Installs over the top, your bets stay.</small></span><span class="upd-btn">Update</span></a>`; };
 const walletStrip = () => !S.user || S.walletReady === false ? "" : S.wallet
   ? `<a class="strip" href="#account"><span class="ic-dot">💷</span><span><b>Balance ${money(+S.wallet.amount)}</b><small>${(() => { const o = (S.bets || []).filter(b => b.result === "open").reduce((a, b) => a + cashStake(b), 0) + chalOpen(); return o ? `${money(o)} in open bets · <b class="pos">${money(+S.wallet.amount + openReturns())}</b> if they all land` : S.wallet.is_public ? "friends can see it" : "private"; })()}</small></span><span aria-hidden="true">›</span></a>`
   : `<a class="strip" href="#account"><span class="ic-dot">💷</span><span><b>Track your balance</b><small>It updates itself as your bets settle</small></span><span aria-hidden="true">›</span></a>`;
@@ -4230,7 +4280,7 @@ document.addEventListener("click", async e => {
   else if (d.tipmode) { S.tipMode = d.tipmode; store.set("tipMode", d.tipmode); render(); }
   else if (d.chalodds2) { S.chalOdds = d.chalodds2; store.set("chalOdds", S.chalOdds); render(); }
   else if (d.accawin) { S.accaWin = d.accawin; render(); }
-  else if (d.twsport || d.twkind || d.twwin || d.twpre || d.twlevel || d.twlegs || d.twgmode || d.twopt || d.twgame || d.twall !== undefined || d.twshuffle !== undefined || d.twload !== undefined || d.twcopy !== undefined) {
+  else if (d.twsport || d.twkind || d.twwin || d.twpre || d.twlevel || d.twlegs || d.twgmode || d.twopt || d.twgame || d.twall !== undefined || d.twshuffle !== undefined || d.twload !== undefined || d.twcopy !== undefined || d.twsave !== undefined || d.twshare !== undefined) {
     const T = twState(), reset = () => { T.custom = {}; T.customSig = null; };
     if (d.twsport) { T.sport = d.twsport; T.off = {}; T.game = null; T.player = null; reset(); }
     else if (d.twkind) { T.kind = d.twkind; T.game = null; T.player = null; T.adult = null; reset(); }
@@ -4242,9 +4292,11 @@ document.addEventListener("click", async e => {
     else if (d.twall !== undefined) { const on = d.twall === "1"; for (const x of twGames(T)) T.off[x.sp + x.g.id] = !on; reset(); }
     else if (d.twshuffle !== undefined) { T.seed++; reset(); }
     else if (d.twload !== undefined) { const L = twGames(T).filter(x => x.sp === "football" && !x.g.lineups && (T.kind === "game" || T.kind === "player" ? x.sp + x.g.id === T.game : twOn(T, x))); toast(`Loading player stats for ${L.length} game${L.length > 1 ? "s" : ""}…`); for (const x of L) { x.g._luAt = 0; loadDetail("football:" + x.g.id); } }
+    else if (d.twsave !== undefined || d.twshare !== undefined) { twSaveImage(d.twshare !== undefined, +(d.twshare || 0)); return; }
     else if (d.twcopy !== undefined) { const ta = document.querySelector(`[data-twedit="${d.twcopy}"]`); if (ta) copyText(ta.value, "Copied. Paste it into X"); return; }
     render();
   }
+  else if (d.allbadges) { S.allBadges = d.allbadges; render(); }
   else if (d.freebet) {   /* mark (or unmark) a saved bet as placed with a free bet: fixes its returns and your balance */
     const b = (S.bets || []).find(x => String(x.id) === d.freebet); if (!b) return;
     const before = credit(b) - cashStake(b), nf = freeOf(b) ? 0 : +b.stake, b2 = { ...b, free_stake: nf }, upd = { free_stake: nf };

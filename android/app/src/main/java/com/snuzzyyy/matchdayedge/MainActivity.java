@@ -9,6 +9,12 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.ClipData;
+import android.content.ContentValues;
+import android.graphics.BitmapFactory;
+import android.provider.MediaStore;
+import android.util.Base64;
+import android.widget.Toast;
+import java.io.OutputStream;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
@@ -37,7 +43,7 @@ public class MainActivity extends Activity {
         s.setDomStorageEnabled(true);
         s.setDatabaseEnabled(true);
         s.setCacheMode(WebSettings.LOAD_DEFAULT);
-        s.setUserAgentString(s.getUserAgentString() + " MatchdayEdgeApp/1.5");
+        s.setUserAgentString(s.getUserAgentString() + " MatchdayEdgeApp/1.6");
         // Lets the site open the phone's own share menu (WhatsApp, Messages, Snapchat...)
         web.addJavascriptInterface(new Object() {
             @JavascriptInterface
@@ -59,6 +65,26 @@ public class MainActivity extends Activity {
             @JavascriptInterface
             public void notify(String title, String body, String tag) {
                 showAlert(title, body, tag);
+            }
+            // Pictures made by the site (tweet cards): save to the phone's photos, or share with text
+            @JavascriptInterface
+            public String saveImage(String b64, String name) {
+                Uri u = storeImage(b64, name);
+                if (u == null) return "error";
+                runOnUiThread(() -> Toast.makeText(MainActivity.this, "Saved to your photos (Pictures > Accabox)", Toast.LENGTH_SHORT).show());
+                return "ok";
+            }
+            @JavascriptInterface
+            public String shareImage(String b64, String name, String text) {
+                Uri u = storeImage(b64, name);
+                if (u == null) return "error";
+                Intent send = new Intent(Intent.ACTION_SEND);
+                send.setType("image/png");
+                send.putExtra(Intent.EXTRA_STREAM, u);
+                if (text != null && !text.isEmpty()) send.putExtra(Intent.EXTRA_TEXT, text);
+                send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                runOnUiThread(() -> { try { startActivity(Intent.createChooser(send, "Share")); } catch (Exception ignored) { } });
+                return "ok";
             }
         }, "MDEApp");
         // Downloads (like a new version of the app) go to the phone's browser
@@ -94,6 +120,38 @@ public class MainActivity extends Activity {
         setContentView(web);
         if (state != null) web.restoreState(state);
         else web.loadUrl(HOME);
+    }
+
+    /** Writes a PNG into Pictures/Accabox and returns its address, or null if it couldn't. */
+    private Uri storeImage(String b64, String name) {
+        try {
+            byte[] bytes = Base64.decode(b64, Base64.DEFAULT);
+            String file = (name == null || name.isEmpty()) ? "accabox-" + System.currentTimeMillis() : name.replaceAll("[^A-Za-z0-9._-]", "");
+            if (!file.endsWith(".png")) file += ".png";
+            if (Build.VERSION.SDK_INT >= 29) {
+                ContentValues v = new ContentValues();
+                v.put(MediaStore.Images.Media.DISPLAY_NAME, file);
+                v.put(MediaStore.Images.Media.MIME_TYPE, "image/png");
+                v.put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/Accabox");
+                v.put(MediaStore.Images.Media.IS_PENDING, 1);
+                Uri u = getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, v);
+                if (u == null) return null;
+                try (OutputStream o = getContentResolver().openOutputStream(u)) { if (o == null) return null; o.write(bytes); }
+                ContentValues done = new ContentValues();
+                done.put(MediaStore.Images.Media.IS_PENDING, 0);
+                getContentResolver().update(u, done, null, null);
+                return u;
+            }
+            // older phones need the storage permission once
+            if (checkSelfPermission("android.permission.WRITE_EXTERNAL_STORAGE") != PackageManager.PERMISSION_GRANTED) {
+                runOnUiThread(() -> { requestPermissions(new String[] { "android.permission.WRITE_EXTERNAL_STORAGE" }, 8); Toast.makeText(MainActivity.this, "Allow storage, then tap Save again", Toast.LENGTH_LONG).show(); });
+                return null;
+            }
+            String saved = MediaStore.Images.Media.insertImage(getContentResolver(), BitmapFactory.decodeByteArray(bytes, 0, bytes.length), file, "Accabox");
+            return saved == null ? null : Uri.parse(saved);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private void showAlert(String title, String body, String tag) {
