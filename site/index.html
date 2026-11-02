@@ -3371,12 +3371,12 @@ function twPerformers(T, sel) {
   for (const { sp, g } of sel) {
     if (sp === "nba") for (const side of ["h", "a"]) for (const p of ((g.box || {})[side] || { players: [] }).players) {
       if (p.dnp) continue; const n = k => +String((p.s || {})[k] ?? 0).split("-")[0] || 0, me = side === "h" ? g.home : g.away, op = side === "h" ? g.away : g.home;
-      const v = { name: p.n, team: me.name, opp: op.name, pts: n("PTS"), reb: n("REB"), ast: n("AST"), tpm: n("3PT"), stl: n("STL"), blk: n("BLK"), fg: (p.s || {}).FG || "", won: +me.score > +op.score };
+      const v = { logo: me.logo, color: me.color, abbr: me.abbr || me.name, name: p.n, team: me.name, opp: op.name, pts: n("PTS"), reb: n("REB"), ast: n("AST"), tpm: n("3PT"), stl: n("STL"), blk: n("BLK"), fg: (p.s || {}).FG || "", won: +me.score > +op.score };
       v.dd = [v.pts, v.reb, v.ast, v.stl, v.blk].filter(x => x >= 10).length; v.score = v.pts + 1.2 * v.reb + 1.5 * v.ast + 2 * (v.stl + v.blk) + (v.dd >= 3 ? 25 : v.dd === 2 ? 10 : 0); nba.push(v);
     }
     if (sp === "football") {
       const add = (name, side, f) => { const me = side === "h" ? g.home : g.away, op = side === "h" ? g.away : g.home, k = name + "|" + me.name;
-        const v = fb.get(k) || { name, team: me.name, opp: op.name, goals: 0, pens: 0, ast: 0, sot: 0, saves: 0, lg: g.league }; f(v); fb.set(k, v); };
+        const v = fb.get(k) || { full: !!g.lineups, logo: me.logo, color: me.color, abbr: me.abbr || me.name, name, team: me.name, opp: op.name, goals: 0, pens: 0, ast: 0, sot: 0, saves: 0, lg: g.league }; f(v); fb.set(k, v); };
       for (const e of g.events || []) if (/Goal|Penalty - Scored/i.test(e.type) && !/Own Goal|Missed|Saved/i.test(e.type) && e.who && e.side) add(e.who, e.side, v => { v.goals++; if (/Penalty/i.test(e.type)) v.pens++; });
       for (const side of ["h", "a"]) for (const p of ((g.lineups || {})[side] || { players: [] }).players) {
         const s = p.s || {}; if ((s.goalAssists || 0) > 0 || (s.shotsOnTarget || 0) >= 3 || (s.saves || 0) >= 5) add(p.n, side, v => { v.ast = Math.max(v.ast, s.goalAssists || 0); v.sot = Math.max(v.sot, s.shotsOnTarget || 0); v.saves = Math.max(v.saves, s.saves || 0); v.goals = Math.max(v.goals, s.totalGoals || 0); });
@@ -3387,7 +3387,7 @@ function twPerformers(T, sel) {
   return { nba: nba.sort((a, b) => b.score - a.score), fb: F.sort((a, b) => b.score - a.score) };
 }
 const nbaLine = (v, short) => [v.pts && `${v.pts} PTS`, v.reb >= 5 && `${v.reb} REB`, v.ast >= 5 && `${v.ast} AST`, !short && v.tpm >= 4 && `${v.tpm} 3PM`, !short && v.stl + v.blk >= 4 && `${v.stl + v.blk} STL+BLK`].filter(Boolean).join(" · ");
-const fbLine = v => [v.goals >= 3 ? "hat-trick" : v.goals === 2 ? "brace" : v.goals === 1 ? "goal" : "", v.ast ? `${v.ast} assist${v.ast > 1 ? "s" : ""}` : "", !v.goals && v.sot >= 3 ? `${v.sot} shots on target` : "", v.saves >= 5 ? `${v.saves} saves` : ""].filter(Boolean).join(" + ");
+const fbLine = v => [v.goals >= 4 ? `${v.goals} goals` : v.goals >= 3 ? "hat-trick" : v.goals === 2 ? "brace" : v.goals === 1 ? "goal" : "", v.ast ? `${v.ast} assist${v.ast > 1 ? "s" : ""}` : "", !v.goals && v.sot >= 3 ? `${v.sot} shots on target` : "", v.saves >= 5 ? `${v.saves} saves` : ""].filter(Boolean).join(" + ");
 const fbIcon = v => v.goals >= 3 ? "🎩" : v.goals === 2 ? "⚽⚽" : v.goals === 1 ? "⚽" : v.ast ? "🅰️" : v.saves >= 5 ? "🧤" : "🎯";
 /* build the tweet(s) and the image card for the current settings */
 function twBuild(T) {
@@ -3399,19 +3399,26 @@ function twBuild(T) {
   if (!sel.length) return { tweets: [], card: null, empty: T.kind === "live" ? "Nothing in play right now." : T.kind === "acca" || T.gameMode === "preview" ? "No games coming up in that window." : "No finished games in that window yet. Try a longer window." };
   if (T.kind === "top") {
     const P = twPerformers(T, sel), rows = [];
+    const pc = (v, nb) => ({ name: v.name, team: v.team, opp: v.opp, logo: v.logo, color: v.color, abbr: v.abbr,
+      tag: nb ? (v.dd >= 3 ? "TRIPLE-DOUBLE" : v.dd === 2 ? "DOUBLE-DOUBLE" : v.pts >= 35 ? "ON FIRE" : "") : v.goals >= 4 ? `${v.goals} GOALS` : v.goals === 3 ? "HAT-TRICK" : v.goals === 2 ? "BRACE" : v.saves >= 5 ? "WALL" : "",
+      stats: nb ? [[v.pts, "PTS"], [v.reb, "REB"], [v.ast, "AST"], ...(v.tpm ? [[v.tpm, "3PM"]] : [])] : !v.full ? [[v.goals, "GOALS"]] : v.saves >= 5 && !v.goals ? [[v.saves, "SAVES"], [v.ast, "ASSISTS"], [v.sot, "ON TARGET"]] : [[v.goals, "GOALS"], [v.ast, "ASSISTS"], [v.sot, "ON TARGET"]] });
+    const players = [];
+    if (sports.includes("nba")) for (const v of P.nba.slice(0, sports.length > 1 ? 3 : 6)) players.push(pc(v, true));
+    if (sports.includes("football")) for (const v of P.fb.slice(0, sports.length > 1 ? 3 : 6)) players.push(pc(v, false));
     if (sports.includes("nba")) for (const v of P.nba.slice(0, sports.length > 1 ? 3 : 5)) rows.push({ t: `${T.emoji ? (v.dd >= 3 ? "👑 " : v.pts >= 35 ? "🔥 " : v.dd === 2 ? "💪 " : "🏀 ") : ""}${v.name}: ${nbaLine(v)}${v.dd >= 3 ? " (triple-double)" : ""}`, c: [v.name, nbaLine(v, true) + (v.dd >= 3 ? " · TD" : ""), v.team] });
     if (sports.includes("football")) for (const v of P.fb.slice(0, sports.length > 1 ? 3 : 5)) rows.push({ t: `${T.emoji ? fbIcon(v) + " " : ""}${v.name}: ${fbLine(v)} v ${v.opp}${v.pens ? ` (${v.pens} pen)` : ""}`, c: [v.name, fbLine(v), v.team] });
     if (!rows.length) return { tweets: [], card: null, empty: sports.includes("football") ? "No goals or stand-out stats yet. Tap “Load player stats” to pull assists, shots and saves." : "No box scores for these games yet." };
     head = E(sports.length > 1 ? "🏆" : sports[0] === "nba" ? "🏀" : "⚽", twPick([`${when} top performers`, `${when} standouts`, `Who stood out ${T.win <= 14 ? "tonight" : "today"}`], s));
     body = rows.map(r => r.t); ask = twPick(["Who impressed you most? 👇", "Who's your player of the night? 👇", "Who did we miss? 👇"], s);
-    card = { title: twPick(["TOP PERFORMERS", "STANDOUTS"], s), sub: T.win <= 14 ? "Tonight" : T.win <= 24 ? "Today" : "Last 48 hours", rows: rows.map(r => r.c) };
+    card = { type: "top", title: twPick(["TOP PERFORMERS", "STANDOUTS"], s), sub: T.win <= 14 ? "TONIGHT" : T.win <= 24 ? "TODAY" : "LAST 48 HOURS", players };
   } else if (T.kind === "results" || T.kind === "live") {
     const by = new Map(); for (const x of sel) { const k = x.sp === "nba" ? "NBA" : leagueName(x.g.league); by.set(k, [...(by.get(k) || []), x]); }
     head = T.kind === "live" ? E("🔴", "Live scores") : E("📋", twPick([`${when === "Tonight's" ? "Tonight's" : "Today's"} results`, "Full-time scores", "How it finished"], s));
     for (const [k, L] of by) { if (by.size > 1) body.push(`${k}:`); for (const x of L) body.push(`${twScore(x.sp, x.g)}${T.kind === "live" ? ` (${clockLabel(x.sp, x.g)})` : ""}`); if (by.size > 1) body.push(""); }
     while (body.length && body[body.length - 1] === "") body.pop();
     ask = T.kind === "live" ? twPick(["Who are you cheering on? 👇", "What are you watching? 👇"], s) : twPick(["Any of these land you an acca? 👇", "Best result of the night? 👇", "Who surprised you? 👇"], s);
-    card = { title: T.kind === "live" ? "LIVE NOW" : "RESULTS", sub: [...by.keys()].slice(0, 3).join(" · "), rows: sel.slice(0, 8).map(x => { const L = x.sp === "nba" ? x.g.away : x.g.home, R = x.sp === "nba" ? x.g.home : x.g.away; return [`${L.name}  ${L.score}–${R.score}  ${R.name}`, T.kind === "live" ? clockLabel(x.sp, x.g) : x.sp === "nba" ? "Final" : "FT", ""]; }) };
+    card = { type: "results", live: T.kind === "live", title: T.kind === "live" ? "LIVE NOW" : "RESULTS", sub: [...by.keys()].slice(0, 3).join(" · ").toUpperCase(), leagues: by.size,
+      games: sel.slice(0, 8).map(x => { const L = x.sp === "nba" ? x.g.away : x.g.home, R = x.sp === "nba" ? x.g.home : x.g.away; return { status: T.kind === "live" ? clockLabel(x.sp, x.g) : x.sp === "nba" ? "FINAL" : "FT", lg: x.sp === "nba" ? "NBA" : leagueName(x.g.league), teams: [L, R].map(t => ({ logo: t.logo, color: t.color, abbr: t.abbr || t.name, name: t.name, score: t.score })) }; }), more: Math.max(0, sel.length - 8), rows: sel.slice(0, 8).map(x => { const L = x.sp === "nba" ? x.g.away : x.g.home, R = x.sp === "nba" ? x.g.home : x.g.away; return [`${L.name}  ${L.score}–${R.score}  ${R.name}`, T.kind === "live" ? clockLabel(x.sp, x.g) : x.sp === "nba" ? "Final" : "FT", ""]; }) };
   } else if (T.kind === "game") {
     const { sp, g } = sel[0], h = g.home, a = g.away, L = sp === "nba" ? a : h, R = sp === "nba" ? h : a;
     if (isPre(g)) {
@@ -3449,7 +3456,10 @@ function twBuild(T) {
     head = nb ? E(v.dd >= 3 ? "👑" : "🔥", `${v.name} ${twPick(["went off", "was on fire", "delivered"], s)} ${T.win <= 14 ? "tonight" : "today"}`) : E("⭐", `${v.name} ${twPick(["stole the show", "was unplayable", "delivered"], s)} v ${v.opp}`);
     body = nb ? [`${nbaLine(v)}${v.fg ? ` on ${v.fg.replace("-", "/")} FG` : ""}${v.dd >= 3 ? " — triple-double" : ""}`, `${v.won ? "✅" : "❌"} ${v.team} ${v.won ? "got the win" : "fell short"} v ${v.opp}`] : [fbLine(v).replace(/^./, c => c.toUpperCase()) + (v.pens ? ` (${v.pens} pen)` : ""), v.sot && v.goals ? `${v.sot} shots on target` : ""].filter(Boolean);
     ask = twPick(["Rate the performance /10 👇", "Who's stopping them? 👇", "Did you have them in your acca? 👇"], s);
-    card = { title: "PLAYER SPOTLIGHT", sub: `${v.name} · ${v.team}`, rows: nb ? [[`${v.pts}`, "Points", ""], [`${v.reb}`, "Rebounds", ""], [`${v.ast}`, "Assists", ""], [`${v.tpm}`, "Threes", ""]] : [[`${v.goals}`, "Goals", ""], [`${v.ast}`, "Assists", ""], [`${v.sot}`, "Shots on target", ""]].filter(r => r[0] !== "0" || r[1] === "Goals") };
+    const g0 = sel[0].g, Lt = nb ? g0.away : g0.home, Rt = nb ? g0.home : g0.away;
+    card = { type: "player", name: v.name, team: v.team, logo: v.logo, color: v.color, abbr: v.abbr, result: `${Lt.name} ${Lt.score}–${Rt.score} ${Rt.name}`, won: nb ? v.won : null,
+      tag: nb ? (v.dd >= 3 ? "TRIPLE-DOUBLE" : v.dd === 2 ? "DOUBLE-DOUBLE" : "") : v.goals >= 4 ? `${v.goals} GOALS` : v.goals >= 3 ? "HAT-TRICK" : v.goals === 2 ? "BRACE" : "",
+      extra: nb && v.fg ? `${v.fg.replace("-", "/")} FG` : "", stats: nb ? [[v.pts, "POINTS"], [v.reb, "REBOUNDS"], [v.ast, "ASSISTS"], [v.tpm, "THREES"]] : [[v.goals, "GOALS"], [v.ast, "ASSISTS"], [v.sot, "ON TARGET"], ...(v.saves ? [[v.saves, "SAVES"]] : [])], title: "PLAYER SPOTLIGHT", sub: `${v.name} · ${v.team}`, rows: nb ? [[`${v.pts}`, "Points", ""], [`${v.reb}`, "Rebounds", ""], [`${v.ast}`, "Assists", ""], [`${v.tpm}`, "Threes", ""]] : [[`${v.goals}`, "Goals", ""], [`${v.ast}`, "Assists", ""], [`${v.sot}`, "Shots on target", ""]].filter(r => r[0] !== "0" || r[1] === "Goals") };
   } else if (T.kind === "acca") {
     adult = true; const keep = { sport: S.sport, risk: S.accaRisk, win: S.accaWin }, legs = [];
     try { S.accaRisk = T.level; S.accaWin = T.pre; S._lvl = {}; for (const sp of sports) { S.sport = sp; legs.push(...levelPreset(T.legs).filter(x => twOn(T, { sp: x.sport, g: x.g }))); } } finally { S.sport = keep.sport; S.accaRisk = keep.risk; S.accaWin = keep.win; S._lvl = {}; }
@@ -3497,7 +3507,60 @@ async function twCard(card) {
   const teamBadge = async (t, X, Y, R) => { x.save(); x.beginPath(); x.arc(X, Y, R, 0, 7); x.fillStyle = "#151d33"; x.fill(); x.lineWidth = 3; x.strokeStyle = "rgba(255,255,255,.12)"; x.stroke(); x.clip();
     const b = await img(t.logo); if (b) x.drawImage(b, X - R * .78, Y - R * .78, R * 1.56, R * 1.56); else { x.fillStyle = t.color || "#334155"; x.fillRect(X - R, Y - R, 2 * R, 2 * R); x.fillStyle = "#fff"; x.font = `800 ${Math.round(R * .62)}px Figtree`; x.textAlign = "center"; x.fillText(String(t.abbr || "").slice(0, 3).toUpperCase(), X, Y + R * .22); x.textAlign = "left"; }
     x.restore(); };
-  if (card.type === "result") {
+  const pill = (txt, live) => { x.font = "800 26px Figtree"; const w = x.measureText(txt).width + 44; x.fillStyle = live ? "rgba(239,68,68,.18)" : "rgba(255,122,47,.14)"; rr(1520 - w, 70, w, 52, 26); x.fill(); x.strokeStyle = live ? "rgba(239,68,68,.7)" : "rgba(255,122,47,.55)"; x.lineWidth = 2; x.stroke();
+    x.fillStyle = live ? "#f87171" : "#ff9a52"; x.fillText(txt, 1520 - w + 22, 106); x.font = "700 24px Figtree"; x.fillStyle = "#8f9ab3"; x.textAlign = "right"; x.fillText(dateTxt, 1520 - w - 22, 104); x.textAlign = "left"; };
+  const panel = (X, Y, W, H, R, tint) => { const g = x.createLinearGradient(X, Y, X + W, Y + H); g.addColorStop(0, tint || "rgba(255,255,255,.09)"); g.addColorStop(1, "rgba(255,255,255,.03)"); x.fillStyle = g; rr(X, Y, W, H, R); x.fill(); x.strokeStyle = "rgba(255,255,255,.09)"; x.lineWidth = 1.5; x.stroke(); };
+  const tagPill = (t, X, Y, fz) => { if (!t) return; x.font = `800 ${fz}px Figtree`; const w = x.measureText(t).width + fz * 1.2; x.fillStyle = "rgba(255,190,60,.16)"; rr(X, Y, w, fz * 1.7, fz * .85); x.fill(); x.fillStyle = "#ffcf5c"; x.fillText(t, X + fz * .6, Y + fz * 1.2); };
+  if (card.type === "top") {
+    pill(card.sub);
+    x.font = "italic 800 84px 'Barlow Condensed'"; x.fillStyle = "#fff"; x.fillText(card.title, 80, 238);
+    const P = card.players.slice(0, 6), n = P.length, cols = n <= 3 ? Math.max(n, 1) : n === 4 ? 2 : 3, rows = Math.ceil(n / cols), gap = 18, AY = 272, AH = 540;
+    const W = (1440 - gap * (cols - 1)) / cols, H = (AH - gap * (rows - 1)) / rows;
+    for (let i = 0; i < n; i++) { const p = P[i], X = 80 + (i % cols) * (W + gap), Y = AY + Math.floor(i / cols) * (H + gap), big = H > 330;
+      panel(X, Y, W, H, 22, i === 0 ? "rgba(255,122,47,.2)" : null);
+      x.font = `italic 800 ${big ? 90 : 64}px 'Barlow Condensed'`; x.fillStyle = "rgba(255,255,255,.08)"; x.textAlign = "right"; x.fillText(String(i + 1), X + W - 18, Y + (big ? 86 : 62)); x.textAlign = "left";
+      const R = big ? 40 : 30, bx = X + 24 + R, by = Y + 24 + R; await teamBadge(p, bx, by, R);
+      const nx = bx + R + 18; x.font = `800 ${big ? 34 : 28}px Figtree`; x.fillStyle = "#fff"; x.fillText(fit(p.name, W - (nx - X) - 60), nx, by - 2);
+      x.font = `500 ${big ? 21 : 18}px Figtree`; x.fillStyle = "#8f9ab3"; x.fillText(fit(`${p.team} v ${p.opp}`, W - (nx - X) - 30), nx, by + (big ? 28 : 24));
+      if (p.tag) tagPill(p.tag, nx, by + (big ? 42 : 34), big ? 16 : 13);
+      const st = p.stats.slice(0, 4), sy = Y + (big ? 180 : 132) + (p.tag ? 8 : 0), sh = Y + H - 20 - sy, bw = (W - 40 - 10 * (st.length - 1)) / st.length;
+      st.forEach((q, j) => { const qx = X + 20 + j * (bw + 10); x.fillStyle = "rgba(0,0,0,.28)"; rr(qx, sy, bw, sh, 14); x.fill();
+        const vf = Math.min(sh * .62, bw * .62, 86); x.textAlign = "center"; x.font = `italic 800 ${vf}px 'Barlow Condensed'`; x.fillStyle = j === 0 ? orange(sy, sy + sh) : "#f4f6fb"; x.fillText(String(q[0]), qx + bw / 2, sy + sh * .58);
+        x.font = `800 ${Math.max(12, Math.min(16, sh * .16))}px Figtree`; x.fillStyle = "#8f9ab3"; x.fillText(q[1], qx + bw / 2, sy + sh * .86); x.textAlign = "left"; }); }
+  } else if (card.type === "results") {
+    pill(card.live ? `LIVE · ${card.games.length + card.more} GAME${card.games.length + card.more > 1 ? "S" : ""}` : card.leagues === 1 ? fit(card.sub, 520) : `${card.games.length + card.more} GAMES`, card.live);
+    x.font = "italic 800 84px 'Barlow Condensed'"; x.fillStyle = "#fff"; x.fillText(card.title, 80, 238);
+    const G = card.games, n = G.length, cols = n <= 4 ? 1 : 2, rows = Math.ceil(n / cols), gap = 16, AH = card.more ? 500 : 530, W = (1440 - gap * (cols - 1)) / cols, H = Math.min(cols === 1 ? 160 : 150, (AH - gap * (rows - 1)) / rows), AY = 272 + (AH - (H * rows + gap * (rows - 1))) / 2;
+    for (let i = 0; i < n; i++) { const m = G[i], X = 80 + (i % cols) * (W + gap), Y = AY + Math.floor(i / cols) * (H + gap), lw = +m.teams[0].score > +m.teams[1].score, rw = +m.teams[1].score > +m.teams[0].score;
+      panel(X, Y, W, H, 18);
+      if (cols === 1) { const cy = Y + H / 2, R = Math.min(38, H * .3), sf = Math.min(92, H * .62), fz = Math.min(34, H * .26), mid = X + (W - 120) / 2;
+        await teamBadge(m.teams[0], X + 30 + R, cy, R); await teamBadge(m.teams[1], X + W - 150 - R, cy, R);
+        x.font = `${lw ? 800 : 600} ${fz}px Figtree`; x.fillStyle = rw ? "#9aa3b8" : "#f4f6fb"; x.fillText(fit(m.teams[0].name, 300), X + 30 + 2 * R + 18, cy + fz * .36);
+        x.textAlign = "right"; x.font = `${rw ? 800 : 600} ${fz}px Figtree`; x.fillStyle = lw ? "#9aa3b8" : "#f4f6fb"; x.fillText(fit(m.teams[1].name, 300), X + W - 150 - 2 * R - 18, cy + fz * .36);
+        x.font = `italic 800 ${sf}px 'Barlow Condensed'`; x.fillStyle = rw ? "#7f8aa3" : "#ffffff"; x.fillText(String(m.teams[0].score ?? ""), mid - 34, cy + sf * .36); x.textAlign = "left"; x.fillStyle = lw ? "#7f8aa3" : "#ffffff"; x.fillText(String(m.teams[1].score ?? ""), mid + 34, cy + sf * .36);
+        x.fillStyle = "#ff8a3d"; x.textAlign = "center"; x.fillText("–", mid, cy + sf * .33); x.textAlign = "left";
+        x.fillStyle = "rgba(255,255,255,.1)"; x.fillRect(X + W - 100, Y + 14, 1.5, H - 28); x.textAlign = "center"; x.font = "800 20px Figtree"; x.fillStyle = card.live ? "#f87171" : "#c9d1e3"; x.fillText(fit(m.status, 80), X + W - 50, cy - 2); x.font = "600 14px Figtree"; x.fillStyle = "#7f8aa3"; x.fillText(fit(m.lg.toUpperCase(), 84), X + W - 50, cy + 22); x.textAlign = "left"; continue; }
+      const lh = H / 2, R = Math.min(24, lh * .36), fz = Math.min(30, lh * .42), sf = Math.min(52, lh * .74);
+      for (let k = 0; k < 2; k++) { const t = m.teams[k], cy = Y + lh * k + lh / 2 + (k ? -4 : 4), win = k ? rw : lw, lose = k ? lw : rw;
+        await teamBadge(t, X + 22 + R, cy, R); x.font = `${win ? 800 : 600} ${fz}px Figtree`; x.fillStyle = lose ? "#9aa3b8" : "#f4f6fb"; x.fillText(fit(t.name, W - 260), X + 22 + 2 * R + 16, cy + fz * .36);
+        x.textAlign = "right"; x.font = `italic 800 ${sf}px 'Barlow Condensed'`; x.fillStyle = lose ? "#7f8aa3" : win ? orange(cy - sf / 2, cy + sf / 2) : "#f4f6fb"; x.fillText(String(t.score ?? ""), X + W - 120, cy + sf * .36); x.textAlign = "left"; }
+      x.fillStyle = "rgba(255,255,255,.1)"; x.fillRect(X + W - 100, Y + 14, 1.5, H - 28);
+      x.textAlign = "center"; x.font = "800 18px Figtree"; x.fillStyle = card.live ? "#f87171" : "#c9d1e3"; x.fillText(fit(m.status, 80), X + W - 50, Y + H / 2 - 2); x.font = "600 13px Figtree"; x.fillStyle = "#7f8aa3"; x.fillText(fit(m.lg.toUpperCase(), 84), X + W - 50, Y + H / 2 + 20); x.textAlign = "left"; }
+    if (card.more) { x.font = "700 22px Figtree"; x.fillStyle = "#ff9a52"; x.fillText(`+${card.more} more in the thread`, 80, 808); }
+  } else if (card.type === "player") {
+    pill("PLAYER SPOTLIGHT");
+    panel(80, 166, 1440, 270, 28, "rgba(255,122,47,.2)");
+    await teamBadge(card, 200, 301, 82);
+    x.font = "italic 800 104px 'Barlow Condensed'"; x.fillStyle = "#fff"; x.fillText(fit(card.name.toUpperCase(), 1000), 320, 300);
+    x.font = "600 30px Figtree"; x.fillStyle = "#c9d1e3"; x.fillText(fit(card.result, 760), 324, 352);
+    let px = 324 + Math.min(760, x.measureText(card.result).width) + 20;
+    if (card.won != null) { x.font = "800 22px Figtree"; const t = card.won ? "WIN" : "LOSS", w = x.measureText(t).width + 30; x.fillStyle = card.won ? "rgba(34,197,94,.2)" : "rgba(239,68,68,.2)"; rr(px, 326, w, 36, 18); x.fill(); x.fillStyle = card.won ? "#4ade80" : "#f87171"; x.fillText(t, px + 15, 352); px += w + 12; }
+    if (card.tag) tagPill(card.tag, 324, 378, 18); if (card.extra) { x.font = "700 24px Figtree"; x.fillStyle = "#ff9a52"; x.textAlign = "right"; x.fillText(card.extra, 1490, 404); x.textAlign = "left"; }
+    const st = card.stats.slice(0, 4), gap = 18, W = (1440 - gap * (st.length - 1)) / st.length, Y = 466, H = 340;
+    st.forEach((q, j) => { const X = 80 + j * (W + gap); panel(X, Y, W, H, 24, j === 0 ? "rgba(255,122,47,.18)" : null);
+      x.textAlign = "center"; x.font = `italic 800 ${Math.min(200, W * .55)}px 'Barlow Condensed'`; x.fillStyle = j === 0 ? orange(Y + 40, Y + 240) : "#ffffff"; x.fillText(String(q[0]), X + W / 2, Y + 220);
+      x.font = "800 26px Figtree"; x.fillStyle = "#8f9ab3"; x.fillText(q[1], X + W / 2, Y + 290); x.textAlign = "left"; });
+  } else if (card.type === "result") {
     const T2 = card.teams, lw2 = +T2[0].score > +T2[1].score, rw2 = +T2[1].score > +T2[0].score, BLUE = "#4f8dff", ORNG = "#ff7a2f";
     x.font = "800 26px Figtree"; const stt = card.status, sw = x.measureText(stt).width + 44, live = /^LIVE/.test(stt);
     x.fillStyle = live ? "rgba(239,68,68,.18)" : "rgba(255,255,255,.08)"; rr(1520 - sw, 70, sw, 52, 26); x.fill(); x.strokeStyle = live ? "rgba(239,68,68,.7)" : "rgba(255,255,255,.25)"; x.lineWidth = 2; x.stroke();
