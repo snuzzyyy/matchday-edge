@@ -251,6 +251,7 @@ No server of our own. ESPN is free, has no key and is about 1–3 minutes behind
 - already-landed legs are not alerted on first sight (`mde:alerted`, `mde:alertKnown`);
 - Android uses `MDEApp.notify`; browsers and iPhone home-screen apps use `sw.js`;
 - live updates keep running in the background while alerts are on and a bet is live.
+- **5-minute heads-up:** `soonCheck` in `alertTick` sends one alert per saved/tracked/£1K bet when its first game is ≤6 min from kick-off (pref `soon`, key `<id>:soon`, sent even for just-saved bets).
 - **Notifications panel** (`notifSheet`, `S.notifOpen`, opened by `data-notif` from the Live page button and Account → Notifications): master switch (`alertOpt`/`alertOpt2`), per-type choices (`mde:alertPrefs`, `apref(k)`: land, close, miss, result, ko, goal, red, ht, tight, ft) and the followed games.
 - **Followed games:** bell on fixture rows and live cards (`bellBtn`, `data-gfollow`), "Notify me" on the game page. Stored on the device in `mde:gfollow`; `gameAlerts()` (called from `alertTick`) compares against `mde:gstate` and sends kick-off, goals (with scorer), red cards, half-time/quarter breaks, close NBA finishes and full-time. First sight never alerts. Follows drop 8 h after kick-off. `followActive()` keeps live updates running in the background too.
 
