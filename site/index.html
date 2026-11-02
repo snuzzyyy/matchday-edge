@@ -4720,7 +4720,8 @@ async function liveTick() {
 async function reloadSnapshot() {
   try { const d = await getJ("data.json?t=" + Date.now()); S.data = d; liveTick(); } catch {}
 }
-setInterval(liveTick, 10000);
+let tickN = 0;
+setInterval(() => { tickN++; const hot = liveBetCount() || (S.drawer && (g => g && isLive(g))(findGame(...S.drawer.split(":")))); if (hot || tickN % 2 === 0) liveTick(); }, 5000);   /* every 5 s while you have a bet in play or a live game open, otherwise every 10 s */
 setInterval(reloadSnapshot, 10 * 60e3);
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") liveTick(); });
 // coming back to the app: pick up changes made elsewhere (Pro given in Supabase, bets settled overnight, balance)
