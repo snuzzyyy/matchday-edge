@@ -2564,7 +2564,7 @@ function marketIn(seg, sp, g) {
   if (t.includes(" draw or away ") || t.includes(" x2 ")) extra.push(`${an} or draw`);
   if (t.includes(" both teams to score ")) extra.push(/ both teams to score:? no | btts no /.test(t) || / no $/.test(t) ? "both teams to score no" : "both teams to score");
   if (/ (match result|full time result|match odds|1x2) /.test(t) && / draw /.test(t) && !has(H) && !has(A)) extra.push("draw");
-  const ms = g.model.markets.filter(m => !SKIP.has(m.k) && !isProp(m)).map(m => ({ m, l: normT(m.label) }));
+  const ms = g.model.markets.filter(m => !isProp(m)).map(m => ({ m, l: normT(m.label) }));
   for (const src of [...extra.map(x => " " + normT(x) + " "), t]) { const hit = ms.filter(x => src.includes(" " + x.l + " ")).sort((a, b) => b.l.length - a.l.length)[0]; if (hit) return hit.m; }
   return sp === "football" ? teamStatIn(t, g, H, A) : null;
 }
@@ -2676,7 +2676,12 @@ function parseBet(text, idx) {
     }
     for (const nm of names) {
       const p = findPlayer(idx, nm); if (!p) { missing.push(names.length > 1 ? nm : `${nm} ${/^\d/.test(rest.trim()) ? "" : "to "}${rest.trim()}`.replace(/\s+/g, " ")); continue; }
-      const st = (PROPS[p.sport].find(([re]) => re.test(rest)) || PROPS[p.sport][p.sport === "nba" ? 6 : 5]);
+      let st = (PROPS[p.sport].find(([re]) => re.test(rest)) || PROPS[p.sport][p.sport === "nba" ? 6 : 5]);
+      { /* "combine for 8+ shots & foul involvements": two stats added together */
+        const parts = rest.replace(/\(.*?\)/g, " ").split(/\s*(?:&|\+|,|\band\b)\s*/i).map(x => x.trim()).filter(Boolean), found = [];
+        for (const pt of parts) { const e = PROPS[p.sport].find(([re]) => re.test(pt)); if (e && !found.some(f => f[1] === e[1])) found.push(e); }
+        if (found.length > 1 && (/combin/i.test(rest) || (rest.match(/\d+(?:\.\d+)?\s*\+/g) || []).length <= 1) && st[1] !== "PRA" && st[1] !== "goalOrAssist") st = [null, "combo:" + found.map(f => f[1]).join(","), found.map(f => f[2]).join(" + ")];
+      }
       const target = tgt ? Math.ceil(+tgt) : ov ? Math.floor(+ov) + 1 : 1;
       const half = p.sport === "football" && /\b(1st|first) half\b/i.test(rest) ? 1 : p.sport === "football" && /\b(2nd|second) half\b/i.test(rest) ? 2 : 0;
       legs.push({ sport: p.sport, gid: p.gid, side: p.side, pid: p.pid, name: p.name, team: p.team, stat: st[1], label: st[2] + (half ? ` (${half === 1 ? "1st" : "2nd"} half)` : ""), target, ...(half ? { half } : {}) });
@@ -2709,6 +2714,8 @@ function legValue(l) {
   if (l.group) { const parts = l.group.map(m => ({ m, r: legValue({ ...l, ...m, group: null }) })), got = parts.filter(x => x.r.v != null);
     const gs = [...new Set(l.group.map(m => findGame(l.sport, m.gid)).filter(Boolean))];
     return { v: got.length ? got.reduce((a, x) => a + x.r.v, 0) : null, g: gs[0] || null, gs, parts, on: parts.some(x => x.r.on), dnp: parts.every(x => x.r.dnp), anyDnp: parts.some(x => x.r.dnp) }; }
+  if (/^combo:/.test(l.stat || "")) { const parts = l.stat.slice(6).split(",").map(st => legValue({ ...l, stat: st })), got = parts.filter(x => x.v != null), r0 = parts[0] || {};
+    return { ...r0, v: got.length ? got.reduce((a, x) => a + x.v, 0) : null }; }
   const g = findGame(l.sport, l.gid); if (!g) return { v: null, g };
   if (l.sport === "nba") {
     const B = (g.box || {})[l.side], P = (B || { players: [] }).players.find(p => String(p.id) === String(l.pid)); if (!P) return { v: null, g, dnp: !!(B && B.players.length) && !isPre(g) };
@@ -2864,7 +2871,8 @@ function legChance(l) {
   const g = findGame(l.sport, l.gid); if (!g) return null;
   if (l.pid) {
     if (l.half) return null;
-    const m = !l.group && mkt(g, `P:${l.pid}:${l.stat}:${l.target}`), lam0 = m ? lamFor(m.p, l.target, l.stat) : Math.max(.5, l.target - .5);
+    const m = !l.group && mkt(g, `P:${l.pid}:${l.stat}:${l.target}`), E = !m && !l.group ? chkLam(l, g) : null, lam0 = m ? lamFor(m.p, l.target, l.stat) : E ? E.lam : Math.max(.5, l.target - .5);
+    if (isPre(g) && !m && E) return atLeast(l.target, E.lam, l.stat);
     if (isPre(g)) return m ? m.p : null;
     const cur = legValue(l).v || 0; return paceChance(cur, l.target - cur, gameFrac(l.sport, g), lam0, l.stat);
   }
@@ -3908,7 +3916,8 @@ function chkLam(l, g) {   /* how many of this stat we expect from the player ove
   const fromMkt = stat => { const L = ms.filter(m => m.prop.stat === stat).map(m => lamFor(m.p, m.prop.target, stat)).filter(x => x != null); return L.length ? L.reduce((a, b) => a + b, 0) / L.length : null; };
   const one = stat => fromMkt(stat) ?? (CHK_PRIOR[l.sport] || {})[stat] ?? null;
   let lam, src = ms.some(m => m.prop.stat === l.stat) ? "From this player's line in our model" : "From his usual numbers (no line in our model, so this is a rougher guess)";
-  if (l.stat === "foulInvolvements") { lam = one("foulsSuffered") + one("foulsCommitted"); src = "Fouls he wins plus fouls he commits, from his usual numbers"; }
+  if (/^combo:/.test(l.stat)) { const subs = l.stat.slice(6).split(",").map(st => chkLam({ ...l, stat: st, half: 0 }, g)); if (subs.some(x => !x)) return null; lam = subs.reduce((a, x) => a + x.lam, 0); src = "The stats added together, from his usual numbers"; }
+  else if (l.stat === "foulInvolvements") { lam = one("foulsSuffered") + one("foulsCommitted"); src = "Fouls he wins plus fouls he commits, from his usual numbers"; }
   else if (l.stat === "goalOrAssist") { lam = one("totalGoals") + (fromMkt("goalAssists") ?? .15); src = "His goal chance plus his assist chance"; }
   else lam = one(l.stat);
   if (lam == null) return null;

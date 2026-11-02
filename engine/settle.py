@@ -88,6 +88,13 @@ def leg_result(l):
             if r is None or v is None: return None, None
             tot += v
         return ("won" if tot >= l["target"] else "lost"), tot
+    if str(l.get("stat", "")).startswith("combo:"):   # "8+ shots & foul involvements": the stats add up
+        tot = 0
+        for st in l["stat"][6:].split(","):
+            r, v = leg_result({**l, "stat": st})
+            if r is None or v is None: return None, None
+            tot += v
+        return ("won" if tot >= l["target"] else "lost"), tot
     sp, g = l.get("sport"), GAMES.get((l.get("sport"), str(l.get("gid"))))
     if not g: return None, None
     st = final_state(sp, g)
