@@ -1049,6 +1049,21 @@ button.setrow{width:100%;text-align:left;font:inherit;color:inherit;background:n
 .bc-foot{display:flex;justify-content:flex-end;padding-top:6px}.bv-foot{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
 .fb-check{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--bg-2);cursor:pointer;font-size:14px;font-weight:700}.fb-check input{width:18px;height:18px;margin-top:2px;accent-color:#facc15;flex:none}.hf-free{grid-column:1 / -1}.fb-check small{display:block;font-weight:500;font-size:12px;color:var(--muted);margin-top:2px}
 .strip.upd{border-color:rgba(255,122,47,.5);background:radial-gradient(120% 160% at 100% 0%,rgba(255,122,47,.18),transparent 60%),var(--surface)}.strip .upd-btn{background:var(--tang);color:#fff!important;font-weight:800;font-size:13px;padding:7px 14px;border-radius:999px;white-space:nowrap}
+.tw-wrap{display:grid;gap:18px}@media (min-width:1000px){.tw-wrap{grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start}.tw-out{position:sticky;top:12px}}
+.tw-ctrl{display:grid;gap:16px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px}.tw-step{display:grid;gap:9px}.tw-step>b,.tw-gh b{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.tw-gh{display:flex;justify-content:space-between;align-items:center}.tw-gh span{font-size:13px}
+.tw-games{display:grid;gap:6px;max-height:360px;overflow-y:auto;overscroll-behavior:contain;padding-right:2px}
+.tw-g{display:flex;align-items:center;gap:10px;text-align:left;background:var(--bg-2);border:1px solid var(--line);border-radius:12px;padding:8px 10px;color:var(--fg);font:inherit;cursor:pointer}.tw-g[aria-pressed=true]{border-color:var(--blue);background:rgba(59,130,246,.1)}
+.tw-tick{flex:none;width:22px;height:22px;border-radius:7px;border:1.5px solid var(--line-2);display:grid;place-items:center;font-size:13px;font-weight:800;color:#fff}.tw-g[aria-pressed=true] .tw-tick{background:var(--blue);border-color:var(--blue)}
+.tw-gt{display:grid;min-width:0}.tw-gt b{font-size:14px;overflow-wrap:anywhere}.tw-gt small{font-size:12px;color:var(--muted)}
+.tw-load{justify-self:start}
+.tw-out{display:grid;gap:12px}.tw-oh{display:flex;justify-content:space-between;align-items:center;gap:10px}.tw-oh h2,.tw-oh h3{margin:0}
+.tw-card{background:#000;border:1px solid #2f3336;border-radius:16px;padding:14px 16px;display:grid;gap:10px}
+.tw-who{display:flex;align-items:center;gap:10px}.tw-who img{width:40px;height:40px;border-radius:50%}.tw-who span{display:grid}.tw-who b{font-size:15px}.tw-who small{color:#71767b;font-size:13.5px}
+.tw-text{width:100%;resize:vertical;background:transparent;border:0;color:#e7e9ea;font:inherit;font-size:16px;line-height:1.4;padding:0;outline:none;min-height:120px}
+.tw-foot{display:flex;justify-content:space-between;align-items:center;gap:10px;border-top:1px solid #2f3336;padding-top:10px}.tw-acts{display:flex;gap:8px}
+.tw-count{font-size:13px;font-weight:700;color:#71767b}.tw-count.near{color:#ffd400}.tw-count.over{color:#f4212e}
+.tw-img img{width:100%;border-radius:14px;border:1px solid var(--line);display:block}
 </style>
 
 <header class="top">
@@ -1105,7 +1120,7 @@ const NAV = [["live", "Live", ["live"], "live"], ["games", "Games", ["fixtures",
 const SUBNAME = { fixtures: "Fixtures", tables: "Tables", news: "News", bets: "Tips", acca: "Accas", multi: "Multi-sport", mybets: "My Bets", stats: "Stats" };
 const navOf = v => NAV.find(n => n[2].includes(v));
 S.lastSub = store.get("lastSub", {});
-const view = () => { const h = location.hash.slice(1); return h === "account" || h === "perks" || h === "stats" || VIEWS.some(v => v[0] === h) ? h : "live"; };
+const view = () => { const h = location.hash.slice(1); return h === "account" || h === "perks" || h === "stats" || h === "tweets" || VIEWS.some(v => v[0] === h) ? h : "live"; };
 
 /* ---------- odds ---------- */
 const FR = [[1,20],[1,16],[1,14],[1,12],[1,10],[1,9],[1,8],[1,7],[1,6],[1,5],[2,9],[1,4],[2,7],[3,10],[1,3],[4,11],[2,5],[4,9],[1,2],[8,15],[4,7],[8,13],[4,6],[8,11],[4,5],[5,6],[10,11],[19,20],[20,21],[1,1],[21,20],[11,10],[6,5],[5,4],[11,8],[7,5],[6,4],[8,5],[13,8],[7,4],[9,5],[15,8],[2,1],[85,40],[9,4],[12,5],[5,2],[13,5],[11,4],[3,1],[10,3],[7,2],[4,1],[9,2],[5,1],[11,2],[6,1],[13,2],[7,1],[15,2],[8,1],[17,2],[9,1],[10,1],[11,1],[12,1],[14,1],[16,1],[18,1],[20,1],[22,1],[25,1],[28,1],[33,1],[40,1],[50,1],[66,1],[80,1],[100,1],[125,1],[150,1],[200,1],[250,1],[300,1],[400,1],[500,1],[750,1],[1000,1]];
@@ -3142,6 +3157,7 @@ function viewAccount(mode = "account") {
   ${m}
   ${profileShowcase(S.user.id)}
   <div class="setcard links"><a class="setrow" href="#friends">${avatarStack()}<span><b>Friends</b><small>${nFr ? `${nFr} friend${nFr > 1 ? "s" : ""}` : "Invite your friends"}</small></span><span class="rchev" aria-hidden="true">›</span></a>
+  ${isOwner() ? `<a class="setrow" href="#tweets"><span class="ic-dot">✍️</span><span><b>Tweet maker</b><small>Owner only · tweets and images from tonight's stats</small></span><span class="rchev" aria-hidden="true">›</span></a>` : ""}
   <a class="setrow" href="#perks"><span class="ic-dot">${(S.profile || {}).plan === "pro" ? "★" : "☆"}</span><span><b>Your plan & perks</b><small>${(S.profile || {}).plan === "pro" ? "Pro · see everything you get" : "Free · see what Pro adds"}</small></span><span class="rchev" aria-hidden="true">›</span></a>
   <a class="setrow" href="#mybets"><span class="ic-dot">${ICON.chart}</span><span><b>My Bets</b><small>${S.bets.length ? `${S.bets.length} saved` : "Your bets and profit"}</small></span><span class="rchev" aria-hidden="true">›</span></a></div>
   ${profileView()}
@@ -3324,6 +3340,185 @@ function friendsView() {
     <form class="addrow" id="addFriend"><div class="field"><label for="fcode">Add a friend by their code</label><input id="fcode" maxlength="6" placeholder="e.g. 7F3A9C" autocomplete="off" style="text-transform:uppercase"></div><div class="field" style="flex:0 0 auto;align-self:end"><button class="btn" type="submit">Add friend</button></div></form>
     <h2 style="margin-top:6px">Your friends</h2>
     ${fr.length ? `<div class="mates">${fr.map(f => `<div class="mate"><button class="mate-main" data-mate="${f.id}">${avatarHTML(f, 44)}<span><b>${esc(f.display_name)}${badgesHTML(f, 1)}</b><small>Tap to see their bets and £1K challenge</small></span></button><button class="x" data-unfriend="${f.id}" aria-label="Remove ${esc(f.display_name)}">✕</button></div>`).join("")}</div>` : `<div class="empty">No friends yet. Share your link or code to get started.</div>`}</section>${peopleSection()}`;
+}
+/* ---------- Tweet maker: owner only. Writes tweets (and a matching image card) from tonight's real stats ---------- */
+const isOwner = () => ((S.profile || {}).badges || []).includes("owner");
+const TW_TAGS = { "eng.1": "#PL", "eng.2": "#EFL", "eng.3": "#EFL", "eng.4": "#EFL", "esp.1": "#LaLiga", "ita.1": "#SerieA", "ger.1": "#Bundesliga", "fra.1": "#Ligue1", "sco.1": "#SPFL", "uefa.champions": "#UCL", "uefa.europa": "#UEL", "ned.1": "#Eredivisie", "por.1": "#LigaPortugal", "usa.1": "#MLS" };
+const TW_KINDS = [["top", "Top performers"], ["results", "Results"], ["game", "One game"], ["player", "Player spotlight"], ["acca", "Acca of the day"], ["live", "Live now"]];
+const twLen = t => { let n = 0; for (const ch of String(t).replace(/https?:\/\/\S+/g, "x".repeat(23))) { const c = ch.codePointAt(0); n += c === 0xfe0f || c === 0x200d ? 0 : c >= 0x1f000 || (c >= 0x2600 && c <= 0x27bf) || (c >= 0x1100 && c <= 0x11ff) ? 2 : 1; } return n; };
+const twPick = (arr, seed) => arr[Math.abs(seed) % arr.length];
+const twState = () => (S.tw = S.tw || { sport: "football", kind: "top", win: 14, pre: "today", off: {}, game: null, player: null, seed: 0, emoji: true, tags: true, ask: true, adult: null, level: "balanced", legs: 3, custom: {} });
+const twSports = T => T.sport === "both" ? ["football", "nba"] : [T.sport];
+const twScore = (sp, g) => { const L = sp === "nba" ? g.away : g.home, R = sp === "nba" ? g.home : g.away; return `${L.name} ${L.score}–${R.score} ${R.name}`; };
+function twGames(T) {   /* the games this kind of tweet is about */
+  const now = Date.now(), out = [];
+  for (const sp of twSports(T)) {
+    const G = games(sp);
+    const list = T.kind === "live" ? G.filter(isLive)
+      : T.kind === "acca" || (T.kind === "game" && T.gameMode === "preview") ? upcoming(sp, T.pre).filter(isPre)
+      : G.filter(g => g.status.state === "post" && now - +new Date(kick(g)) < T.win * 3600e3);
+    for (const g of list.sort((a, b) => new Date(kick(a)) - new Date(kick(b)))) out.push({ sp, g });
+  }
+  return out;
+}
+const twOn = (T, x) => !T.off[x.sp + x.g.id];
+/* everyone who did something worth shouting about in the chosen games */
+function twPerformers(T, sel) {
+  const nba = [], fb = new Map();
+  for (const { sp, g } of sel) {
+    if (sp === "nba") for (const side of ["h", "a"]) for (const p of ((g.box || {})[side] || { players: [] }).players) {
+      if (p.dnp) continue; const n = k => +String((p.s || {})[k] ?? 0).split("-")[0] || 0, me = side === "h" ? g.home : g.away, op = side === "h" ? g.away : g.home;
+      const v = { name: p.n, team: me.name, opp: op.name, pts: n("PTS"), reb: n("REB"), ast: n("AST"), tpm: n("3PT"), stl: n("STL"), blk: n("BLK"), fg: (p.s || {}).FG || "", won: +me.score > +op.score };
+      v.dd = [v.pts, v.reb, v.ast, v.stl, v.blk].filter(x => x >= 10).length; v.score = v.pts + 1.2 * v.reb + 1.5 * v.ast + 2 * (v.stl + v.blk) + (v.dd >= 3 ? 25 : v.dd === 2 ? 10 : 0); nba.push(v);
+    }
+    if (sp === "football") {
+      const add = (name, side, f) => { const me = side === "h" ? g.home : g.away, op = side === "h" ? g.away : g.home, k = name + "|" + me.name;
+        const v = fb.get(k) || { name, team: me.name, opp: op.name, goals: 0, pens: 0, ast: 0, sot: 0, saves: 0, lg: g.league }; f(v); fb.set(k, v); };
+      for (const e of g.events || []) if (/Goal|Penalty - Scored/i.test(e.type) && !/Own Goal|Missed|Saved/i.test(e.type) && e.who && e.side) add(e.who, e.side, v => { v.goals++; if (/Penalty/i.test(e.type)) v.pens++; });
+      for (const side of ["h", "a"]) for (const p of ((g.lineups || {})[side] || { players: [] }).players) {
+        const s = p.s || {}; if ((s.goalAssists || 0) > 0 || (s.shotsOnTarget || 0) >= 3 || (s.saves || 0) >= 5) add(p.n, side, v => { v.ast = Math.max(v.ast, s.goalAssists || 0); v.sot = Math.max(v.sot, s.shotsOnTarget || 0); v.saves = Math.max(v.saves, s.saves || 0); v.goals = Math.max(v.goals, s.totalGoals || 0); });
+      }
+    }
+  }
+  const F = [...fb.values()].map(v => ({ ...v, score: v.goals * 10 + v.ast * 6 + v.sot * 1.5 + (v.saves >= 5 ? v.saves : 0) }));
+  return { nba: nba.sort((a, b) => b.score - a.score), fb: F.sort((a, b) => b.score - a.score) };
+}
+const nbaLine = (v, short) => [v.pts && `${v.pts} PTS`, v.reb >= 5 && `${v.reb} REB`, v.ast >= 5 && `${v.ast} AST`, !short && v.tpm >= 4 && `${v.tpm} 3PM`, !short && v.stl + v.blk >= 4 && `${v.stl + v.blk} STL+BLK`].filter(Boolean).join(" · ");
+const fbLine = v => [v.goals >= 3 ? "hat-trick" : v.goals === 2 ? "brace" : v.goals === 1 ? "goal" : "", v.ast ? `${v.ast} assist${v.ast > 1 ? "s" : ""}` : "", !v.goals && v.sot >= 3 ? `${v.sot} shots on target` : "", v.saves >= 5 ? `${v.saves} saves` : ""].filter(Boolean).join(" + ");
+const fbIcon = v => v.goals >= 3 ? "🎩" : v.goals === 2 ? "⚽⚽" : v.goals === 1 ? "⚽" : v.ast ? "🅰️" : v.saves >= 5 ? "🧤" : "🎯";
+/* build the tweet(s) and the image card for the current settings */
+function twBuild(T) {
+  const all = twGames(T), sel = T.kind === "game" || T.kind === "player" ? all.filter(x => x.sp + x.g.id === T.game).slice(0, 1) : all.filter(x => twOn(T, x));
+  const E = (e, t) => T.emoji ? `${e} ${t}` : t, s = T.seed, sports = [...new Set(sel.map(x => x.sp))];
+  const tags = !T.tags ? "" : [...new Set(sel.map(x => x.sp === "nba" ? "#NBA" : TW_TAGS[x.g.league] || "#Football"))].slice(0, 2).join(" ");
+  const wd = new Date().getDay(), when = T.win <= 14 ? "Tonight's" : T.win <= 24 ? "Today's" : wd === 0 || wd === 1 ? "This weekend's" : "The latest";
+  let head = "", body = [], ask = "", card = null, adult = false, empty = "", accaTags = null;
+  if (!sel.length) return { tweets: [], card: null, empty: T.kind === "live" ? "Nothing in play right now." : T.kind === "acca" || T.gameMode === "preview" ? "No games coming up in that window." : "No finished games in that window yet. Try a longer window." };
+  if (T.kind === "top") {
+    const P = twPerformers(T, sel), rows = [];
+    if (sports.includes("nba")) for (const v of P.nba.slice(0, sports.length > 1 ? 3 : 5)) rows.push({ t: `${T.emoji ? (v.dd >= 3 ? "👑 " : v.pts >= 35 ? "🔥 " : v.dd === 2 ? "💪 " : "🏀 ") : ""}${v.name}: ${nbaLine(v)}${v.dd >= 3 ? " (triple-double)" : ""}`, c: [v.name, nbaLine(v, true) + (v.dd >= 3 ? " · TD" : ""), v.team] });
+    if (sports.includes("football")) for (const v of P.fb.slice(0, sports.length > 1 ? 3 : 5)) rows.push({ t: `${T.emoji ? fbIcon(v) + " " : ""}${v.name}: ${fbLine(v)} v ${v.opp}${v.pens ? ` (${v.pens} pen)` : ""}`, c: [v.name, fbLine(v), v.team] });
+    if (!rows.length) return { tweets: [], card: null, empty: sports.includes("football") ? "No goals or stand-out stats yet. Tap “Load player stats” to pull assists, shots and saves." : "No box scores for these games yet." };
+    head = E(sports.length > 1 ? "🏆" : sports[0] === "nba" ? "🏀" : "⚽", twPick([`${when} top performers`, `${when} standouts`, `Who stood out ${T.win <= 14 ? "tonight" : "today"}`], s));
+    body = rows.map(r => r.t); ask = twPick(["Who impressed you most? 👇", "Who's your player of the night? 👇", "Who did we miss? 👇"], s);
+    card = { title: twPick(["TOP PERFORMERS", "STANDOUTS"], s), sub: T.win <= 14 ? "Tonight" : T.win <= 24 ? "Today" : "Last 48 hours", rows: rows.map(r => r.c) };
+  } else if (T.kind === "results" || T.kind === "live") {
+    const by = new Map(); for (const x of sel) { const k = x.sp === "nba" ? "NBA" : leagueName(x.g.league); by.set(k, [...(by.get(k) || []), x]); }
+    head = T.kind === "live" ? E("🔴", "Live scores") : E("📋", twPick([`${when === "Tonight's" ? "Tonight's" : "Today's"} results`, "Full-time scores", "How it finished"], s));
+    for (const [k, L] of by) { if (by.size > 1) body.push(`${k}:`); for (const x of L) body.push(`${twScore(x.sp, x.g)}${T.kind === "live" ? ` (${clockLabel(x.sp, x.g)})` : ""}`); if (by.size > 1) body.push(""); }
+    while (body.length && body[body.length - 1] === "") body.pop();
+    ask = T.kind === "live" ? twPick(["Who are you cheering on? 👇", "What are you watching? 👇"], s) : twPick(["Any of these land you an acca? 👇", "Best result of the night? 👇", "Who surprised you? 👇"], s);
+    card = { title: T.kind === "live" ? "LIVE NOW" : "RESULTS", sub: [...by.keys()].slice(0, 3).join(" · "), rows: sel.slice(0, 8).map(x => { const L = x.sp === "nba" ? x.g.away : x.g.home, R = x.sp === "nba" ? x.g.home : x.g.away; return [`${L.name}  ${L.score}–${R.score}  ${R.name}`, T.kind === "live" ? clockLabel(x.sp, x.g) : x.sp === "nba" ? "Final" : "FT", ""]; }) };
+  } else if (T.kind === "game") {
+    const { sp, g } = sel[0], h = g.home, a = g.away, L = sp === "nba" ? a : h, R = sp === "nba" ? h : a;
+    if (isPre(g)) {
+      adult = true; const ms = g.model.markets, best = [...ms].filter(m => !SKIP.has(m.k) && !m.prop && m.p <= .93 && priceOf(m) >= 1.2).sort((x, y) => y.p - x.p)[0], big = [...ms].filter(m => !SKIP.has(m.k) && !m.prop && priceOf(m) >= 1.8 && priceOf(m) <= 4 && m.p >= .3).sort((x, y) => y.p * priceOf(y) - x.p * priceOf(x))[0];
+      const wl = whenLabel(kick(g)); head = E("👀", `${/\d{1,2}:\d{2}/.test(wl) ? wl : wl + " " + hm(kick(g))}: ${vs(sp, g)}`);
+      if (sp === "football") { const p1 = mkt(g, "1"), px = mkt(g, "X"), p2 = mkt(g, "2"); if (p1 && px && p2) body.push(E("📈", `Our model: ${h.name} ${pct(p1.p)} · Draw ${pct(px.p)} · ${a.name} ${pct(p2.p)}`)); body.push(E("⚽", `Expected goals ${g.model.xgH.toFixed(1)}–${g.model.xgA.toFixed(1)}${g.model.corners ? ` · corners ~${g.model.corners.toFixed(1)}` : ""}`)); }
+      else { const m1 = mkt(g, "ML1"); if (m1) body.push(E("📈", `Win chance: ${a.name} ${pct(1 - m1.p)} · ${h.name} ${pct(m1.p)}`)); body.push(E("🏀", `Projected total ${g.model.proj}${g.odds && g.odds.total ? ` (line ${g.odds.total})` : ""}`)); }
+      if (best) body.push(E("🎯", `Most likely: ${best.label} (${pct(best.p)})`)); if (big) body.push(E("💰", `Bigger price: ${big.label} ${odds(priceOf(big))}`));
+      ask = twPick(["What's your call? 👇", "How are you betting this one? 👇", "Score prediction? 👇"], s);
+      card = { title: "PREVIEW", sub: `${vs(sp, g)} · ${/\d{1,2}:\d{2}/.test(whenLabel(kick(g))) ? whenLabel(kick(g)) : whenLabel(kick(g)) + " " + hm(kick(g))}`, rows: [best && [best.label, pct(best.p) + " chance", "Most likely"], big && [big.label, odds(priceOf(big)), "Bigger price"]].filter(Boolean) };
+    } else {
+      const fin = g.status.state === "post", P = twPerformers(T, sel), top = (sp === "nba" ? P.nba : P.fb).slice(0, 2);
+      head = `${fin ? (sp === "nba" ? "FINAL" : "FT") : "LIVE"}: ${L.name} ${L.score}–${R.score} ${R.name}${T.emoji ? (sp === "nba" ? " 🏀" : " ⚽") : ""}`;
+      if (sp === "football") { const sc = side => (g.events || []).filter(e => /Goal|Penalty - Scored/i.test(e.type) && !/Missed|Saved/i.test(e.type) && e.side === side).map(e => `${(e.who || "").split(" ").slice(-1)[0]} ${e.min}${/Own Goal/i.test(e.type) ? " (og)" : ""}`).join(", "); const hs = sc("h"), as = sc("a"); if (hs || as) body.push(E("⚽", `${hs || "–"} | ${as || "–"}`)); }
+      const st = k => (g.stats || []).find(x => x.k === k), fmt = (k, lab, pc) => { const x = st(k); if (!x) return ""; const [l, r] = sp === "nba" ? [x.a, x.h] : [x.h, x.a]; return `${lab} ${Math.round(l)}${pc ? "%" : ""}–${Math.round(r)}${pc ? "%" : ""}`; };
+      const stats = sp === "nba" ? [fmt("fieldGoalPct", "FG", 1), fmt("threePointFieldGoalPct", "3PT", 1), fmt("totalRebounds", "REB")] : [fmt("shotsOnTarget", "Shots on target"), fmt("wonCorners", "Corners"), fmt("possessionPct", "Possession", 1)];
+      if (stats.some(Boolean)) body.push(E("📊", stats.filter(Boolean).join(" · ")));
+      for (const v of top) body.push(sp === "nba" ? E(v.dd >= 3 ? "👑" : "🔥", `${v.name}: ${nbaLine(v)}`) : E("⭐", `${v.name}: ${fbLine(v)}`));
+      ask = twPick(["Thoughts? 👇", "Did this one land for you? 👇", "Man of the match? 👇"], s);
+      card = { title: fin ? "FULL TIME" : "LIVE", sub: `${L.name} ${L.score}–${R.score} ${R.name}`, rows: [...top.map(v => sp === "nba" ? [v.name, nbaLine(v, true), v.team] : [v.name, fbLine(v), v.team]), ...stats.filter(Boolean).slice(0, 3).map(x => [x, "", ""])] };
+    }
+  } else if (T.kind === "player") {
+    const P = twPerformers(T, sel), list = [...P.nba, ...P.fb], v = list.find(x => x.name === T.player) || list[0];
+    if (!v) return { tweets: [], card: null, empty: "No player stats for this game yet. Tap “Load player stats”." };
+    const nb = sel[0].sp === "nba";
+    head = nb ? E(v.dd >= 3 ? "👑" : "🔥", `${v.name} ${twPick(["went off", "was on fire", "delivered"], s)} ${T.win <= 14 ? "tonight" : "today"}`) : E("⭐", `${v.name} ${twPick(["stole the show", "was unplayable", "delivered"], s)} v ${v.opp}`);
+    body = nb ? [`${nbaLine(v)}${v.fg ? ` on ${v.fg.replace("-", "/")} FG` : ""}${v.dd >= 3 ? " — triple-double" : ""}`, `${v.won ? "✅" : "❌"} ${v.team} ${v.won ? "got the win" : "fell short"} v ${v.opp}`] : [fbLine(v).replace(/^./, c => c.toUpperCase()) + (v.pens ? ` (${v.pens} pen)` : ""), v.sot && v.goals ? `${v.sot} shots on target` : ""].filter(Boolean);
+    ask = twPick(["Rate the performance /10 👇", "Who's stopping them? 👇", "Did you have them in your acca? 👇"], s);
+    card = { title: "PLAYER SPOTLIGHT", sub: `${v.name} · ${v.team}`, rows: nb ? [[`${v.pts}`, "Points", ""], [`${v.reb}`, "Rebounds", ""], [`${v.ast}`, "Assists", ""], [`${v.tpm}`, "Threes", ""]] : [[`${v.goals}`, "Goals", ""], [`${v.ast}`, "Assists", ""], [`${v.sot}`, "Shots on target", ""]].filter(r => r[0] !== "0" || r[1] === "Goals") };
+  } else if (T.kind === "acca") {
+    adult = true; const keep = { sport: S.sport, risk: S.accaRisk, win: S.accaWin }, legs = [];
+    try { S.accaRisk = T.level; S.accaWin = T.pre; S._lvl = {}; for (const sp of sports) { S.sport = sp; legs.push(...levelPreset(T.legs).filter(x => twOn(T, { sp: x.sport, g: x.g }))); } } finally { S.sport = keep.sport; S.accaRisk = keep.risk; S.accaWin = keep.win; S._lvl = {}; }
+    if (legs.length < 2) return { tweets: [], card: null, empty: "Couldn't build an acca from those games. Try another window or level." };
+    const L2 = asLegs(legs), c = slipCalc(L2);
+    head = E("📦", `${twPick(["Tonight's Accabox acca", "The Accabox acca", "Our acca"], s)} · ${RISK[T.level].name}`);
+    body = L2.map(l => `${T.emoji ? "✅ " : "- "}${l.pid ? legText(l) : `${l.match}: ${legText(l)}`} (${odds(l.dec)})`);
+    accaTags = [...new Set(legs.map(x => x.sport === "nba" ? "#NBA" : TW_TAGS[x.g.league] || "#Football"))].slice(0, 2).join(" "); body.push(""); body.push(E("💰", `${L2.length}-fold at about ${odds(c.dec)}`));
+    ask = twPick(["Who's on it? 👇", "Would you back it? 👇", "Swap any leg? Tell us 👇"], s);
+    card = { title: "ACCA OF THE DAY", sub: `${RISK[T.level].name} · about ${odds(c.dec)}`, rows: L2.map(l => [legText(l), odds(l.dec), l.match]) };
+  }
+  const showAdult = T.adult == null ? adult : T.adult;
+  let foot = [T.ask && ask, T.tags && accaTags != null ? accaTags : tags, showAdult && "18+ BeGambleAware"].filter(Boolean);
+  const join = b => [head, "", ...b, "", ...foot].join("\n").replace(/\n{3,}/g, "\n\n").replace(/ {2,}/g, " ").replace(/ +:/g, ":").trim();
+  if (T.kind !== "results" && T.kind !== "live") for (const drop of [ask, T.tags && accaTags != null ? accaTags : tags]) if (twLen(join(body)) > 280 && drop) foot = foot.filter(x => x !== drop);   /* keep it to one tweet: lose the question, then the hashtags */
+  /* fit to 280: lists of players or bets drop their weakest rows to stay as one tweet; results become a numbered thread */
+  if (T.kind !== "results" && T.kind !== "live" && T.kind !== "acca") while (twLen(join(body)) > 280 && body.filter(Boolean).length > 3) body = body.slice(0, -1);
+  const tweets = [], all1 = join(body);
+  if (twLen(all1) <= 280) tweets.push(all1);
+  else { let cur = [head, ""]; for (const line of body) { const next = [...cur, line].join("\n"); if (twLen(next) > 262 && cur.length > 2) { const carry = []; while (cur.length > 2 && (/:$/.test(cur[cur.length - 1]) || cur[cur.length - 1] === "")) carry.unshift(cur.pop()); tweets.push(cur.join("\n").trim()); cur = [...carry.filter(Boolean), line]; } else cur.push(line); }
+    const last = [...cur, "", ...foot].join("\n").trim(); if (twLen(last) <= 274) tweets.push(last); else { tweets.push(cur.join("\n").trim()); tweets.push(foot.join("\n")); }
+    if (tweets.length > 1) tweets.forEach((t, i) => { tweets[i] = `${t}\n\n${i + 1}/${tweets.length}`; }); }
+  if (card) card.adult = showAdult;
+  return { tweets, card, empty };
+}
+/* the image card: 1600×900, brand colours, drawn on a canvas so it can be saved and attached */
+async function twCard(card) {
+  const c = document.createElement("canvas"); c.width = 1600; c.height = 900; const x = c.getContext("2d");
+  try { await document.fonts.load("italic 800 80px 'Barlow Condensed'"); await document.fonts.load("700 40px Figtree"); } catch {}
+  const bg = x.createLinearGradient(0, 0, 1600, 900); bg.addColorStop(0, "#0d1530"); bg.addColorStop(.6, "#080c18"); bg.addColorStop(1, "#140c18"); x.fillStyle = bg; x.fillRect(0, 0, 1600, 900);
+  const glow = (cx, cy, r, col) => { const g = x.createRadialGradient(cx, cy, 0, cx, cy, r); g.addColorStop(0, col); g.addColorStop(1, "rgba(0,0,0,0)"); x.fillStyle = g; x.fillRect(0, 0, 1600, 900); };
+  glow(1500, 60, 700, "rgba(255,122,47,.28)"); glow(80, 880, 700, "rgba(59,130,246,.25)");
+  const logo = await new Promise(r => { const i = new Image(); i.onload = () => r(i); i.onerror = () => r(null); i.src = "mark.png"; });
+  if (logo) { x.save(); x.beginPath(); x.roundRect(80, 64, 92, 92, 22); x.clip(); x.drawImage(logo, 80, 64, 92, 92); x.restore(); }
+  x.font = "italic 800 84px 'Barlow Condensed'"; x.textBaseline = "alphabetic"; x.fillStyle = "#f4f6fb"; x.fillText("ACCA", 196, 140); const aw = x.measureText("ACCA").width;
+  const og = x.createLinearGradient(0, 70, 0, 150); og.addColorStop(0, "#ffa043"); og.addColorStop(1, "#ff5a3c"); x.fillStyle = og; x.fillText("BOX", 196 + aw, 140);
+  x.font = "italic 800 92px 'Barlow Condensed'"; x.fillStyle = "#ffffff"; x.fillText(card.title, 80, 290);
+  x.font = "600 34px Figtree"; x.fillStyle = "#ff8a3d"; x.fillText(card.sub || "", 82, 345);
+  const rows = (card.rows || []).slice(0, 6), top = 400, rh = Math.min(76, 400 / Math.max(rows.length, 1));
+  rows.forEach((r, i) => { const y = top + i * rh;
+    x.fillStyle = i % 2 ? "rgba(255,255,255,.035)" : "rgba(255,255,255,.07)"; x.beginPath(); x.roundRect(80, y, 1440, rh - 10, 14); x.fill();
+    const mid = y + (rh - 10) / 2 + 12; x.font = "700 34px Figtree"; x.fillStyle = "#eef1f8"; let t = String(r[0] || ""); while (x.measureText(t).width > 820 && t.length > 3) t = t.slice(0, -2); x.fillText(t === r[0] ? t : t + "…", 108, mid);
+    x.textAlign = "right"; x.font = "italic 800 40px 'Barlow Condensed'"; x.fillStyle = "#ff8a3d"; x.fillText(String(r[1] || ""), 1490, mid);
+    if (r[2]) { x.font = "500 24px Figtree"; x.fillStyle = "#8f9ab3"; x.fillText(String(r[2]), 1490 - x.measureText(String(r[1] || "")).width * 1.2 - 40, mid - 2); } x.textAlign = "left"; });
+  x.font = "800 30px Figtree"; x.fillStyle = "#ffffff"; x.fillText("@accabox", 80, 852);
+  x.font = "500 22px Figtree"; x.fillStyle = "#7f8aa3"; x.textAlign = "right"; x.fillText(card.adult ? "18+ · Please gamble responsibly · BeGambleAware.org" : "Stats from Accabox", 1520, 852); x.textAlign = "left";
+  return c.toDataURL("image/png");
+}
+function viewTweets() {
+  if (!isOwner()) return `<div class="empty"><b>Not available</b><span>This page is only for the Accabox owner.</span></div>`;
+  const T = twState(), all = twGames(T), single = T.kind === "game" || T.kind === "player";
+  if (single && (!T.game || !all.some(x => x.sp + x.g.id === T.game))) T.game = all.length ? all[0].sp + all[0].g.id : null;
+  const chosen = single ? all.filter(x => x.sp + x.g.id === T.game) : all.filter(x => twOn(T, x));
+  const needFb = chosen.filter(x => x.sp === "football" && x.g.status.state !== "pre" && !x.g.lineups);
+  const R = twBuild(T);
+  if (R.card && S._twSig !== JSON.stringify(R.card)) { S._twSig = JSON.stringify(R.card); S._twImg = null; twCard(R.card).then(u => { S._twImg = u; render(); }); }
+  const seg = (name, cur, opts, attr) => `<div class="seg3 ${opts.length === 2 ? "two" : ""}" role="group" aria-label="${name}">${opts.map(([k, l]) => `<button ${attr}="${k}" aria-pressed="${String(cur) === String(k)}">${l}</button>`).join("")}</div>`;
+  const chip = (attr, k, l, on) => `<button class="chip" ${attr}="${k}" aria-pressed="${!!on}">${l}</button>`;
+  const pre = T.kind === "acca" || (T.kind === "game" && T.gameMode === "preview");
+  const gameRows = all.length ? `<div class="tw-games">${all.map(x => { const id = x.sp + x.g.id, on = single ? T.game === id : twOn(T, x); return `<button class="tw-g" data-twgame="${id}" aria-pressed="${on}"><span class="tw-tick">${on ? "✓" : ""}</span><span class="tw-gt"><b>${esc(x.g.status.state === "pre" ? vs(x.sp, x.g) : twScore(x.sp, x.g))}</b><small>${x.sp === "nba" ? "NBA" : esc(leagueName(x.g.league))} · ${x.g.status.state === "pre" ? esc(whenLabel(kick(x.g)) + " " + hm(kick(x.g))) : isLive(x.g) ? esc(clockLabel(x.sp, x.g)) : "Finished"}</small></span></button>`; }).join("")}</div>` : `<div class="empty">${R.empty || "No games in that window."}</div>`;
+  const players = T.kind === "player" && chosen.length ? (() => { const P = twPerformers(T, chosen), L = [...P.nba, ...P.fb].slice(0, 30); return L.length ? `<div class="field"><label for="twPlayer">Player</label><select id="twPlayer" data-twplayer>${L.map(v => `<option ${v.name === T.player ? "selected" : ""}>${esc(v.name)}</option>`).join("")}</select></div>` : ""; })() : "";
+  return `<div class="hd"><div><h1>Tweet maker <span class="bdg owner">OWNER</span></h1><p class="sub">Only you can see this. Pick what to tweet about and it writes it from the latest stats.</p></div></div>
+  <div class="tw-wrap"><section class="tw-ctrl">
+    <div class="tw-step"><b>1 · Sport</b>${seg("Sport", T.sport, [["football", "⚽ Football"], ["nba", "🏀 NBA"], ["both", "Both"]], "data-twsport")}</div>
+    <div class="tw-step"><b>2 · Tweet about</b><div class="chips">${TW_KINDS.map(([k, l]) => chip("data-twkind", k, l, T.kind === k)).join("")}</div>
+      ${T.kind === "game" ? seg("Game", T.gameMode || "recap", [["recap", "Result / live"], ["preview", "Preview"]], "data-twgmode") : ""}</div>
+    <div class="tw-step"><b>3 · When</b><div class="chips">${pre ? [["today", "Today"], ["tomorrow", "Tomorrow"], ["48h", "Next 48 hrs"]].map(([k, l]) => chip("data-twpre", k, l, T.pre === k)).join("") : T.kind === "live" ? `<span class="sub" style="margin:0">Games on right now</span>` : [[14, "Tonight"], [24, "Last 24 hrs"], [48, "Last 48 hrs"]].map(([k, l]) => chip("data-twwin", k, l, T.win === k)).join("")}</div></div>
+    ${T.kind === "acca" ? `<div class="tw-step"><b>Level and legs</b>${seg("Level", T.level, Object.entries(RISK).map(([k, r]) => [k, r.name]), "data-twlevel")}<div class="chips">${[2, 3, 4, 5].map(n => chip("data-twlegs", n, n + " legs", T.legs === n)).join("")}</div></div>` : ""}
+    <div class="tw-step"><div class="tw-gh"><b>4 · ${single ? "Pick a game" : "Games"}</b>${!single && all.length ? `<span><button class="linkbtn" data-twall="1">All</button> · <button class="linkbtn" data-twall="0">None</button></span>` : ""}</div>${gameRows}
+      ${needFb.length ? `<button class="btn ghost sm tw-load" data-twload>⬇ Load player stats (${needFb.length} game${needFb.length > 1 ? "s" : ""}): assists, shots, saves</button>` : ""}${players}</div>
+    <div class="tw-step"><b>Style</b><div class="chips">${chip("data-twopt", "emoji", "Emojis", T.emoji)}${chip("data-twopt", "tags", "Hashtags", T.tags)}${chip("data-twopt", "ask", "Question for followers", T.ask)}${chip("data-twopt", "adult", "18+ line", T.adult == null ? pre || T.kind === "game" && T.gameMode === "preview" : T.adult)}</div></div>
+  </section>
+  <section class="tw-out">
+    <div class="tw-oh"><h2>Your tweet${R.tweets.length > 1 ? `s · thread of ${R.tweets.length}` : ""}</h2><button class="btn ghost sm" data-twshuffle>↻ New wording</button></div>
+    ${R.tweets.length ? R.tweets.map((t0, i) => { const t = T.custom[i] != null ? T.custom[i] : t0, n = twLen(t);
+      return `<article class="tw-card"><div class="tw-who"><img src="mark.png" alt=""><span><b>Accabox</b><small>@accabox</small></span></div>
+        <textarea class="tw-text" data-twedit="${i}" rows="${Math.min(14, t.split("\n").length + 1)}" spellcheck="true">${esc(t)}</textarea>
+        <div class="tw-foot"><span class="tw-count ${n > 280 ? "over" : n > 260 ? "near" : ""}">${n}/280</span><span class="tw-acts"><button class="btn ghost sm" data-twcopy="${i}">Copy</button><a class="btn sm" href="https://x.com/intent/post?text=${encodeURIComponent(t)}" target="_blank" rel="noopener">Post on X</a></span></div></article>`; }).join("")
+      : `<div class="empty">${R.empty || "Pick some games."}</div>`}
+    ${R.card ? `<div class="tw-img"><div class="tw-oh"><h3>Image to attach</h3>${S._twImg ? `<a class="btn ghost sm" download="accabox-${T.kind}.png" href="${S._twImg}">Save image</a>` : ""}</div>${S._twImg ? `<img src="${S._twImg}" alt="Tweet image">` : `<div class="loadbox">Drawing the image…</div>`}<p class="colkey" style="margin:6px 0 0">On a phone, press and hold the image to save it.</p></div>` : ""}
+  </section></div>`;
 }
 function viewMyBets() {
   const bets = S.user ? S.bets || [] : [], track = b => (b.legs || []).some(l => l.pid || l.k);
@@ -3882,13 +4077,13 @@ function render() {
   setTimeout(autoSettle, 0);
   const v = view();
   { const g = navOf(v); if (g && g[2].length > 1 && S.lastSub[g[0]] !== v) { S.lastSub[g[0]] = v; store.set("lastSub", S.lastSub); } }
-  const MAIN = $("#main"), html = iosTip() + subnav(v) + (v === "friends" ? viewAccount("friends") : v === "account" ? viewAccount() : v === "perks" ? viewPerks() : v === "stats" ? viewStats() : v === "tables" ? viewTables() : v === "news" ? viewNews() : v === "fixtures" ? viewFixtures() : v === "bets" ? viewBets() : v === "mybets" ? viewMyBets() : v === "multi" ? viewMulti() : v === "acca" ? viewAcca() : v === "challenge" ? viewChallenge() : viewLive());
+  const MAIN = $("#main"), html = iosTip() + subnav(v) + (v === "friends" ? viewAccount("friends") : v === "account" ? viewAccount() : v === "perks" ? viewPerks() : v === "tweets" ? viewTweets() : v === "stats" ? viewStats() : v === "tables" ? viewTables() : v === "news" ? viewNews() : v === "fixtures" ? viewFixtures() : v === "bets" ? viewBets() : v === "mybets" ? viewMyBets() : v === "multi" ? viewMulti() : v === "acca" ? viewAcca() : v === "challenge" ? viewChallenge() : viewLive());
   if (MAIN._h !== html) {
     const sx = [...MAIN.querySelectorAll(".tw,.chips,.scroller")].map(e => e.scrollLeft);
     MAIN.innerHTML = html; MAIN._h = html;
     [...MAIN.querySelectorAll(".tw,.chips,.scroller")].forEach((e, k) => { if (sx[k]) e.scrollLeft = sx[k]; });
   }
-  const norail = v === "account" || v === "friends" || v === "perks"; document.querySelector(".page").classList.toggle("norail", norail);
+  const norail = v === "account" || v === "friends" || v === "perks" || v === "tweets"; document.querySelector(".page").classList.toggle("norail", norail);
   $("#rail").innerHTML = norail ? "" : slipHTML();
   const L = $("#layer"), prevDr = $(".drawer"), dkey = S.drawer || (S.slipOpen ? "slip" : ""), same = !!(prevDr && dkey && prevDr.dataset.key === dkey), keepTop = same ? prevDr.scrollTop : 0;
   const sheetTop = {}; for (const el of L.querySelectorAll(".ijsheet")) sheetTop[el.getAttribute("aria-label")] = el.scrollTop;   /* keep sheets where they were, and a half-typed comment */
@@ -4035,6 +4230,21 @@ document.addEventListener("click", async e => {
   else if (d.tipmode) { S.tipMode = d.tipmode; store.set("tipMode", d.tipmode); render(); }
   else if (d.chalodds2) { S.chalOdds = d.chalodds2; store.set("chalOdds", S.chalOdds); render(); }
   else if (d.accawin) { S.accaWin = d.accawin; render(); }
+  else if (d.twsport || d.twkind || d.twwin || d.twpre || d.twlevel || d.twlegs || d.twgmode || d.twopt || d.twgame || d.twall !== undefined || d.twshuffle !== undefined || d.twload !== undefined || d.twcopy !== undefined) {
+    const T = twState(), reset = () => { T.custom = {}; T.customSig = null; };
+    if (d.twsport) { T.sport = d.twsport; T.off = {}; T.game = null; T.player = null; reset(); }
+    else if (d.twkind) { T.kind = d.twkind; T.game = null; T.player = null; T.adult = null; reset(); }
+    else if (d.twwin) { T.win = +d.twwin; reset(); } else if (d.twpre) { T.pre = d.twpre; reset(); }
+    else if (d.twlevel) { T.level = d.twlevel; reset(); } else if (d.twlegs) { T.legs = +d.twlegs; reset(); }
+    else if (d.twgmode) { T.gameMode = d.twgmode; T.game = null; reset(); }
+    else if (d.twopt) { const k = d.twopt; if (k === "adult") { const cur = T.adult == null ? T.kind === "acca" || T.gameMode === "preview" : T.adult; T.adult = !cur; } else T[k] = !T[k]; reset(); }
+    else if (d.twgame) { if (T.kind === "game" || T.kind === "player") { T.game = d.twgame; T.player = null; const [sp] = d.twgame.match(/^(football|nba)/); const id = d.twgame.slice(sp.length); if (sp === "football") loadDetail("football:" + id); } else T.off[d.twgame] = !T.off[d.twgame]; reset(); }
+    else if (d.twall !== undefined) { const on = d.twall === "1"; for (const x of twGames(T)) T.off[x.sp + x.g.id] = !on; reset(); }
+    else if (d.twshuffle !== undefined) { T.seed++; reset(); }
+    else if (d.twload !== undefined) { const L = twGames(T).filter(x => x.sp === "football" && !x.g.lineups && (T.kind === "game" || T.kind === "player" ? x.sp + x.g.id === T.game : twOn(T, x))); toast(`Loading player stats for ${L.length} game${L.length > 1 ? "s" : ""}…`); for (const x of L) { x.g._luAt = 0; loadDetail("football:" + x.g.id); } }
+    else if (d.twcopy !== undefined) { const ta = document.querySelector(`[data-twedit="${d.twcopy}"]`); if (ta) copyText(ta.value, "Copied. Paste it into X"); return; }
+    render();
+  }
   else if (d.freebet) {   /* mark (or unmark) a saved bet as placed with a free bet: fixes its returns and your balance */
     const b = (S.bets || []).find(x => String(x.id) === d.freebet); if (!b) return;
     const before = credit(b) - cashStake(b), nf = freeOf(b) ? 0 : +b.stake, b2 = { ...b, free_stake: nf }, upd = { free_stake: nf };
@@ -4082,12 +4292,15 @@ document.addEventListener("click", e => { const b = e.target.closest("[data-legr
 document.addEventListener("input", e => {
   if (e.target.id === "stake") { S.stake = Math.max(0, +e.target.value || 0); save(); const c = slipCalc(); document.querySelectorAll("#ret").forEach(r => r.textContent = money(S.stake * c.dec - (S.slipFree ? S.stake : 0))); }
   if (e.target.id === "slipfree") { S.slipFree = e.target.checked; render(); }
+  if (e.target.dataset && e.target.dataset.twedit != null) { const T = twState(), i = +e.target.dataset.twedit, n = twLen(e.target.value); T.custom[i] = e.target.value;
+    const card = e.target.closest(".tw-card"), cnt = card && card.querySelector(".tw-count"), a = card && card.querySelector("a.btn"); if (cnt) { cnt.textContent = n + "/280"; cnt.className = "tw-count " + (n > 280 ? "over" : n > 260 ? "near" : ""); } if (a) a.href = "https://x.com/intent/post?text=" + encodeURIComponent(e.target.value); }
 });
 document.addEventListener("click", e => { if (e.target.closest("[data-injclose]")) { S.injOpen = null; render(); } if (e.target.closest("div[data-betviewx]")) { S.betView = null; render(); } if (e.target.closest("div[data-cashclose]")) { S.cashOpen = null; render(); } const shc = e.target.closest("[data-shareclose]"); if (shc && S.shareOpen) { if (shc.tagName === "A") setTimeout(() => { S.shareOpen = false; render(); }, 400); else { S.shareOpen = false; render(); } } if (e.target.closest("[data-importclose]")) { S.importOpen = false; saveImpDraft(); render(); } });
 document.addEventListener("input", e => {
   const id = e.target.id; if (!/^imp(text|odds|stake)$/.test(id)) return;
   if (id === "imptext") { S.importText = e.target.value; S.impShotMsg = ""; clearTimeout(S._impT); S._impT = setTimeout(impRefresh, 350); }
   if (id === "impodds") { S.impOdds = e.target.value; S.impOddsTyped = !!e.target.value.trim(); }
+  if (e.target.dataset && e.target.dataset.twplayer !== undefined) { twState().player = e.target.value; twState().custom = {}; render(); }
   if (id === "impstake") S.impStake = e.target.value; if (id === "impfree") S.impFree = e.target.checked;
   saveImpDraft();
 });

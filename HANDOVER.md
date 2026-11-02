@@ -383,6 +383,11 @@ No server of our own. ESPN is free, has no key and is about 1–3 minutes behind
 | New team stat bet | `teamStatIn` / `teamStatVals` / `TSTAT` + `engine/settle.py` (`T:`) |
 | Rebuild APK | §8 |
 
+## Tweet maker (owner only)
+- `#tweets` (`viewTweets`, link in Account only when `isOwner()` = profile badge `owner`). Sport (football/NBA/both), type (`TW_KINDS`: top performers, results, one game recap/preview, player spotlight, acca of the day, live now), window, game picker, style toggles.
+- `twBuild()` writes the text from real data: NBA box scores (`g.box`), football goals from `g.events`, assists/shots/saves after "Load player stats" (`loadDetail` → `g.lineups`), previews from `g.model`, accas from `levelPreset`. Fits to 280 (`twLen`, emojis count 2) by dropping weakest rows / question / hashtags; results become a numbered thread. Editable text, Copy, Post on X (intent link).
+- `twCard()` draws a 1600×900 PNG card on a canvas (brand colours, `mark.png`); Save image / press-and-hold on phones.
+
 ## Rename to Accabox (2 Nov 2026)
 - Name shown everywhere is **Accabox** (header wordmark `Acca<b>box</b>`, title, manifest, share texts, download page, Android label from app 1.5).
 - Unchanged on purpose: the repo/URL `snuzzyyy.github.io/matchday-edge`, localStorage keys `mde:*`, the Android package `com.snuzzyyy.matchdayedge`, the user-agent token `MatchdayEdgeApp/1.x` (the site detects it), secrets `MDE_*`. Changing any of these breaks installs or saved data.
