@@ -1102,7 +1102,7 @@ button.setrow{width:100%;text-align:left;font:inherit;color:inherit;background:n
 .ver-pill{font-size:12.5px;font-weight:800;padding:6px 12px;border-radius:999px;white-space:nowrap;text-decoration:none}.ver-pill.ok{background:rgba(34,197,94,.14);color:var(--win)}.ver-pill.upd{background:var(--tang);color:#fff}
 @media (max-width:1099px){.g-cols .g-col{display:contents}}.gx{order:var(--o,0);min-width:0}.g-cols.one{margin-left:auto;margin-right:auto;width:100%}
 @media (min-width:1100px){.g-cols.one.wide{max-width:none}.g-cols.wide .gbets{grid-template-columns:repeat(2,minmax(0,1fr))}.mg-cols{columns:2;column-gap:26px}.mg-cols>*{break-inside:avoid}.mg-cols .mg-ph{column-span:all}
-  .drawer .gtop{flex-wrap:nowrap}.drawer .gtop .gtabs{flex:0 1 560px;order:3;margin:0}.drawer .gtop .gbell{order:4;margin-left:0}}
+  .drawer .gtop{flex-wrap:nowrap}}
 .fi.bot{border-color:rgba(255,122,47,.35);background:radial-gradient(120% 140% at 100% 0%,rgba(255,122,47,.12),transparent 60%),var(--surface)}.bot-av{width:40px;height:40px;border-radius:12px;overflow:hidden;flex:none}.bot-av img{width:100%;height:100%;display:block}
 .bot-tick{display:inline-grid;place-items:center;width:16px;height:16px;border-radius:50%;background:var(--tang);color:#fff;font-size:10px;font-weight:900;margin:0 4px 0 4px;vertical-align:1px}
 .bot-card{display:grid;gap:8px;background:var(--bg-2);border:1px solid var(--line);border-radius:14px;padding:12px}.bot-hd{display:flex;justify-content:space-between;align-items:center;gap:8px}.bot-hd b{font-family:var(--display);font-size:24px}
@@ -1136,6 +1136,9 @@ button.setrow{width:100%;text-align:left;font:inherit;color:inherit;background:n
 .livelay .statrow{padding:3px 0}
 .x[data-armed="1"]{width:auto!important;height:auto!important;min-width:0;padding:5px 10px!important;border-radius:999px!important;background:var(--loss)!important;color:#fff!important;font-size:12px!important;font-weight:800;white-space:nowrap;line-height:1.2}
 .lgl-hint{color:var(--muted)!important;font-size:11.5px!important}
+.gtabbar{position:sticky;top:calc(56px + env(safe-area-inset-top,0px));z-index:4;padding:10px 0 6px;margin:6px 0 0;background:linear-gradient(var(--bg) 80%,transparent)}
+.gtabbar .gtabs{max-width:720px;margin:0 auto;padding:4px;border-radius:14px;background:var(--surface);box-shadow:0 8px 24px -12px rgba(0,0,0,.8)}
+.gtabbar .gtabs button{padding:11px 4px;font-size:14px;border-radius:10px}.gtabbar .gtabs button[aria-current=page]{background:linear-gradient(135deg,var(--blue),#6d5cff);color:#fff;box-shadow:0 6px 16px -8px rgba(79,141,255,.9)}
 </style>
 
 <header class="top">
@@ -2457,7 +2460,7 @@ function drawerHTML(sport, g) {
     : tab === "players" ? lay([[sec.pitch, 0, 1], [sec.ptable, 1, 2], [sec.injuries, 1, 3]])
     : lay([[sec.win, 0, 1], [live ? anglesHTML(sport, g) : "", 0, 2], [quick, 0, 3], [pop || (ended ? "" : `<section class="section"><h2>Ready-made accas</h2><p class="sub">No ready-made accas for this game yet.</p><button class="btn sm" data-gtab="bets">See all markets</button></section>`), 0, 4], [pre ? bestForGame(sport, g) : "", 0, 5]], "wide ovw");
   const tabs = `<nav class="gtabs" aria-label="Game sections">${T.map(([k, n]) => `<button data-gtab="${k}" aria-current="${k === tab ? "page" : "false"}">${n}</button>`).join("")}</nav>`;
-  return `<div class="scrim" data-close></div><aside class="drawer full" role="dialog" aria-modal="true" aria-label="${esc(vs(sport, g))}"><div class="gtop"><button class="gback" data-close aria-label="Back">‹ Back</button><span class="eyebrow">${esc(sport === "nba" ? "NBA" : leagueName(g.league))}${g.venue ? " · " + esc(g.venue) : ""}</span>${ended ? "" : bellBtn(sport, g, true)}${tabs}</div><div class="dr-in">${hero}${body}</div></aside>`;
+  return `<div class="scrim" data-close></div><aside class="drawer full" role="dialog" aria-modal="true" aria-label="${esc(vs(sport, g))}"><div class="gtop"><button class="gback" data-close aria-label="Back">‹ Back</button><span class="eyebrow">${esc(sport === "nba" ? "NBA" : leagueName(g.league))}${g.venue ? " · " + esc(g.venue) : ""}</span>${ended ? "" : bellBtn(sport, g, true)}</div><div class="dr-in">${hero}<div class="gtabbar">${tabs}</div>${body}</div></aside>`;
 }
 function injuryCard(name) {
   const f = feed(`${SB}/basketball/nba/injuries`, 20 * 60e3);
