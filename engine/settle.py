@@ -226,6 +226,7 @@ def settle_bot():
     """The Accabox bot's ready-made accas: settle them like bets; only winners are ever shown. Older than 3 days and still unsure: void."""
     rows = http("GET", "bot_accas?result=eq.open&select=id,legs,kickoff,created_at&limit=500")
     if not isinstance(rows, list): return 0   # table not set up yet
+    print(f"Accabox bot: {len(rows)} open acca(s) waiting to settle.")
     n, cutoff = 0, datetime.now(timezone.utc).timestamp() - 3 * 86400
     for r in rows:
         res, legs = outcome(r.get("legs"))
