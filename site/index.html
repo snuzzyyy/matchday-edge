@@ -1584,37 +1584,42 @@ function bestPer(list, n, score, perGame = 1) {   // the best n, at most perGame
 }
 /* one bet of each kind, from different games where possible */
 function mixPick(C, types) {
-  const out = [];
+  const out = [], r = RISK[S.accaRisk || "safe"], t = Math.pow(r.target, 1 / types.length), mn = Math.min(r.minLeg || 1, t), sc = c => -Math.abs(Math.log(priceOf(c.m) / t)) + .35 * c.m.p;   /* one of each kind, priced for the level */
   for (const re of types) {
-    const ok = C.filter(c => re.test(c.m.k) && c.m.p >= .55 && c.m.p <= .88 && priceOf(c.m) >= 1.1 && !out.some(x => x.g === c.g && (SG_GROUP(x.m.k) === SG_GROUP(c.m.k) || conflicts(x.m.k, c.m.k)))).sort((a, b) => b.m.p - a.m.p);
+    const ok = C.filter(c => re.test(c.m.k) && c.m.p >= .2 && c.m.p <= .95 && priceOf(c.m) >= Math.max(1.06, mn) && !out.some(x => x.g === c.g && (SG_GROUP(x.m.k) === SG_GROUP(c.m.k) || conflicts(x.m.k, c.m.k)))).sort((a, b) => sc(b) - sc(a));
     const c = ok.find(c => !out.some(x => x.g === c.g)) || ok[0]; if (c) out.push(c);
   }
   return out;
 }
 const MIX = { football: [/^(1|X|2|1X|X2|DNB1|DNB2)$/, /^(O|U)\d|^BTTS/, /^C/, /^Y/, /^P:.*:(shotsOnTarget|totalShots|foulsSuffered|totalGoals):/], nba: [/^ML/, /^(SP|FAVH)/, /^T/, /^P:.*:PTS:/, /^P:.*:(REB|AST|3PM):/] };
-function buildPreset(kind, win, sp = S.sport) {
-  const C = candidates(sp, win || accaWin()), A = candAll(sp, win || accaWin()), pool = C.filter(c => c.m.p <= .93 && c.m.fair >= 1.13);
-  const props = (stats, lo, hi, n) => bestPer(A.filter(c => c.m.prop && stats.includes(c.m.prop.stat) && c.m.p >= lo && c.m.p <= hi), n, c => c.m.p, 2);
-  if (kind === "safe") return bestPerMatch(pool.filter(c => c.m.p >= .76), 4, c => c.m.p);
-  if (kind === "goals") return bestPerMatch(pool.filter(c => /^(O15|BTTS|HO05|AO05|TO-10|TO-6)$/.test(c.m.k) && c.m.p >= .7), 5, c => c.m.p);
-  if (kind === "five") {   /* four legs at around evens or bigger (4/6 to 13/8 each), one per game, no more than two of the same kind */
-    const out = [], kinds = {};
-    for (const c of C.filter(c => priceOf(c.m) >= 1.66 && priceOf(c.m) <= 2.65 && c.m.p >= .42).sort((a, b) => b.m.p * priceOf(b.m) - a.m.p * priceOf(a.m))) {
-      const kd = SG_GROUP(c.m.k); if (out.some(x => x.g === c.g) || (kinds[kd] || 0) >= 2) continue; kinds[kd] = (kinds[kd] || 0) + 1; out.push(c); if (out.length >= 4) break; }
-    return out;
+/* themed accas follow the level: from the theme's bets, the legs whose combined price lands in the level's range, the likeliest way possible */
+function levelTheme(pool, nMin, nMax, perGame = 1) {
+  const r = RISK[S.accaRisk || "safe"], ok = pool.filter(c => c.m.p >= .15 && c.m.p <= .96 && priceOf(c.m) >= 1.04 && isPre(c.g));
+  let best = null;
+  for (let n = nMin; n <= nMax; n++) {
+    const t = Math.pow(r.target, 1 / n), mn = Math.min(r.minLeg || 1, t);
+    const pick = bestPer(ok.filter(c => priceOf(c.m) >= mn), n, c => -Math.abs(Math.log(priceOf(c.m) / t)) + .35 * c.m.p, perGame);
+    if (pick.length < 2) continue;
+    const dec = pick.reduce((a, c) => a * priceOf(c.m), 1), p = pick.reduce((a, c) => a * c.m.p, 1), miss = dec < r.lo ? Math.log(r.lo / dec) : dec > r.hi ? Math.log(dec / r.hi) : 0;
+    if (!best || miss < best.miss - 1e-9 || (Math.abs(miss - best.miss) < 1e-9 && p > best.p)) best = { pick, miss, p };
   }
-  if (kind === "corners") return bestPerMatch(pool.filter(c => /^(C|Y)/.test(c.m.k) && c.m.p >= .66), 4, c => c.m.p);
-  if (kind === "mix") return mixPick(A, MIX[sp]);
-  if (kind === "scorers") return sp === "nba" ? props(["PTS"], .55, .85, 4) : bestPer(A.filter(c => c.m.prop && c.m.prop.stat === "totalGoals" && c.m.p >= .25), 3, c => c.m.p);
-  if (kind === "sot") return props(["shotsOnTarget"], .55, .88, 4);
-  if (kind === "fouled") return props(["foulsSuffered"], .6, .9, 4);
-  if (kind === "boards") return props(["REB", "AST"], .6, .88, 4);
-  if (kind === "threes") return props(["3PM"], .55, .88, 4);
-  return [];
+  return best && best.miss <= .12 ? best.pick : [];   /* can't get near the level with this theme: hide it rather than show the wrong odds */
+}
+function buildPreset(kind, win, sp = S.sport) {
+  const w = win || accaWin(), key = [kind, w, sp, S.accaRisk, S.data.updated].join("|"), M = (S._thm = S._thm || {})[key]; if (M && Date.now() - M.at < 30e3) return M.v;
+  const C = candidates(sp, w), A = candAll(sp, w), props = (stats, a, b, pg = 2) => levelTheme(A.filter(c => c.m.prop && stats.includes(c.m.prop.stat)), a, b, pg);
+  const v = kind === "safe" ? levelTheme(C, 4, 4)
+    : kind === "goals" ? levelTheme(C.filter(c => sp === "nba" ? /^TO/.test(c.m.k) : /^(O\d|BTTS$|HO\d|AO\d)/.test(c.m.k)), 2, 5)
+    : kind === "corners" ? levelTheme(C.filter(c => /^(C|Y)/.test(c.m.k)), 2, 4)
+    : kind === "mix" ? mixPick(A, MIX[sp])
+    : kind === "scorers" ? props([sp === "nba" ? "PTS" : "totalGoals"], 2, 4)
+    : kind === "sot" ? props(["shotsOnTarget"], 2, 5) : kind === "fouled" ? props(["foulsSuffered"], 2, 5)
+    : kind === "boards" ? props(["REB", "AST"], 2, 5) : kind === "threes" ? props(["3PM"], 2, 5) : [];
+  S._thm[key] = { at: Date.now(), v }; return v;
 }
 const THEMES = {
-  football: [["safe", "Safe four", "Up to four bankers from different games."], ["mix", "Mix it up", "A result, goals, corners, cards and a player bet."], ["scorers", "Goalscorers", "The likeliest scorers in the games coming up."], ["sot", "Shots on target", "Players who hit the target most."], ["fouled", "Fouls won", "Players who get fouled a lot."], ["goals", "Goals galore", "Over 1.5s, both teams to score and teams to score."], ["corners", "Corners & cards", "Stat markets backed by recent averages."], ["five", "Bigger punch", "Four legs around evens or bigger, for a proper price."]],
-  nba: [["safe", "Safe four", "Up to four bankers from different games."], ["mix", "Mix it up", "A winner, a handicap, a total and player bets."], ["scorers", "Big scorers", "Players to hit their points line."], ["boards", "Boards & dimes", "Rebounds and assists from the players who rack them up."], ["threes", "From downtown", "Players to hit their threes."], ["goals", "Points galore", "Games to go over a lowered points line."], ["five", "Bigger punch", "Four legs around evens or bigger, for a proper price."]]
+  football: [["safe", "Four", "Four games, one bet each, at your level."], ["mix", "Mix it up", "A result, goals, corners, cards and a player bet."], ["scorers", "Goalscorers", "The likeliest scorers in the games coming up."], ["sot", "Shots on target", "Players who hit the target most."], ["fouled", "Fouls won", "Players who get fouled a lot."], ["goals", "Goals galore", "Over 1.5s, both teams to score and teams to score."], ["corners", "Corners & cards", "Stat markets backed by recent averages."]],
+  nba: [["safe", "Four", "Four games, one bet each, at your level."], ["mix", "Mix it up", "A winner, a handicap, a total and player bets."], ["scorers", "Big scorers", "Players to hit their points line."], ["boards", "Boards & dimes", "Rebounds and assists from the players who rack them up."], ["threes", "From downtown", "Players to hit their threes."], ["goals", "Points galore", "Games to go over a lowered points line."]]
 };
 /* ---------- multi-sport: football and NBA in one acca ---------- */
 const multiWin = () => S.multiWin || (["today", "tomorrow", "48h"].find(w => upcoming("football", w).some(isPre) && upcoming("nba", w).some(isPre)) || "48h");
@@ -1682,7 +1687,7 @@ function presetsHTML() {
     const raw = levelPreset(n); if (raw.length < (n === 1 ? 2 : n)) return ""; const legs = asLegs(raw), c = slipCalc(legs), ok = c.dec >= R.lo && c.dec <= R.hi;
     return `<button class="preset" data-preset="lvl:${n}"><span class="pt">${R.name} ${t.toLowerCase()}</span><span class="pd">${d}</span><span class="pd">${legs.map(l => esc(legText(l)) + ` <span style="color:var(--muted)">(${whenLabel(l.kick)})</span>`).join(" · ")}</span><span class="po"><b>${odds(c.dec)}</b><span class="pill ${c.p > .3 ? "good" : "hot"}">${pct(c.p)} chance</span></span>${ok ? "" : `<span class="pd" style="color:var(--amber)">Closest we could get to the ${R.name} range</span>`}</button>`;
   }).join("");
-  const presets = THEMES[S.sport].map(([k, t, d]) => presetCard(`th:${S.sport}:${k}`, t, d, buildPreset(k))).join("");
+  const presets = THEMES[S.sport].map(([k, t, d]) => presetCard(`th:${S.sport}:${k}`, k === "safe" ? `${R.name} four` : t, d, buildPreset(k))).join("");
   return `<section class="section"><div class="hd"><h2>Ready-made accas · ${R.name} · ${WIN_NAME[aw]}</h2><div class="chips">${["today", "tomorrow", "48h"].map(k => `<button class="chip" data-accawin="${k}" aria-pressed="${aw === k}" ${upcoming(S.sport, k).length ? "" : "disabled style=\"opacity:.4\""}>${WIN_NAME[k]}</button>`).join("")}</div></div>
   ${firstWin(S.sport) !== "today" && !S.accaWin ? `<div class="note">All of today's ${S.sport === "nba" ? "NBA" : "football"} has started, so these use ${WIN_NAME[aw].toLowerCase()}'s games.${S.sport === "football" && upcoming("nba", "today").length ? ` Switch to <b>NBA</b> at the top for tonight's games.` : ""}</div>` : ""}<p class="sub" style="margin:-4px 0 10px">Built for the level you've picked above: the whole acca at ${R.hi > 1e8 ? odds(R.lo) + " or bigger" : R.lo < 1.1 ? "under " + odds(R.hi) : odds(R.lo) + " to " + odds(R.hi)}. Tap one to load it into your slip.</p>
   <div class="presets">${lvl || `<div class="empty">Not enough upcoming games to build one.</div>`}</div>${presets ? `<h3 class="bv-h" style="margin-top:14px">Themed accas</h3><div class="presets">${presets}</div>` : ""}</section>
