@@ -1109,6 +1109,8 @@ button.setrow{width:100%;text-align:left;font:inherit;color:inherit;background:n
 .bot-legs{list-style:none;margin:0;padding:0;display:grid;gap:7px}.bot-legs li{display:grid;grid-template-columns:20px minmax(0,1fr);gap:8px;align-items:start}.bot-legs b{display:block;font-size:14px;font-weight:600}.bot-legs small{font-size:12px;color:var(--muted)}
 .bot-ok{width:18px;height:18px;border-radius:50%;background:var(--win);color:#04210f;display:grid;place-items:center;font-size:11px;font-weight:900;margin-top:1px}
 .bot-ft{display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px 12px;font-size:12px;color:var(--muted);border-top:1px solid var(--line);padding-top:8px}.bot-ft b{font-size:14px}
+.mbtabs{margin:4px 0 2px}.mbtabs button{display:inline-flex;align-items:center;justify-content:center;gap:7px}.mb-n{min-width:20px;height:20px;padding:0 6px;border-radius:10px;background:var(--surface-3);font-size:11.5px;font-weight:800;display:inline-grid;place-items:center}.mbtabs button[aria-pressed=true] .mb-n{background:rgba(255,255,255,.22)}
+.mb-sum{margin:0 0 -4px;font-size:13px;color:var(--fg-2)}
 </style>
 
 <header class="top">
@@ -3797,20 +3799,28 @@ function viewMyBets() {
   for (const c of [...cards, ...chalCards]) for (const l of c.legs) { const g = findGame(l.sport, l.gid); if (l.pid && g && !isPre(g) && !(l.sport === "nba" ? g.box : g.lineups)) loadDetail(l.sport + ":" + l.gid); }
   const hand = bets.filter(b => b.result === "open" && !track(b)), settled = bets.filter(b => b.result !== "open");
   const head = `<div class="hd"><div><h1>My Bets</h1><p class="sub">Your bets update live and settle themselves at full time.</p></div><button class="btn ghost sm" data-import>+ Import a bet</button></div>`;
-  const live = (chalCards.length ? `<section class="section"><div class="hd"><h2>£1K challenges</h2><a class="linkbtn" href="#challenge">Open £1K ›</a></div><div class="trk ${chalCards.length > 1 ? "chal-row" : ""}">${chalCards.map(betCard).join("")}</div>${chalCards.length > 1 ? `<p class="swipe-hint">Swipe for challenge ${chalCards.length > 2 ? "2 and 3" : "2"} ›</p>` : ""}</section>` : "")
-    + (cards.length ? `<section class="section"><h2>Live & upcoming</h2><div class="trk">${cards.map(betCard).join("")}</div></section>` : "");
-  if (!sb || !S.user) return `${head}${live}${cards.length ? "" : `<div class="empty art"><img src="${art("empty-bets.webp")}" alt="" loading="lazy"><b>No bets yet</b><span>Import a bet to follow it live, e.g. "Haaland to score @ 1.80".</span></div>`}
-    <a class="strip" href="#account"><span class="ic-dot">${ICON.chart}</span><span><b>Save your bets</b><small>Sign in free to keep your bets and see your profit.</small></span><span aria-hidden="true">›</span></a>`;
-  return `${head}${walletStrip()}${live}
-    ${hand.length ? `<section class="section"><h2>To settle</h2><p class="sub" style="margin:-6px 0 0">Bets you typed in yourself aren't linked to a game, so mark these when they finish.</p><div style="display:grid;gap:8px">${hand.map(b => betRow(b)).join("")}</div></section>` : ""}
-    ${!cards.length && !hand.length ? `<div class="empty art"><img src="${art("empty-bets.webp")}" alt="" loading="lazy"><b>No open bets</b><span>Import a bet, or save one from your bet slip.</span></div>` : ""}
-    ${bets.length ? statBlock() : ""}
-    ${settled.length ? `<section class="section"><h2>Settled</h2><div class="btiles wide">${settled.slice(0, S.showAllSettled ? 500 : 8).map(betTile).join("")}</div>${settled.length > 8 && !S.showAllSettled ? `<button class="linkbtn" data-allsettled>Show all ${settled.length}</button>` : ""}</section>` : ""}
-    <details class="handadd"><summary><span class="ic-dot">＋</span><span><b>Add a bet by hand</b><small>For bets you can't import. You'll mark these won or lost yourself.</small></span></summary>
+  /* three tabs: in play, still to start, and results. £1K bets sit with the rest, marked with their orange tag */
+  const started = c => c.legs.some(l => { if (!l.gid) return !!l.fst; const g = findGame(l.sport, l.gid); return g ? !isPre(g) : true; });   /* a game that's left the feed has been played */
+  const all = [...chalCards, ...cards], liveC = all.filter(started), upC = all.filter(c => !started(c));
+  const T = [["live", "Live", liveC.length], ["up", "Upcoming", upC.length + hand.length], ["done", "Settled", settled.length]];
+  const tab = T.some(t => t[0] === S.mbTab) ? S.mbTab : liveC.length ? "live" : upC.length || hand.length ? "up" : "done";
+  const sum = L => { const st = L.reduce((a, c) => a + (+c.stake || 0), 0), rt = L.reduce((a, c) => a + (+c.stake || 0) * (+c.dec || 1) - (+c.free || 0), 0); return st ? `<p class="mb-sum">${L.length} bet${L.length > 1 ? "s" : ""} · ${money(st)} staked · <b class="pos">${money(rt)}</b> if they all land</p>` : ""; };
+  const tabsHTML = `<div class="seg3 mbtabs" role="tablist">${T.map(([k, n, c]) => `<button role="tab" data-mbtab="${k}" aria-pressed="${tab === k}">${k === "live" && c ? '<span class="dot red"></span>' : ""}${n}${c ? `<span class="mb-n">${c}</span>` : ""}</button>`).join("")}</div>`;
+  const empty = (img, b, t, more = "") => `<div class="empty art"><img src="${art(img)}" alt="" loading="lazy"><b>${b}</b><span>${t}</span>${more}</div>`;
+  const nextUp = upC.map(c => c.legs.map(l => findGame(l.sport, l.gid)).filter(Boolean).map(kick).sort()[0]).filter(Boolean).sort()[0];
+  const handAdd = `<details class="handadd"><summary><span class="ic-dot">＋</span><span><b>Add a bet by hand</b><small>For bets you can't import. You'll mark these won or lost yourself.</small></span></summary>
       <form id="addBet" class="handform"><div class="field hf-bet"><label for="ab-label">Bet</label><input id="ab-label" placeholder="e.g. Liverpool to win" required></div>
       <div class="field"><label for="ab-odds">Odds</label><input id="ab-odds" placeholder="5/2" required></div><div class="field"><label for="ab-stake">Stake £</label><input id="ab-stake" type="number" inputmode="decimal" min="0" step="0.5" value="${S.stake}" required></div>
       <label class="fb-check hf-free"><input type="checkbox" id="ab-free"><span>🎁 Free bet <small>Not taken off your balance</small></span></label>
       <button class="btn hf-go" type="submit">Add bet</button></form></details>`;
+  const body = tab === "live" ? (liveC.length ? `${sum(liveC)}<div class="trk">${liveC.map(betCard).join("")}</div>`
+      : empty("empty-live.webp", "Nothing in play", nextUp ? `Your next bet starts ${esc(whenLabel(nextUp))} (${untilTxt(nextUp)}).` : "When a game in one of your bets kicks off, it shows here.", upC.length ? `<button class="btn ghost sm" data-mbtab="up">See upcoming ›</button>` : ""))
+    : tab === "up" ? `${hand.length ? `<section class="section"><h2>Mark these yourself</h2><p class="sub" style="margin:-6px 0 0">Typed-in bets aren't linked to a game, so tap Won or Lost when they finish.</p><div style="display:grid;gap:8px">${hand.map(b => betRow(b)).join("")}</div></section>` : ""}
+        ${upC.length ? `${sum(upC)}<div class="trk">${upC.map(betCard).join("")}</div>` : hand.length ? "" : empty("empty-bets.webp", "No upcoming bets", "Import a bet, or save one from your bet slip.")}
+        ${S.user && sb ? handAdd : ""}`
+    : `${bets.length ? statBlock() : ""}${settled.length ? `<div class="btiles wide">${settled.slice(0, S.showAllSettled ? 500 : 12).map(betTile).join("")}</div>${settled.length > 12 && !S.showAllSettled ? `<button class="linkbtn" data-allsettled>Show all ${settled.length}</button>` : ""}` : empty("empty-bets.webp", "No results yet", "Settled bets and your profit show here.")}`;
+  if (!sb || !S.user) return `${head}${tabsHTML}${body}<a class="strip" href="#account"><span class="ic-dot">${ICON.chart}</span><span><b>Save your bets</b><small>Sign in free to keep your bets and see your profit.</small></span><span aria-hidden="true">›</span></a>`;
+  return `${head}${walletStrip()}${tabsHTML}${body}`;
 }
 function myBetsView(inTab) {
   return `${statBlock()}<section class="section"><div class="hd"><h2>${inTab ? "Saved bets" : "My bets"}</h2>${inTab ? "" : `<button class="btn ghost sm" data-import>+ Import a player bet</button>`}<div class="chips">${[["open", "Open"], ["settled", "Settled"], ["all", "All"]].map(([k, l]) => `<button class="chip" data-betfilter="${k}" aria-pressed="${S.betFilter === k}">${l}</button>`).join("")}</div></div>
@@ -4587,6 +4597,7 @@ document.addEventListener("click", async e => {
     render();
   }
   else if (d.allbadges) { S.allBadges = d.allbadges; render(); }
+  else if (d.mbtab) { S.mbTab = d.mbtab; render(); scrollTo({ top: 0 }); }
   else if (d.freebet) {   /* mark (or unmark) a saved bet as placed with a free bet: fixes its returns and your balance */
     const b = (S.bets || []).find(x => String(x.id) === d.freebet); if (!b) return;
     const before = credit(b) - cashStake(b), nf = freeOf(b) ? 0 : +b.stake, b2 = { ...b, free_stake: nf }, upd = { free_stake: nf };
