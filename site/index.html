@@ -1085,6 +1085,20 @@ button.setrow{width:100%;text-align:left;font:inherit;color:inherit;background:n
 .segbar{display:flex;gap:4px;margin:2px 0 0}.segbar i{flex:1;height:5px;border-radius:4px;background:var(--surface-3)}.segbar i.hit{background:var(--win)}.segbar i.miss{background:var(--loss)}.segbar i.void{background:var(--muted)}.segbar i.live{background:var(--tang);animation:segpulse 1.6s ease-in-out infinite}
 @keyframes segpulse{50%{opacity:.45}}@media (prefers-reduced-motion:reduce){.segbar i.live{animation:none}}
 .trk-card .st.pre{background:rgba(255,122,47,.12);color:#ff9a52}.trk-card .st.live{display:inline-flex;align-items:center;gap:6px;color:#f87171}
+.lgg{display:grid;gap:2px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.06)}.lgg:last-child{border-bottom:0}
+.lgg-hd{display:flex;align-items:center;gap:10px;background:none;border:0;padding:0 0 4px;color:inherit;font:inherit;text-align:left;cursor:pointer;width:100%}
+.lgg-logos{display:flex;flex:none}.lgg-logos>*{width:24px!important;height:24px!important;border-radius:50%;background:#151d33;padding:2px;box-shadow:0 0 0 2px var(--surface)}.lgg-logos>*+*{margin-left:-7px}.lgg-logos .mono{font-size:8px!important;padding:0}
+.lgg-t{display:grid;min-width:0;flex:1}.lgg-t b{font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.lgg-t small{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lgg-sc{font-family:var(--display);font-size:16px;color:var(--tang-2,#ff9a5c);margin:0 2px}
+.lgg-cd{flex:none;font-size:11.5px;font-weight:800;color:#ff9a52;background:rgba(255,122,47,.12);padding:3px 9px;border-radius:999px;white-space:nowrap}
+.lgg-clk{flex:none;display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:800;color:var(--muted);white-space:nowrap}.lgg-clk.live{color:#f87171}
+.lgg-legs{display:grid;gap:0;margin-left:12px;border-left:2px solid var(--line);padding-left:12px}
+.lgl{display:grid;grid-template-columns:16px minmax(0,1fr) auto;gap:8px;align-items:start;padding:6px 0}
+.lgl-ic{width:14px;height:14px;margin-top:2px;border-radius:50%;border:2px solid var(--line-2)}.lgl.live .lgl-ic{border-color:#ff9a52;background:rgba(255,122,47,.25)}.lgl.hit .lgl-ic{border:0;background:var(--win)}.lgl.miss .lgl-ic{border:0;background:var(--loss)}.lgl.void .lgl-ic{border-style:dashed}
+.lgl-m{display:grid;gap:4px;min-width:0}.lgl-m b{font-size:14px;font-weight:600;line-height:1.3;overflow-wrap:anywhere}.lgl.miss .lgl-m b{color:var(--muted);text-decoration:line-through;text-decoration-color:rgba(239,68,68,.6)}
+.lgl-m small{font-size:12px;color:var(--fg-2)}.lgl-bar{height:4px;border-radius:4px;background:var(--surface-3);overflow:hidden}.lgl-bar i{display:block;height:100%;border-radius:4px;background:#ff9a52}.lgl.hit .lgl-bar i{background:var(--win)}.lgl.miss .lgl-bar i{background:var(--loss)}
+.lgl-r{font-family:var(--display);font-weight:700;font-size:17px;white-space:nowrap}.lgl.hit .lgl-r{color:var(--win)}.lgl.miss .lgl-r{color:var(--loss)}.lgl.void .lgl-r{color:var(--muted);font-size:13px}
+.lgl .tl-teams,.lgl .tl-pps{margin-top:2px}
 </style>
 
 <header class="top">
@@ -2790,18 +2804,29 @@ function withPc(i, l) {
 function betChance(legs) { let p = 1, unknown = 0; for (const l of legs) { const c = legChance(l); if (c == null) unknown++; else p *= c; } return { p, unknown }; }
 /* ---------- a leg in a bet card: badges, kick-off countdown before, a mini scoreboard and progress during, the result after ---------- */
 const untilTxt = iso => { const m = Math.round((new Date(iso) - Date.now()) / 6e4); return m <= 0 ? "starting" : m < 60 ? `in ${m}m` : m < 1440 ? `in ${Math.floor(m / 60)}h${m % 60 ? ` ${m % 60}m` : ""}` : `in ${Math.round(m / 1440)}d`; };
-function legRow(l, k, legs) {
-  const info = legInfo0(k && l.pid && !l.group && legs[k - 1].pid === l.pid ? { ...l, _sub: true } : l), g = !l.manual && l.gid && findGame(l.sport, l.gid);
-  if (!g) return null;   /* typed-in legs and games that have left the feed keep the simple row */
-  const sp = l.sport, Lt = sp === "nba" ? g.away : g.home, Rt = sp === "nba" ? g.home : g.away, pre = isPre(g), live = isLive(g), st = info.st;
-  const c = st === "hit" || st === "miss" || st === "void" ? null : legChance(l);
+/* legs grouped by game: the game once (badges, kick-off countdown or live score), then one tidy line per bet */
+function legLine(l, k, legs) {
+  const info = legInfo0(k && l.pid && !l.group && legs[k - 1].pid === l.pid ? { ...l, _sub: true } : l), st = info.st, g = findGame(l.sport, l.gid), live = g && !isPre(g);
   const title = l.group ? `${surnames(l)} ${l.target}+ ${l.label}` : String(legText(l) || "").replace(/ \(in-play\)$/, "");
-  const oc = (info.html.match(/<span class="oc-pill">[\s\S]*?<\/span>/) || [""])[0];
-  const right = st === "hit" ? `<span class="lg3-res hit">✓</span>` : st === "miss" ? `<span class="lg3-res miss">✗</span>` : st === "void" ? `<span class="lg3-res void">VOID</span>` : c != null ? `<span class="lg3-pc" style="color:${tierColor(c)}"><b>${pct(c)}</b><small>chance</small></span>` : "";
-  const strip = pre ? `<div class="gs3 pre"><span class="gs3-ico" aria-hidden="true">⏱</span><span>${sp === "nba" ? "Tip-off" : "Kick-off"} <b>${esc(whenLabel(kick(g)))}</b></span><span class="gs3-cd">${untilTxt(kick(g))}</span></div>`
-    : `<div class="gs3 ${live ? "live" : "ft"}">${logo(sp, Lt)}<span class="gs3-n"><span class="fn">${esc(Lt.name)}</span><span class="ab">${esc(Lt.abbr || Lt.name)}</span></span><b class="gs3-s">${esc(Lt.score)}<i>–</i>${esc(Rt.score)}</b><span class="gs3-n r"><span class="fn">${esc(Rt.name)}</span><span class="ab">${esc(Rt.abbr || Rt.name)}</span></span>${logo(sp, Rt)}<span class="gs3-clk">${live ? `<span class="dot red"></span>${esc(clockLabel(sp, g))}` : g.status.state === "post" ? "FT" : esc(g.status.detail || "")}</span></div>`;
-  const body = pre || /chance now/.test(info.html) ? "" : info.html.replace(/<div class="tl-top">[\s\S]*?<\/div>/, "").replace(/^<div class="tl-leg[^"]*"/, '<div class="lg3-body"');
-  return `<div class="lg3 ${st}"><button type="button" class="lg3-hd" data-open="${sp}:${g.id}" aria-label="Open ${esc(vs(sp, g))}"><span class="lg3-logos">${logo(sp, Lt)}${logo(sp, Rt)}</span><span class="lg3-t"><b>${esc(title)}</b><small>${oc ? oc + " " : ""}${esc(vs(sp, g))}${sp === "football" ? " · " + esc(leagueName(g.league)) : ""}</small></span>${right}</button>${strip}${body}</div>`;
+  const c = st === "hit" || st === "miss" || st === "void" ? null : legChance(l);
+  const h = info.html, bar = (h.match(/<div class="tl-bar"><i style="width:([\d.]+)%/) || [])[1], num = h.match(/<div class="tl-num"><span>([\s\S]*?)<\/span><span>([\s\S]*?)<\/span><\/div>/);
+  const txt = x => String(x || "").replace(/<[^>]+>/g, "").replace(/✓ Landed|✗ Lost|✗ Missed/g, "").trim();
+  const prog = live && num ? [txt(num[1]), txt(num[2])].filter(x => x && !/chance now|Waiting/.test(x)).join(" · ") : "";
+  const xi = Math.min(...["<div class=\"tl-teams\">", "<div class=\"tl-pps\">"].map(t => h.indexOf(t)).filter(n => n >= 0)), extra = live && isFinite(xi) ? h.slice(xi, -6) : "";
+  const oc = live ? (h.match(/<span class="oc-pill">[\s\S]*?<\/span>/) || [""])[0] : "";
+  const right = st === "hit" ? "✓" : st === "miss" ? "✗" : st === "void" ? "Void" : c != null ? `<span style="color:${tierColor(c)}">${pct(c)}</span>` : "";
+  const showBar = live && bar != null && st !== "void" && !/chance now/.test(h);
+  return `<div class="lgl ${st}"><span class="lgl-ic" aria-hidden="true"></span><div class="lgl-m"><b>${esc(title)}${oc ? " " + oc : ""}</b>${showBar ? `<div class="lgl-bar"><i style="width:${bar}%"></i></div>` : ""}${prog ? `<small>${esc(prog)}</small>` : ""}${extra}</div><span class="lgl-r">${right}</span></div>`;
+}
+function legGroups(legs, infos) {
+  const out = [], at = new Map();
+  legs.forEach((l, k) => { const g = !l.manual && l.gid && findGame(l.sport, l.gid);
+    if (!g) { out.push({ raw: infos[k].html }); return; }
+    const key = l.sport + g.id; if (!at.has(key)) { at.set(key, out.length); out.push({ sp: l.sport, g, lines: [] }); } out[at.get(key)].lines.push(legLine(l, k, legs)); });
+  return out.map(G => { if (G.raw) return G.raw; const { sp, g } = G, Lt = sp === "nba" ? g.away : g.home, Rt = sp === "nba" ? g.home : g.away, live = isLive(g), post = g.status.state === "post";
+    const head = isPre(g) ? `<span class="lgg-t"><b>${esc(vs(sp, g))}</b><small>${esc(whenLabel(kick(g)))}${sp === "football" ? " · " + esc(leagueName(g.league)) : ""}</small></span><span class="lgg-cd">${untilTxt(kick(g))}</span>`
+      : `<span class="lgg-t"><b>${esc(Lt.name)} <span class="lgg-sc">${esc(Lt.score)}–${esc(Rt.score)}</span> ${esc(Rt.name)}</b><small>${sp === "football" ? esc(leagueName(g.league)) : "NBA"}</small></span><span class="lgg-clk ${live ? "live" : ""}">${live ? `<span class="dot red"></span>${esc(clockLabel(sp, g))}` : post ? "FT" : esc(g.status.detail || "")}</span>`;
+    return `<div class="lgg"><button type="button" class="lgg-hd" data-open="${sp}:${g.id}" aria-label="Open ${esc(vs(sp, g))}"><span class="lgg-logos">${logo(sp, Lt)}${logo(sp, Rt)}</span>${head}</button><div class="lgg-legs">${G.lines.join("")}</div></div>`; }).join("");
 }
 function betCard(t) {
   const info = t.legs.map((l, i) => { const r = legInfo(i && l.pid && !l.group && t.legs[i - 1].pid === l.pid ? { ...l, _sub: true } : l);
@@ -2815,7 +2840,7 @@ function betCard(t) {
   const x = t.noX ? "" : t.saved ? `<button class="x" data-delbet="${t.saved}" aria-label="Delete bet">✕</button>` : `<button class="x" data-untrack="${t.id}" aria-label="Stop tracking">✕</button>`;
   const BC = !t.result || t.result === "open" ? betChance(t.legs) : null, showC = BC && !lost && !(hit && hit + voids === n) && BC.unknown < n;
   const chanceCell = showC ? `<span title="${BC.unknown ? `${BC.unknown} leg${BC.unknown > 1 ? "s" : ""} you mark yourself not counted` : ""}"><small>Chance</small><b style="color:${tierColor(BC.p)}">${pct(BC.p)}</b></span>` : "", chanceBar = showC ? `<div class="meter bc-meter"><i style="width:${Math.max(2, BC.p * 100)}%"></i></div>` : "";
-  return `<article class="trk-card ${t.chal ? "chalcard" : ""}"><div class="trk-hd"><div>${t.tag ? `<a class="chaltag" href="#challenge" ${t.chal ? `data-chalsel="${t.chal}"` : ""}>🏆 ${esc(t.tag)} ›</a>` : ""}<b>${esc(title)}</b>${t.free ? FREE_TAG : ""}</div>${overall}${x}</div>${t.stake || t.dec || chanceCell ? `<div class="bc-money ${chanceCell ? "four" : ""}"><span><small>${t.free ? "Free stake" : "Stake"}</small><b>${t.stake ? money(+t.stake) : "–"}</b></span><span><small>Odds</small><b>${t.dec ? odds(t.dec) : "–"}</b></span><span><small>${t.result === "won" ? "Returned" : "Returns"}</small><b class="pos">${t.stake ? money(t.stake * (t.dec || 1) - (t.free || 0)) : "–"}</b></span>${chanceCell}${chanceBar}</div>` : ""}${segs}<div class="bc-legs">${info.map((i, k) => legRow(t.legs[k], k, t.legs) || (showC ? withPc(i, t.legs[k]) : i.html)).join("")}</div>${t.bet ? `<div class="bc-foot">${freeBtn(t.bet)}</div>` : ""}</article>`;
+  return `<article class="trk-card ${t.chal ? "chalcard" : ""}"><div class="trk-hd"><div>${t.tag ? `<a class="chaltag" href="#challenge" ${t.chal ? `data-chalsel="${t.chal}"` : ""}>🏆 ${esc(t.tag)} ›</a>` : ""}<b>${esc(title)}</b>${t.free ? FREE_TAG : ""}</div>${overall}${x}</div>${t.stake || t.dec || chanceCell ? `<div class="bc-money ${chanceCell ? "four" : ""}"><span><small>${t.free ? "Free stake" : "Stake"}</small><b>${t.stake ? money(+t.stake) : "–"}</b></span><span><small>Odds</small><b>${t.dec ? odds(t.dec) : "–"}</b></span><span><small>${t.result === "won" ? "Returned" : "Returns"}</small><b class="pos">${t.stake ? money(t.stake * (t.dec || 1) - (t.free || 0)) : "–"}</b></span>${chanceCell}</div>` : ""}${segs}<div class="bc-legs">${legGroups(t.legs, info)}</div>${t.bet ? `<div class="bc-foot">${freeBtn(t.bet)}</div>` : ""}</article>`;
 }
 function trackerHTML(bare, extra) {
   const all = [...(S.tracked || []), ...(extra || [])], sportOf = t => (t.legs[0] || {}).sport, T = bare ? all : all.filter(t => sportOf(t) === S.sport), other = all.length - T.length;

@@ -384,7 +384,7 @@ No server of our own. ESPN is free, has no key and is about 1–3 minutes behind
 | Rebuild APK | §8 |
 
 ## Bet cards (My Bets, bet sheets, £1K)
-- Each leg with a known game renders through `legRow()`: badges + bet name + chance (or ✓/✗/VOID), a strip (`.gs3`): pre = kick-off + countdown (`untilTxt`), live/FT = mini scoreboard with clock; then the progress body from `legInfo0` with its `tl-top` removed (skipped pre-match and for plain "chance now" legs). Typed-in legs and games that left the feed fall back to the old rows.
+- Legs are grouped by game (`legGroups`): one header per game (badges, match, kick-off countdown `untilTxt`, or live score + clock), then one line per bet (`legLine`): status dot, bet, its own % chance (owner likes this), and while live a thin progress bar + "8 / 9 corners · 1 to go" parsed from `legInfo0`. Typed-in legs and games that left the feed keep the old rows.
 - `betCard` header: "Starts 19:45 · in 3h" before, red-dot "x of n landed" live; `.segbar` shows each leg's state (pulses while live).
 
 ## Tweet maker (owner only)
