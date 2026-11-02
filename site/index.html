@@ -3421,7 +3421,10 @@ function twBuild(T) {
       else { const m1 = mkt(g, "ML1"); if (m1) body.push(E("📈", `Win chance: ${a.name} ${pct(1 - m1.p)} · ${h.name} ${pct(m1.p)}`)); body.push(E("🏀", `Projected total ${g.model.proj}${g.odds && g.odds.total ? ` (line ${g.odds.total})` : ""}`)); }
       if (best) body.push(E("🎯", `Most likely: ${best.label} (${pct(best.p)})`)); if (big) body.push(E("💰", `Bigger price: ${big.label} ${odds(priceOf(big))}`));
       ask = twPick(["What's your call? 👇", "How are you betting this one? 👇", "Score prediction? 👇"], s);
-      card = { title: "PREVIEW", sub: `${vs(sp, g)} · ${/\d{1,2}:\d{2}/.test(whenLabel(kick(g))) ? whenLabel(kick(g)) : whenLabel(kick(g)) + " " + hm(kick(g))}`, rows: [best && [best.label, pct(best.p) + " chance", "Most likely"], big && [big.label, odds(priceOf(big)), "Bigger price"]].filter(Boolean) };
+      card = { type: "preview", teams: [L, R].map(t => ({ logo: t.logo, color: t.color, abbr: t.abbr || t.name, name: t.name })), title: "PREVIEW", sub: `${vs(sp, g)} · ${/\d{1,2}:\d{2}/.test(whenLabel(kick(g))) ? whenLabel(kick(g)) : whenLabel(kick(g)) + " " + hm(kick(g))}`, rows: [best && [best.label, pct(best.p) + " chance", "Most likely"], big && [big.label, odds(priceOf(big)), "Bigger price"],
+        sp === "football" ? (() => { const p1 = mkt(g, "1"), px = mkt(g, "X"), p2 = mkt(g, "2"); return p1 && px && p2 ? [`${h.name} ${pct(p1.p)} · Draw ${pct(px.p)} · ${a.name} ${pct(p2.p)}`, "", "Win chances"] : null; })()
+          : (() => { const m1 = mkt(g, "ML1"); return m1 ? [`${a.name} ${pct(1 - m1.p)} · ${h.name} ${pct(m1.p)}`, "", "Win chances"] : null; })(),
+        sp === "football" ? [`Expected goals ${g.model.xgH.toFixed(1)}–${g.model.xgA.toFixed(1)}${g.model.corners ? ` · corners ~${g.model.corners.toFixed(1)}` : ""}`, "", "Our model"] : [`Projected total ${g.model.proj}${g.odds && g.odds.total ? ` · line ${g.odds.total}` : ""}`, "", "Our model"]].filter(Boolean) };
     } else {
       const fin = g.status.state === "post", P = twPerformers(T, sel), top = (sp === "nba" ? P.nba : P.fb).slice(0, 2);
       head = `${fin ? (sp === "nba" ? "FINAL" : "FT") : "LIVE"}: ${L.name} ${L.score}–${R.score} ${R.name}${T.emoji ? (sp === "nba" ? " 🏀" : " ⚽") : ""}`;
@@ -3450,7 +3453,10 @@ function twBuild(T) {
     body = L2.map(l => `${T.emoji ? "✅ " : "- "}${l.pid ? legText(l) : `${l.match}: ${legText(l)}`} (${odds(l.dec)})`);
     accaTags = [...new Set(legs.map(x => x.sport === "nba" ? "#NBA" : TW_TAGS[x.g.league] || "#Football"))].slice(0, 2).join(" "); body.push(""); body.push(E("💰", `${L2.length}-fold at about ${odds(c.dec)}`));
     ask = twPick(["Who's on it? 👇", "Would you back it? 👇", "Swap any leg? Tell us 👇"], s);
-    card = { title: "ACCA OF THE DAY", sub: `${RISK[T.level].name} · about ${odds(c.dec)}`, rows: L2.map(l => [legText(l), odds(l.dec), l.match]) };
+    const tm = iso => { const w = whenLabel(iso); return /\d{1,2}:\d{2}/.test(w) ? w : w + " " + hm(iso); };
+    card = { type: "acca", title: "ACCA OF THE DAY", level: RISK[T.level].name, total: odds(c.dec), dec: c.dec, p: c.p,
+      legs: legs.map((x, i) => ({ label: legText(L2[i]), match: vs(x.sport, x.g), when: tm(kick(x.g)), odds: odds(L2[i].dec), p: L2[i].p, sport: x.sport,
+        teams: (x.sport === "nba" ? [x.g.away, x.g.home] : [x.g.home, x.g.away]).map(t => ({ logo: t.logo, color: t.color, abbr: t.abbr || t.name })) })) };
   }
   const showAdult = T.adult == null ? adult : T.adult;
   let foot = [T.ask && ask, T.tags && accaTags != null ? accaTags : tags, showAdult && "18+ BeGambleAware"].filter(Boolean);
@@ -3469,24 +3475,65 @@ function twBuild(T) {
 /* the image card: 1600×900, brand colours, drawn on a canvas so it can be saved and attached */
 async function twCard(card) {
   const c = document.createElement("canvas"); c.width = 1600; c.height = 900; const x = c.getContext("2d");
-  try { await document.fonts.load("italic 800 80px 'Barlow Condensed'"); await document.fonts.load("700 40px Figtree"); } catch {}
+  try { await document.fonts.load("italic 800 80px 'Barlow Condensed'"); await document.fonts.load("700 40px Figtree"); await document.fonts.load("500 30px Figtree"); } catch {}
   const bg = x.createLinearGradient(0, 0, 1600, 900); bg.addColorStop(0, "#0d1530"); bg.addColorStop(.6, "#080c18"); bg.addColorStop(1, "#140c18"); x.fillStyle = bg; x.fillRect(0, 0, 1600, 900);
   const glow = (cx, cy, r, col) => { const g = x.createRadialGradient(cx, cy, 0, cx, cy, r); g.addColorStop(0, col); g.addColorStop(1, "rgba(0,0,0,0)"); x.fillStyle = g; x.fillRect(0, 0, 1600, 900); };
   glow(1500, 60, 700, "rgba(255,122,47,.28)"); glow(80, 880, 700, "rgba(59,130,246,.25)");
-  const logo = await new Promise(r => { const i = new Image(); i.onload = () => r(i); i.onerror = () => r(null); i.src = "mark.png"; });
-  if (logo) { x.save(); x.beginPath(); x.roundRect(80, 64, 92, 92, 22); x.clip(); x.drawImage(logo, 80, 64, 92, 92); x.restore(); }
-  x.font = "italic 800 84px 'Barlow Condensed'"; x.textBaseline = "alphabetic"; x.fillStyle = "#f4f6fb"; x.fillText("ACCA", 196, 140); const aw = x.measureText("ACCA").width;
-  const og = x.createLinearGradient(0, 70, 0, 150); og.addColorStop(0, "#ffa043"); og.addColorStop(1, "#ff5a3c"); x.fillStyle = og; x.fillText("BOX", 196 + aw, 140);
-  x.font = "italic 800 92px 'Barlow Condensed'"; x.fillStyle = "#ffffff"; x.fillText(card.title, 80, 290);
-  x.font = "600 34px Figtree"; x.fillStyle = "#ff8a3d"; x.fillText(card.sub || "", 82, 345);
-  const rows = (card.rows || []).slice(0, 6), top = 400, rh = Math.min(76, 400 / Math.max(rows.length, 1));
-  rows.forEach((r, i) => { const y = top + i * rh;
-    x.fillStyle = i % 2 ? "rgba(255,255,255,.035)" : "rgba(255,255,255,.07)"; x.beginPath(); x.roundRect(80, y, 1440, rh - 10, 14); x.fill();
-    const mid = y + (rh - 10) / 2 + 12; x.font = "700 34px Figtree"; x.fillStyle = "#eef1f8"; let t = String(r[0] || ""); while (x.measureText(t).width > 820 && t.length > 3) t = t.slice(0, -2); x.fillText(t === r[0] ? t : t + "…", 108, mid);
-    x.textAlign = "right"; x.font = "italic 800 40px 'Barlow Condensed'"; x.fillStyle = "#ff8a3d"; x.fillText(String(r[1] || ""), 1490, mid);
-    if (r[2]) { x.font = "500 24px Figtree"; x.fillStyle = "#8f9ab3"; x.fillText(String(r[2]), 1490 - x.measureText(String(r[1] || "")).width * 1.2 - 40, mid - 2); } x.textAlign = "left"; });
-  x.font = "800 30px Figtree"; x.fillStyle = "#ffffff"; x.fillText("@accabox", 80, 852);
-  x.font = "500 22px Figtree"; x.fillStyle = "#7f8aa3"; x.textAlign = "right"; x.fillText(card.adult ? "18+ · Please gamble responsibly · BeGambleAware.org" : "Stats from Accabox", 1520, 852); x.textAlign = "left";
+  const img = async src => { if (!src) return null; try { const r = await fetch(src, { mode: "cors" }); if (!r.ok) return null; return await createImageBitmap(await r.blob()); } catch { return null; } };   /* fetched, so the picture can still be saved */
+  const rr = (X, Y, W, H, R) => { x.beginPath(); x.roundRect(X, Y, W, H, R); };
+  const fit = (t, w) => { t = String(t || ""); if (x.measureText(t).width <= w) return t; while (t.length > 3 && x.measureText(t + "…").width > w) t = t.slice(0, -1); return t + "…"; };
+  const orange = (y0, y1) => { const g = x.createLinearGradient(0, y0, 0, y1); g.addColorStop(0, "#ffa043"); g.addColorStop(1, "#ff5a3c"); return g; };
+  const logo = await img("mark.png");
+  /* header: logo + wordmark */
+  if (logo) { x.save(); rr(80, 56, 80, 80, 20); x.clip(); x.drawImage(logo, 80, 56, 80, 80); x.restore(); }
+  x.textBaseline = "alphabetic"; x.font = "italic 800 72px 'Barlow Condensed'"; x.fillStyle = "#f4f6fb"; x.fillText("ACCA", 180, 124); const aw = x.measureText("ACCA").width; x.fillStyle = orange(64, 130); x.fillText("BOX", 180 + aw, 124);
+  const dateTxt = new Date().toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: TZ }).toUpperCase();
+  const teamBadge = async (t, X, Y, R) => { x.save(); x.beginPath(); x.arc(X, Y, R, 0, 7); x.fillStyle = "#151d33"; x.fill(); x.lineWidth = 3; x.strokeStyle = "rgba(255,255,255,.12)"; x.stroke(); x.clip();
+    const b = await img(t.logo); if (b) x.drawImage(b, X - R * .78, Y - R * .78, R * 1.56, R * 1.56); else { x.fillStyle = t.color || "#334155"; x.fillRect(X - R, Y - R, 2 * R, 2 * R); x.fillStyle = "#fff"; x.font = `800 ${Math.round(R * .62)}px Figtree`; x.textAlign = "center"; x.fillText(String(t.abbr || "").slice(0, 3).toUpperCase(), X, Y + R * .22); x.textAlign = "left"; }
+    x.restore(); };
+  if (card.type === "acca") {
+    /* level pill + date */
+    x.font = "800 26px Figtree"; const lv = card.level.toUpperCase(), lw = x.measureText(lv).width + 44; x.fillStyle = "rgba(255,122,47,.16)"; rr(1520 - lw, 70, lw, 52, 26); x.fill(); x.strokeStyle = "rgba(255,122,47,.6)"; x.lineWidth = 2; x.stroke();
+    x.fillStyle = "#ff9a52"; x.fillText(lv, 1520 - lw + 22, 106); x.font = "700 24px Figtree"; x.fillStyle = "#8f9ab3"; x.textAlign = "right"; x.fillText(dateTxt, 1520 - lw - 22, 104); x.textAlign = "left";
+    x.font = "italic 800 84px 'Barlow Condensed'"; x.fillStyle = "#fff"; x.fillText(card.title, 80, 238);
+    /* legs */
+    const L = card.legs.slice(0, 6), gap = 14, avail = 520, rh = Math.min(150, (avail - gap * (L.length - 1)) / L.length), LW = 1000, top = 272 + (avail - (rh * L.length + gap * (L.length - 1))) / 2;
+    for (let i = 0; i < L.length; i++) { const l = L[i], y = top + i * (rh + gap), cy = y + rh / 2;
+      const rg = x.createLinearGradient(80, 0, 80 + LW, 0); rg.addColorStop(0, "rgba(255,255,255,.09)"); rg.addColorStop(1, "rgba(255,255,255,.035)"); x.fillStyle = rg; rr(80, y, LW, rh, 20); x.fill(); x.strokeStyle = "rgba(255,255,255,.08)"; x.lineWidth = 1.5; x.stroke();
+      x.fillStyle = "#ff7a2f"; rr(80, y + 14, 6, rh - 28, 3); x.fill();
+      const R = Math.min(38, rh * .27); await teamBadge(l.teams[0], 128, cy, R); await teamBadge(l.teams[1], 128 + R * 1.25, cy, R);
+      const tx = 128 + R * 2.45 + 24, big = Math.min(46, rh * .36);
+      x.font = `700 ${big}px Figtree`; x.fillStyle = "#f4f6fb"; x.fillText(fit(l.label, 650), tx, cy - 4);
+      x.font = `500 ${Math.round(big * .62)}px Figtree`; x.fillStyle = "#8f9ab3"; x.fillText(fit(`${l.match} · ${l.when}`, 650), tx, cy + big * .78);
+      x.font = `italic 800 ${Math.round(big * 1.25)}px 'Barlow Condensed'`; const ow = x.measureText(l.odds).width + 40;
+      x.fillStyle = "rgba(255,122,47,.14)"; rr(80 + LW - 24 - ow, cy - big * .82, ow, big * 1.64, big * .5); x.fill(); x.fillStyle = orange(cy - big, cy + big); x.textAlign = "center"; x.fillText(l.odds, 80 + LW - 24 - ow / 2, cy + big * .42); x.textAlign = "left"; }
+    /* slip summary */
+    const PX = 1120, PY = 272, PW = 400, PH = avail;
+    const pg = x.createLinearGradient(PX, PY, PX + PW, PY + PH); pg.addColorStop(0, "rgba(255,122,47,.22)"); pg.addColorStop(1, "rgba(255,90,60,.06)"); x.fillStyle = pg; rr(PX, PY, PW, PH, 26); x.fill(); x.strokeStyle = "rgba(255,122,47,.55)"; x.lineWidth = 2.5; x.stroke();
+    x.textAlign = "center"; const cx = PX + PW / 2;
+    x.font = "800 26px Figtree"; x.fillStyle = "#ffb27a"; x.fillText(`${L.length}-FOLD ACCA`, cx, PY + 64);
+    x.font = "italic 800 150px 'Barlow Condensed'"; x.fillStyle = "#fff"; x.fillText(card.total, cx, PY + 212);
+    x.font = "600 26px Figtree"; x.fillStyle = "#c9d1e3"; x.fillText("total odds", cx, PY + 250);
+    x.fillStyle = "rgba(255,255,255,.12)"; x.fillRect(PX + 40, PY + 286, PW - 80, 2);
+    x.font = "600 26px Figtree"; x.fillStyle = "#c9d1e3"; x.fillText("£10 returns", cx, PY + 336); x.font = "italic 800 66px 'Barlow Condensed'"; x.fillStyle = "#4ade80"; x.fillText(money(10 * card.dec), cx, PY + 400);
+    x.font = "600 22px Figtree"; x.fillStyle = "#8f9ab3"; x.fillText(`Our model: ${pct(card.p)} chance it lands`, cx, PY + 452);
+    x.fillStyle = "rgba(255,255,255,.1)"; rr(PX + 40, PY + 470, PW - 80, 12, 6); x.fill(); const bw = Math.max(12, (PW - 80) * Math.min(1, card.p)); const bgr = x.createLinearGradient(PX + 40, 0, PX + 40 + PW - 80, 0); bgr.addColorStop(0, "#ff5a3c"); bgr.addColorStop(.5, "#ffbe3c"); bgr.addColorStop(1, "#22c55e"); x.fillStyle = bgr; rr(PX + 40, PY + 470, bw, 12, 6); x.fill();
+    x.textAlign = "left";
+  } else {
+    if (card.type === "preview" && card.teams) { await teamBadge(card.teams[0], 1340, 110, 48); await teamBadge(card.teams[1], 1460, 110, 48); }
+    else { x.font = "700 24px Figtree"; x.fillStyle = "#8f9ab3"; x.textAlign = "right"; x.fillText(dateTxt, 1520, 104); x.textAlign = "left"; }
+    x.font = "italic 800 92px 'Barlow Condensed'"; x.fillStyle = "#ffffff"; x.fillText(card.title, 80, 262);
+    x.font = "600 34px Figtree"; x.fillStyle = "#ff8a3d"; x.fillText(fit(card.sub || "", 1440), 82, 314);
+    const rows = (card.rows || []).slice(0, 6), avail = 450, gap = 14, rh = Math.min(108, (avail - gap * (rows.length - 1)) / Math.max(rows.length, 1)), fz = Math.min(42, rh * .4), top = 350 + (avail - (rh * rows.length + gap * (rows.length - 1))) / 2;
+    rows.forEach((r, i) => { const y = top + i * (rh + gap), mid = y + rh / 2 + fz * .36;
+      const rg = x.createLinearGradient(80, 0, 1520, 0); rg.addColorStop(0, "rgba(255,255,255,.09)"); rg.addColorStop(1, "rgba(255,255,255,.035)"); x.fillStyle = rg; rr(80, y, 1440, rh, 18); x.fill();
+      x.fillStyle = "#ff7a2f"; rr(80, y + 12, 6, rh - 24, 3); x.fill();
+      x.textAlign = "right"; x.font = `italic 800 ${Math.round(fz * 1.2)}px 'Barlow Condensed'`; x.fillStyle = orange(y, y + rh); const v = String(r[1] || ""); x.fillText(v, 1490, mid); const vw = x.measureText(v).width;
+      if (r[2]) { x.font = `500 ${Math.round(fz * .62)}px Figtree`; x.fillStyle = "#8f9ab3"; x.fillText(fit(r[2], 300), 1490 - vw - 28, mid - 2); }
+      x.textAlign = "left"; x.font = `700 ${Math.round(fz)}px Figtree`; x.fillStyle = "#eef1f8"; x.fillText(fit(r[0], 1440 - vw - (r[2] ? 360 : 80)), 112, mid); });
+  }
+  x.font = "800 30px Figtree"; x.fillStyle = "#ffffff"; x.fillText("@accabox", 80, 856);
+  x.font = "500 22px Figtree"; x.fillStyle = "#7f8aa3"; x.textAlign = "right"; x.fillText(card.adult ? "18+ · Please gamble responsibly · BeGambleAware.org" : "Stats from Accabox", 1520, 856); x.textAlign = "left";
   return c.toDataURL("image/png");
 }
 /* save or share the image card: the Android app saves it to Photos; browsers download it or use the phone's share menu */
