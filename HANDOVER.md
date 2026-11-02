@@ -332,6 +332,7 @@ No server of our own. ESPN is free, has no key and is about 1–3 minutes behind
 
 - No real UK prices or Sky Bet slip links (needs a paid feed, see §0.4). Sky bet IDs can't be looked up.
 - Alerts can't reach a fully closed app (that needs a push server). The overnight job settles but doesn't notify.
+- **Push server: owner said "later" (2 Nov 2026).** Plan agreed: free. A Supabase Edge Function runs every minute via pg_cron and checks bets plus followed games (would need `gfollow` and alert prefs synced to Supabase). It sends through Firebase Cloud Messaging for the Android app (needs an app rebuild) and Web Push/VAPID for browsers and iPhone home-screen apps. Owner steps: create a Firebase project, add a Supabase secret, run one SQL line. Don't start until they ask.
 - ESPN is 1–3 minutes behind TV. The play-by-play can lag and sometimes revises or removes events.
 - Football props in the builder: not yet. Football first-half bets track from the play-by-play only.
 - Ideas the owner liked but hasn't asked for yet: group leagues, safer-gambling limits, more leagues (League One/Two, Eredivisie, Portugal), a push server.
