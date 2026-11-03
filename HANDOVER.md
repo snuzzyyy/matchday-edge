@@ -394,6 +394,9 @@ No server of our own. ESPN is free, has no key and is about 1–3 minutes behind
 - `gameAccas(opts, price)` (bands in `GA_LEVELS`) builds Low / Medium / High bet builders per game. `gaPicks` caches the pre-match picks in `mde:ga` so the same three are tracked once the game starts (`gaTracked`: leg lines, segbar, chance now; finished games show the result). Overview is one wide column (`.ovw`).
 - My Bets: Live / Upcoming / Settled tabs (`S.mbTab`, `data-mbtab`).
 
+## Update timer (Nov 3)
+- GitHub's own cron for update.yml is unreliable (often hours apart). The owner set up cron-job.org ("Accabox update", every 15 min) to POST `https://api.github.com/repos/snuzzyyy/matchday-edge/actions/workflows/update.yml/dispatches` with body `{"ref":"main"}` and headers Authorization: Bearer <fine-grained token, matchday-edge only, Actions read & write>, Accept: application/vnd.github+json, Content-Type: application/json, User-Agent: accabox-timer. Runs show as event `workflow_dispatch`. When the token expires, the owner makes a new one and pastes it into that header. Never ask for the token in chat.
+
 ## Bets tabs and Bet checker
 - Bets sub-tabs are Tips · Accas · Checker · My Bets. Multi-sport is reached from the Accas header button, Stats from My Bets → Settled; `NAV_ALIAS` keeps the tab highlighted for them.
 - `#check` (`viewCheck`): parses with `parseBet`; each leg's chance via `chkLeg` (match markets → `legChance`; player props → the player's model line, else `CHK_PRIOR`, combined for `foulInvolvements` / `goalOrAssist`, halves ×0.46/0.54, live → `paceChance`). Fair odds = 1/p; with typed odds, value > +10% good, ±10% fair, below poor. "Track this bet" opens the import pre-filled. `render()` now keeps focus/caret in #main inputs.
