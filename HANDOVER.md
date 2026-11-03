@@ -396,7 +396,7 @@ No server of our own. ESPN is free, has no key and is about 1–3 minutes behind
 
 ## Update timer (Nov 3)
 - GitHub's own cron for update.yml is unreliable (often hours apart). The owner set up cron-job.org ("Accabox update", every 15 min) to POST `https://api.github.com/repos/snuzzyyy/matchday-edge/actions/workflows/update.yml/dispatches` with body `{"ref":"main"}` and headers Authorization: Bearer <fine-grained token, matchday-edge only, Actions read & write>, Accept: application/vnd.github+json, Content-Type: application/json, User-Agent: accabox-timer. Runs show as event `workflow_dispatch`. When the token expires, the owner makes a new one and pastes it into that header. Never ask for the token in chat.
-- Second cron-job.org job ("Accabox quick settle", every 2 min) dispatches `.github/workflows/settle.yml`: downloads the live data.json and runs settle.py only (no Pages publish; Pages allows ~10 builds an hour). Shares the `deploy` concurrency group with update.yml so the two never settle at the same time.
+- The cron-job.org job runs every 2 min. update.yml's first step checks the published data.json age: under 13 min → settle only (no build, no Pages publish; Pages allows ~10 builds an hour); otherwise the full build. Pushes always do the full build.
 
 ## Bets tabs and Bet checker
 - Bets sub-tabs are Tips · Accas · Checker · My Bets. Multi-sport is reached from the Accas header button, Stats from My Bets → Settled; `NAV_ALIAS` keeps the tab highlighted for them.

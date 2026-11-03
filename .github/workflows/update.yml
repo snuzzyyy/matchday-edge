@@ -19,20 +19,38 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # cron-job.org starts this every 2 minutes: each run settles bets, but the site is only rebuilt when the
+      # published data is 13+ minutes old (GitHub Pages allows about 10 rebuilds an hour). Pushes always rebuild.
+      - name: Rebuild this time, or just settle?
+        id: mode
+        run: |
+          full=1
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            if curl -sf "https://snuzzyyy.github.io/matchday-edge/data.json" -o /tmp/live.json; then
+              age=$(python3 -c "import json,datetime as d;u=json.load(open('/tmp/live.json'))['updated'];print(int((d.datetime.now(d.timezone.utc)-d.datetime.fromisoformat(u)).total_seconds()))" 2>/dev/null || echo 99999)
+              if [ "$age" -lt 780 ]; then full=0; cp /tmp/live.json site/data.json; fi
+              echo "published data is ${age}s old"
+            fi
+          fi
+          echo "full=$full" >> "$GITHUB_OUTPUT"; echo "full rebuild: $full"
       - uses: actions/cache@v4
+        if: steps.mode.outputs.full == '1'
         with:
           path: engine/cache
           key: espn-${{ github.run_id }}
           restore-keys: espn-
       - name: Pull fixtures, stats and odds; run the model
+        if: steps.mode.outputs.full == '1'
         run: python3 engine/build.py || echo "build failed, deploying last committed data"
       - name: Settle finished bets and £1K steps (skips itself until the SUPABASE_SERVICE_KEY secret is added)
         env:
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: python3 engine/settle.py || true
       - name: Stamp the build so open apps update themselves
+        if: steps.mode.outputs.full == '1'
         run: sed -i "s/name=\"mde-build\" content=\"dev\"/name=\"mde-build\" content=\"${GITHUB_SHA::7}\"/" site/index.html
       - name: Publish site to gh-pages
+        if: steps.mode.outputs.full == '1'
         run: |
           cd site
           touch .nojekyll
