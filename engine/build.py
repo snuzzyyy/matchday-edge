@@ -635,7 +635,28 @@ def nba():
             print("props failed", e["id"], ex, file=sys.stderr)
         games.append(g)
     games.sort(key=lambda g: g["start"])
+    try: nba_lineups(games)
+    except Exception as ex: print("lineups failed", ex, file=sys.stderr)
     return games
+
+NBA_TRI = {"GSW": "GS", "NOP": "NO", "NYK": "NY", "SAS": "SA", "UTA": "UTAH", "WAS": "WSH"}
+def nba_lineups(games):
+    """Starting line-ups from NBA.com: posted (expected, then confirmed) hours before tip-off; ESPN only has them once the game starts."""
+    days = set()
+    for g in games:
+        if g["status"]["state"] != "pre": continue
+        t = dt.datetime.fromisoformat(g["start"].replace("Z", "+00:00")) - dt.timedelta(hours=5)   # the NBA's own (US Eastern) date
+        if t - dt.datetime.now(dt.timezone.utc) < dt.timedelta(hours=36): days.add(t.strftime("%Y%m%d"))
+    for day in days:
+        d = get(f"https://stats.nba.com/js/data/leaders/00_daily_lineups_{day}.json", f"nbalu_{day}", 600) or {}
+        for ng in d.get("games", []):
+            ab = lambda t: NBA_TRI.get(t.get("teamAbbreviation", ""), t.get("teamAbbreviation", ""))
+            h, a = ab(ng.get("homeTeam") or {}), ab(ng.get("awayTeam") or {})
+            g = next((g for g in games if g["status"]["state"] == "pre" and g["home"].get("abbr") == h and g["away"].get("abbr") == a), None)
+            if not g: continue
+            side = lambda t: [{"n": p.get("playerName", ""), "pos": p.get("position") or "", "st": p.get("lineupStatus", ""), "out": p.get("rosterStatus") == "Inactive"} for p in t.get("players", [])]
+            hs, as_ = side(ng["homeTeam"]), side(ng["awayTeam"])
+            if any(p["pos"] for p in hs + as_): g["lu"] = {"h": hs, "a": as_}
 
 def erfinv(y):
     y = max(min(y, 0.999999), -0.999999)
