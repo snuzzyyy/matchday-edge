@@ -2591,7 +2591,8 @@ function marketIn(seg, sp, g) {
   const H = teamAliases(g.home), A = teamAliases(g.away), hn = normT(g.home.name), an = normT(g.away.name), extra = [];
   const cnt = al => Math.max(0, ...al.map(a => t.split(" " + a + " ").length - 1)), has = al => cnt(al) > 0;
   // which team the wording is about: "<team> to win" first, else the team named more often (the game header names both once)
-  const pickTeam = re => { for (const [al, n] of [[H, hn], [A, an]]) if (al.some(a => new RegExp(` ${a} ${re}`).test(t) || new RegExp(`${re} ${a} `).test(t))) return n; const ch = cnt(H), ca = cnt(A); return ch > ca ? hn : ca > ch ? an : null; };
+  const pickTeam = re => { for (const [al, n] of [[H, hn], [A, an]]) if (al.some(a => new RegExp(` ${a} ${re}`).test(t) || new RegExp(`${re} ${a} `).test(t))) return n; const ch = cnt(H), ca = cnt(A); if (ch !== ca) return ch > ca ? hn : an;
+    const tc = t.replace(/[^a-z]/g, ""), cc = al => Math.max(0, ...al.map(a => tc.split(a.replace(/[^a-z]/g, "")).length - 1)), h2 = cc(H), a2 = cc(A); return h2 > a2 ? hn : a2 > h2 ? an : null; };   /* a screenshot can split a name: "Derb y" */
   t = t.replace(/ (\d+) or more (corners|goals|cards|points) /g, (m, n, u) => ` over ${+n - .5} ${u} `).replace(/ bookings? /g, " cards ");
   const ou = t.match(/ (home |away )?over\/under ([\d.]+) (corners|goals|cards|points) /);
   if (ou) { const sel = (t.replace(ou[0], " ").match(/ (over|under) /) || [])[1] || "over"; const who = ou[1] ? (ou[1].trim() === "home" ? hn : an) + " " : "";
@@ -2647,8 +2648,8 @@ function oneTeamGame(txt) {
   hits.sort((x, y) => y.live - x.live || x.t - y.t); return hits.length ? [hits[0]] : [];
 }
 function matchLegsIn(text, single) {
-  const txt = String(text).toLowerCase();
-  let G = gamesInText(txt.replace(/[̀-ͯ]/g, ""));
+  const txt = deLetter(String(text)).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  let G = gamesInText(txt);
   if (!G.length && single && !/\s(?:v|vs|versus|@)\.?\s/i.test(txt)) {   /* "Team v Team" we don't cover: never swap in a different game */ const one = oneTeamGame(txt.replace(/[̀-ͯ]/g, "").trim())[0], m = one && marketIn(txt, one.sp, one.g);   /* the whole line: "Liverpool to win or draw" */
     return m ? { legs: [{ sport: one.sp, gid: one.g.id, k: m.k, label: m.label, match: vs(one.sp, one.g), team: "", kick: kick(one.g) }], odds: [oddsIn(txt)] } : { legs: [], odds: [] }; }
   if (!G.length) return { legs: [], odds: [] };
@@ -2712,7 +2713,7 @@ function parseBet(text, idx) {
   for (const { names: nms, rest: rest0 } of groups) {
     const names = nms.map(x => x.replace(/\b(?:all|both|each|to)\b/gi, " ").replace(/\s+/g, " ").trim()).filter(Boolean);   // "A, B & C all to score"
     const sp0 = sportOf(rest0), idxS = sp0 ? idx.filter(p => p.sport === sp0) : idx;
-    if (nms.length === 1 && /\s(?:v|vs|versus|@)\.?\s/i.test(nms[0])) { unread.push(`${nms[0].trim().replace(/:$/, "")}: ${rest0.trim()}`); continue; }   /* a match we don't cover, not a player: you mark it yourself */
+    if (nms.length === 1 && /\s(?:v|vs|versus|@)\.?\s/i.test(nms[0])) { { const nm0 = nms[0].trim().replace(/:$/, ""); unread.push(nm0.includes(":") ? `${nm0} to ${rest0.trim()}` : `${nm0}: ${rest0.trim()}`); } continue; }   /* a match we don't cover, not a player: you mark it yourself */
     const rest = rest0.replace(/\(\s*\d+\s*so far\s*\)/gi, " ").replace(/\b(\d+)\s*(?:or more|or over|plus)\b/gi, "$1+").replace(/\bat least (\d+)/gi, "$1+");   /* Sky adds "(5 so far)" in My Bets */
     const tgt = (rest.match(/(\d+(?:\.\d+)?)\s*\+/) || [])[1], ov = (rest.match(/over\s*(\d+(?:\.\d+)?)/i) || [])[1];
     if (names.length > 1 && /\bbetween\b|\bcombined\b|\bin total\b/i.test(rest)) {   /* one target shared by the players: their numbers add up */
@@ -3087,11 +3088,17 @@ async function readShot(file) {
     const raw = res.data.text || "", { idx } = playerIndex();
     const ml = matchLegsIn(raw), props = parseBet(raw.split("\n").filter(l => !matchLegsIn(l).legs.length).join("\n"), idx).legs.filter(l => l.pid && (l.group ? l.group.every(m => norm(raw).includes(norm(m.name))) : l.name.split(" ").length >= 2 && norm(raw).includes(norm(l.name))));
     const lines = [...ml.legs.map((l, i) => { const g = findGame(l.sport, l.gid); return `${g.home.name} v ${g.away.name}: ${l.label}${ml.odds[i] ? " @ " + (+ml.odds[i]).toFixed(2) : ""}`; }), ...props.map(l => `${l.name} ${l.target}+ ${l.label}`)];
+    { /* Sky: "Cambridge Utd / Full Time Result - Bristol Rovers v [2.15 X] / Cambridge Utd": a game we don't cover still becomes a leg */
+      const R = raw.split("\n").map(x => x.trim()).filter(Boolean), clean = x => x.replace(/\s+\d[\d.]*\s*[xX×]?\s*$/, "").replace(/\s+[xX×]$/, "").replace(/\s+(?:Vv|VV|vv|V)$/, "").trim();   /* drop the price, the ✕ and Sky's price-drop arrow (read as "V") */
+      R.forEach((ln, i) => { const m = ln.match(/^(full time result|match result|match betting|match odds)\s*[-–]\s*(.*)$/i); if (!m) return;
+        let game = clean(m[2]); if (/\sv$/i.test(game) || !/\sv\s/i.test(game)) game = `${game} ${clean(R[i + 1] || "")}`.replace(/\s+/g, " ").trim();
+        const sel = clean(R[i - 1] || "").replace(/^[^a-z]+/i, ""); if (!sel || !/\sv\s/i.test(game) || gamesInText(normT(game)).length) return;
+        lines.push(`${game}: ${sel} to win`); }); }
     if (!lines.length) { S.impShotMsg = "Couldn't spot any of today's games in that screenshot. Try a clearer one, or type the bet below."; impRefresh(); return; }
     S.importText = lines.join("\n"); const t = $("#imptext"); if (t) t.value = S.importText;
     if (/free\s*bet/i.test(raw)) { S.impFree = true; const f = $("#impfree"); if (f) f.checked = true; }
     const st = raw.match(/stake[^0-9£]{0,12}£?\s*(\d+(?:\.\d{1,2})?)/i) || raw.match(/£\s*(\d+(?:\.\d{1,2})?)\s*(?:stake|bet)/i); if (st) { S.impStake = st[1]; const i = $("#impstake"); if (i) i.value = st[1]; }
-    const od = raw.match(/(?:total )?odds[^0-9a-z]{0,6}(\d{1,4}\/\d{1,3}|\d{1,4}\.\d{1,3}|evs|evens)\b/i) || raw.match(/@\s*(\d{1,4}\/\d{1,3}|\d{1,4}\.\d{1,3}|evs|evens)\b/i);
+    const od = raw.match(/\d+\s*fold[\s\S]{0,40}?odds[\s\S]{0,40}?(\d{1,5}\.\d{1,2})\b/i) || raw.match(/(?:total )?odds[^0-9a-z]{0,6}(\d{1,4}\/\d{1,3}|\d{1,4}\.\d{1,3}|evs|evens)\b/i) || raw.match(/@\s*(\d{1,4}\/\d{1,3}|\d{1,4}\.\d{1,3}|evs|evens)\b/i);
     const od3 = !od && raw.match(/[@€]\s*(\d{1,2})(\d{2})\b/); if (od3) od3[1] = od3[1] + "." + od3[2];   /* small text: "@ 2.10" often reads as "@210" */
     const odm = od || od3, odv = odm && parseOdds(odm[1]);
     S.impOddsTyped = false; if (odv) { S.impOdds = odm[1]; S.impOddsTyped = true; const o = $("#impodds"); if (o) o.value = odm[1]; } S.impShotMsg = `Found ${lines.length} leg${lines.length > 1 ? "s" : ""}. Check them below, then tap Track.`; saveImpDraft(); impRefresh();

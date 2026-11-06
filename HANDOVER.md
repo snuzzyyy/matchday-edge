@@ -411,6 +411,11 @@ No server of our own. ESPN is free, has no key and is about 1–3 minutes behind
 - Accas page: one `.acca-panel` card at the top (Pre-match / In-play / ⚽+🏀 multi-sport via `data-gomulti`, level, day chips on one swipeable line); Ready-made accas first (no second set of day chips); "Build your own" (pick best 3/5, same-game option, your acca, game list) below; themed accas folded in a `<details class="maths">`.
 - £1K: the "Step N · no bet picked yet" box is hidden when the picks are right below; The maths is folded.
 
+## Import fixes (Nov 6)
+- `matchLegsIn` normalises accents (NFD) so "Alavés" matches. `marketIn.pickTeam` falls back to counting team names with spaces removed (OCR "Derb y").
+- `readShot`: Sky slips' "Full Time Result - A v B" for games we don't cover become manual legs ("A v B: X to win"); the slip total is read from "N Fold … Odds 195.25"; Sky's price-drop arrow (OCR "V"/"Vv") and "✕" are stripped.
+- Player legs: `sportOf(rest)` limits the lookup to football or NBA by the wording (no more footballers matched to NBA surnames). "X v Y" lines we don't cover never swap in another game; they're saved as manual legs.
+
 ## Makeover (Nov 6, part 2)
 - Every page opens with one `.acca-panel` control card (Tips: Every game/Top picks + days; Fixtures: leagues + days; Accas; Feed: Up next/Winners + one line); page titles/intro lines removed where the tab already says it.
 - `fixtureBlocks`: one card per day, leagues as thin `.lg-sub` labels inside (no box per league). Fixtures shows one day (`fixtureBlocks(…, false)`, no repeated day heading).
