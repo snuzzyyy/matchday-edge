@@ -411,6 +411,9 @@ No server of our own. ESPN is free, has no key and is about 1–3 minutes behind
 - Accas page: one `.acca-panel` card at the top (Pre-match / In-play / ⚽+🏀 multi-sport via `data-gomulti`, level, day chips on one swipeable line); Ready-made accas first (no second set of day chips); "Build your own" (pick best 3/5, same-game option, your acca, game list) below; themed accas folded in a `<details class="maths">`.
 - £1K: the "Step N · no bet picked yet" box is hidden when the picks are right below; The maths is folded.
 
+## Winners-only accas (Nov 6)
+- "🏆 Winners only" chip on Accas and Multi-sport (`S.winOnly`, saved): `legOptions` keeps only `WIN_KEYS` (football 1/2, NBA ML1/ML2), so ready-mades, Build your own and multi-sport use straight winners at the chosen level; titles read "Balanced winners treble"; themed accas/mixes hidden while on.
+
 ## Live pitch (Nov 6)
 - `livePitch(g)`: first section on a live football game (Overview and Stats tabs). Uses ESPN commentary positions (`fieldPositionX/Y`, kept on `g.plays` as x, y, x2, y2, tid = team id or name, clk, txt). Positions are from the acting team's view, so away actions are flipped (home attacks right). Ball at the latest action with a pulse, trail of the last 5, shot line, box flashes on danger, "Pressure" bar = share of the last 12 actions. Not true ball tracking (that's a paid feed); it moves on each action, refreshed every 10 s.
 

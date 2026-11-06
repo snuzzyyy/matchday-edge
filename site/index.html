@@ -792,6 +792,7 @@ a.prof-bdg{text-decoration:none}
 /* acca builder */
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 .acca-ctrl{display:grid;gap:10px}
+.chip.win-only[aria-pressed=true]{background:rgba(250,204,21,.15);color:#facc15;border-color:rgba(250,204,21,.55);box-shadow:none}
 .acca-panel{display:grid;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:10px;margin-bottom:18px}.acca-panel .seg3{margin:0}.acca-panel .seg3 button{padding:9px 6px;font-size:14px}.acca-panel .chips{margin:0;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}.acca-panel .chips::-webkit-scrollbar{display:none}.acca-panel .chip{flex:none}
 .seg3{display:grid;grid-template-columns:repeat(3,1fr);background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:4px;gap:4px}
 .seg3 button{padding:10px 6px;border-radius:9px;font-weight:700;font-size:13.5px;color:var(--muted)}
@@ -1214,7 +1215,7 @@ const store = { get(k, d) { try { const v = localStorage.getItem("mde:" + k); re
                 set(k, v) { try { localStorage.setItem("mde:" + k, JSON.stringify(v)); } catch {} } };
 
 const S = { comments: {}, data: null, logos: {}, sport: store.get("sport", "football"), fmt: store.get("fmt", "frac"), slip: store.get("slip", []),
-            stake: store.get("stake", 5), slipTot: store.get("slipTot", null), chalOdds: store.get("chalOdds", "over"), chalWin: store.get("chalWin", "24h"), boxSide: {}, league: "all", win: "today", drawer: null, slipOpen: false };
+            stake: store.get("stake", 5), slipTot: store.get("slipTot", null), chalOdds: store.get("chalOdds", "over"), chalWin: store.get("chalWin", "24h"), winOnly: store.get("winOnly", false), boxSide: {}, league: "all", win: "today", drawer: null, slipOpen: false };
 const VIEWS = [["check", "Bet checker", "Checker"], ["live", "Live", "Live"], ["fixtures", "Fixtures", "Games"], ["acca", "Accas", "Accas"], ["multi", "Multi-sport", "Multi"], ["bets", "Best Bets", "Tips"], ["mybets", "My Bets", "My Bets"], ["friends", "Social", "Social"], ["feed", "Feed", "Feed"], ["tables", "Tables", "Tables"], ["news", "News", "News"], ["challenge", "£1K Challenge", "£1K"]];
 const TAB_ICONS = (() => { const svg = p => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`; return {
   live: svg('<circle cx="12" cy="12" r="2.2"/><path d="M7.8 7.8a6 6 0 000 8.4M16.2 7.8a6 6 0 010 8.4M5 5a10 10 0 000 14M19 5a10 10 0 010 14"/>'),
@@ -1774,21 +1775,21 @@ function presetCard(id, title, desc, raw, extra) {
 }
 function viewMulti() {
   const w = multiWin(), R = RISK[S.accaRisk || "safe"], risk = S.accaRisk || "safe";
-  const lvl = [[2, "Double"], [3, "Treble"], [4, "Four-fold"], [5, "Five-fold"]].map(([n, t]) => { const raw = multiPreset(n), c = raw.length ? slipCalc(asLegs(raw)) : null; return presetCard(`mp:${n}`, `${R.name} ${t.toLowerCase()}`, "Football and NBA mixed, one bet per game.", raw, c && !(c.dec >= R.lo && c.dec <= R.hi) ? `<span class="pd" style="color:var(--amber)">Closest we could get to the ${R.name} range</span>` : ""); }).join("");
+  const lvl = [[2, "Double"], [3, "Treble"], [4, "Four-fold"], [5, "Five-fold"]].map(([n, t]) => { const raw = multiPreset(n), c = raw.length ? slipCalc(asLegs(raw)) : null; return presetCard(`mp:${n}`, `${R.name}${S.winOnly ? " winners" : ""} ${t.toLowerCase()}`, "Football and NBA mixed, one bet per game.", raw, c && !(c.dec >= R.lo && c.dec <= R.hi) ? `<span class="pd" style="color:var(--amber)">Closest we could get to the ${R.name} range</span>` : ""); }).join("");
   const themed = [["bankers", "Banker mix", "The two safest bets in each sport."], ["players", "Player mix", "Football shots on target and NBA points."], ["mix", "Mix it up", "Results, goals, corners and cards with NBA winners, totals and player bets."]].map(([k, t, d]) => presetCard(`mt:${k}`, t, d, multiTheme(k))).join("");
   const T = ["football", "nba"].map(sp => tiers(sp, w)), picks = []; for (let i = 0; i < 6; i++) for (const t of T) { const c = [...t.bank, ...t.strong][i]; if (c) picks.push(c); }
   return `<a class="linkbtn back-l" href="#acca">‹ Accas</a><div class="hd"><div><h1>Multi-sport</h1><p class="sub">Football and NBA in one acca. Ready-made for your level, or add the best picks from both yourself.</p></div></div>
-  <div class="acca-ctrl"><div class="seg3" role="group" aria-label="Level">${Object.entries(RISK).map(([k, r]) => `<button data-accarisk="${k}" aria-pressed="${risk === k}">${r.name}</button>`).join("")}</div><p class="risk-desc">${R.desc}</p>
+  <div class="acca-ctrl"><div class="seg3" role="group" aria-label="Level">${Object.entries(RISK).map(([k, r]) => `<button data-accarisk="${k}" aria-pressed="${risk === k}">${r.name}</button>`).join("")}</div><div class="chips"><button class="chip win-only" data-winonly aria-pressed="${!!S.winOnly}">🏆 Winners only</button></div><p class="risk-desc">${R.desc}</p>
     <div class="chips">${["today", "tomorrow", "48h"].map(k => `<button class="chip" data-multiwin="${k}" aria-pressed="${w === k}" ${upcoming("football", k).some(isPre) && upcoming("nba", k).some(isPre) ? "" : "disabled style=\"opacity:.4\""}>${WIN_NAME[k]}</button>`).join("")}</div></div>${(() => { const miss = ["today", "tomorrow"].filter(k => !(upcoming("football", k).some(isPre) && upcoming("nba", k).some(isPre))).map(k => `${WIN_NAME[k].toLowerCase()} (no ${upcoming("nba", k).some(isPre) ? "football" : "NBA"} games left)`); return miss.length ? `<p class="risk-desc" style="margin-top:6px">Not available ${miss.join(" or ")}. A multi-sport acca needs games from both.</p>` : ""; })()}
   <section class="section"><h2>Ready-made multi-sport accas · ${R.name}</h2><div class="presets">${lvl || `<div class="empty">Not enough football and NBA games in this window. Try another day above.</div>`}</div></section>
-  ${themed ? `<section class="section"><h2>Themed mixes</h2><div class="presets">${themed}</div></section>` : ""}
+  ${themed && !S.winOnly ? `<section class="section"><h2>Themed mixes</h2><div class="presets">${themed}</div></section>` : ""}
   ${picks.length ? `<section class="section"><h2>Best picks from both sports</h2><p class="sub" style="margin:-6px 0 8px">Tap + to add any of these to your slip and build your own.</p><div class="pgrid">${picks.map(pickCard).join("")}</div></section>` : ""}`;
 }
 function asLegs(list) { return list.map(({ sport, g, m }) => ({ id: legId(sport, g, m), sport, gid: g.id, k: m.k, label: m.label, match: vs(sport, g), p: m.p, dec: priceOf(m), orig: priceOf(m), est: !m.dec, estOrig: !m.dec, kick: kick(g), ...propLeg(m) })); }
 const accaWin = () => S.accaWin && upcoming(S.sport, S.accaWin).length ? S.accaWin : firstWin(S.sport);
 /* ready-made accas for the level you've picked (pre-match): the best double, treble and four-fold, plus a same-game one, each aimed at that level's odds */
 function levelPreset(n) {
-  const sp = S.sport, aw = accaWin(), r = RISK[S.accaRisk || "safe"], key = [sp, aw, S.accaRisk, n, sgAuto(), S.data.updated].join("|");
+  const sp = S.sport, aw = accaWin(), r = RISK[S.accaRisk || "safe"], key = [sp, aw, S.accaRisk, n, sgAuto(), S.winOnly ? "w" : "", S.data.updated].join("|");
   const C = (S._lvl = S._lvl || {})[key]; if (C && Date.now() - C.at < 30e3) return C.v;
   const list = upcoming(sp, aw).filter(isPre); let out = [];
   if (n === 1) {   // one game, a few bets that go together, inside the level's range
@@ -1807,12 +1808,12 @@ function presetsHTML() {
   const aw = accaWin(), R = RISK[S.accaRisk || "safe"];
   const lvl = [[2, "Double", "Two games, one bet each."], [3, "Treble", "Three games, one bet each."], [4, "Four-fold", "Four games, one bet each."], [1, "Same-game", "A few bets from one game that go together."]].map(([n, t, d]) => {
     const raw = levelPreset(n); if (raw.length < (n === 1 ? 2 : n)) return ""; const legs = asLegs(raw), c = slipCalc(legs), ok = c.dec >= R.lo && c.dec <= R.hi;
-    return `<button class="preset" data-preset="lvl:${n}" data-ptitle="${esc(R.name + " " + t.toLowerCase())}"><span class="pt">${R.name} ${t.toLowerCase()}</span><span class="pd">${d}</span><span class="pd">${legs.map(l => esc(legText(l)) + ` <span style="color:var(--muted)">(${whenLabel(l.kick)})</span>`).join(" · ")}</span><span class="po"><b>${odds(c.dec)}</b><span class="pill ${c.p > .3 ? "good" : "hot"}">${pct(c.p)} chance</span></span>${ok ? "" : `<span class="pd" style="color:var(--amber)">Closest we could get to the ${R.name} range</span>`}</button>`;
+    return `<button class="preset" data-preset="lvl:${n}" data-ptitle="${esc(R.name + (S.winOnly ? " winners " : " ") + t.toLowerCase())}"><span class="pt">${R.name}${S.winOnly ? " winners" : ""} ${t.toLowerCase()}</span><span class="pd">${d}</span><span class="pd">${legs.map(l => esc(legText(l)) + ` <span style="color:var(--muted)">(${whenLabel(l.kick)})</span>`).join(" · ")}</span><span class="po"><b>${odds(c.dec)}</b><span class="pill ${c.p > .3 ? "good" : "hot"}">${pct(c.p)} chance</span></span>${ok ? "" : `<span class="pd" style="color:var(--amber)">Closest we could get to the ${R.name} range</span>`}</button>`;
   }).join("");
   const presets = THEMES[S.sport].map(([k, t, d]) => presetCard(`th:${S.sport}:${k}`, k === "safe" ? `${R.name} four` : t, d, buildPreset(k))).join("");
   return `<section class="section"><div class="hd"><h2>Ready-made accas</h2></div>
   ${firstWin(S.sport) !== "today" && !S.accaWin ? `<div class="note">All of today's ${S.sport === "nba" ? "NBA" : "football"} has started, so these use ${WIN_NAME[aw].toLowerCase()}'s games.${S.sport === "football" && upcoming("nba", "today").length ? ` Switch to <b>NBA</b> at the top for tonight's games.` : ""}</div>` : ""}<p class="sub" style="margin:-4px 0 10px">${R.name}: the whole acca ${R.hi > 1e8 ? odds(R.lo) + " or bigger" : R.lo < 1.1 ? "under " + odds(R.hi) : odds(R.lo) + " to " + odds(R.hi)}. Tap one to add it to your slip.</p>
-  <div class="presets">${lvl || `<div class="empty">Not enough upcoming games to build one.</div>`}</div>${presets ? `<details class="maths" style="margin-top:14px"><summary><h3 class="bv-h" style="display:inline">Themed accas · shots, fouls, goals, corners</h3></summary><div class="presets" style="margin-top:10px">${presets}</div></details>` : ""}</section>
+  <div class="presets">${lvl || `<div class="empty">Not enough upcoming games to build one.</div>`}</div>${presets && !S.winOnly ? `<details class="maths" style="margin-top:14px"><summary><h3 class="bv-h" style="display:inline">Themed accas · shots, fouls, goals, corners</h3></summary><div class="presets" style="margin-top:10px">${presets}</div></details>` : ""}</section>
 `;
 }
 /* ---------- acca builder: pick games, it picks the safest leg in each ---------- */
@@ -1873,9 +1874,11 @@ function jointPick(items, price) {   // items: [{ id, opts, fixed }] -> Map id -
 const bandNote = dec => { const r = RISK[S.accaRisk || "safe"]; if (dec >= r.lo && dec <= r.hi) return `<div class="msg ok">✓ Total ${dec.toFixed(2)}: in your ${r.name} range.</div>`;
   return `<div class="note">Total ${dec.toFixed(2)} is ${dec < r.lo ? "below" : "above"} the ${r.name} range (${r.hi > 1e8 ? r.lo.toFixed(1) + "+" : r.lo.toFixed(1) + " to " + r.hi.toFixed(1)}). ${dec < r.lo ? "Add another game or swap a leg for a bigger price." : "Remove a game or switch to a safer level."}</div>`; };
 const accaSel = () => (S.accaSel = S.accaSel || { football: [], nba: [] })[S.sport];
+/* "Winners only": straight match winners (football home/away win, NBA moneyline) */
+const WIN_KEYS = new Set(["1", "2", "ML1", "ML2"]);
 function legOptions(sport, g) {
   const r = RISK[S.accaRisk || "safe"];
-  return g.model.markets.filter(m => !SKIP.has(m.k) && m.p <= .96 && priceOf(m) >= 1.05).sort((a, b) => b.p - a.p).map(m => ({ m, ok: true }));
+  return g.model.markets.filter(m => !SKIP.has(m.k) && m.p <= .96 && priceOf(m) >= 1.05 && (!S.winOnly || WIN_KEYS.has(m.k))).sort((a, b) => b.p - a.p).map(m => ({ m, ok: true }));
 }
 /* fix one game's bets as they are now (main + all extras, auto-picked ones included), after applying f to the key list */
 function pinGame(live, gid, f) {
@@ -2018,7 +2021,7 @@ function viewAcca() {
         ${m ? `<span class="ag-pick"><span>${esc(m.label)}</span><b style="color:${tierColor(m.p)}">${pct(m.p)}</b></span>` : ""}</span></button>`; }).join("")}</div></div>`).join("");
   return `<div class="acca-panel">${accaModeSeg()}
   <div class="seg3" role="group" aria-label="Safety level">${Object.entries(RISK).map(([k, r]) => `<button data-accarisk="${k}" aria-pressed="${risk === k}">${r.name}</button>`).join("")}</div>
-    <div class="chips scroll">${["today", "tomorrow", "48h", "week"].map(k => `<button class="chip" data-accawin="${k}" aria-pressed="${w === k}" ${upcoming(sp, k).length ? "" : "disabled style=\"opacity:.4\""}>${WIN_NAME[k]}</button>`).join("")}</div>
+    <div class="chips scroll"><button class="chip win-only" data-winonly aria-pressed="${!!S.winOnly}">🏆 Winners only</button>${["today", "tomorrow", "48h", "week"].map(k => `<button class="chip" data-accawin="${k}" aria-pressed="${w === k}" ${upcoming(sp, k).length ? "" : "disabled style=\"opacity:.4\""}>${WIN_NAME[k]}</button>`).join("")}</div>
   </div>
   ${presetsHTML()}
   <section class="section"><div class="hd"><h2>Build your own</h2></div><p class="sub" style="margin:-6px 0 10px">Tap games below and we'll pick the safest bet in each, or let us pick.</p>
@@ -5005,6 +5008,7 @@ document.addEventListener("click", async e => {
     render();
   }
   else if (d.fxday) { S.fxDay = d.fxday; render(); }
+  else if (d.winonly !== undefined) { S.winOnly = !S.winOnly; store.set("winOnly", S.winOnly); S._lvl = {}; render(); toast(S.winOnly ? "Ready-made accas now use match winners only" : "Ready-made accas use every type of bet again"); }
   else if (d.gomulti !== undefined) { location.hash = "multi"; }
   else if (d.feedtab) { S.feedTab = d.feedtab; render(); scrollTo({ top: 0 }); }
   else if (d.allbadges) { S.allBadges = d.allbadges; render(); }
