@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Pulls fixtures, live stats, form and odds, runs the model, writes site/data.json + site/logos.json."""
-import json, math, os, sys, time, gzip, base64, urllib.request, datetime as dt
+import json, math, os, re, sys, time, gzip, base64, urllib.request, datetime as dt
 from concurrent.futures import ThreadPoolExecutor
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -15,6 +15,10 @@ LEAGUES = [
     ("esp.1", "La Liga", "LIGA"), ("ita.1", "Serie A", "SERIE A"), ("ger.1", "Bundesliga", "BUND"),
     ("fra.1", "Ligue 1", "L1"), ("sco.1", "Scottish Premiership", "SPFL"),
     ("ned.1", "Eredivisie", "ERE"), ("por.1", "Primeira Liga", "POR"), ("usa.1", "MLS", "MLS"),
+    # cups: so bets on cup games track and settle by themselves
+    ("eng.fa", "FA Cup", "FAC"), ("eng.league_cup", "Carabao Cup", "EFLC"), ("eng.trophy", "EFL Trophy", "EFLT"),
+    ("uefa.europa.conf", "Conference League", "UECL"), ("sco.tennents", "Scottish Cup", "SC"), ("sco.cis", "Scottish League Cup", "SLC"),
+    ("esp.copa_del_rey", "Copa del Rey", "CDR"), ("ita.coppa_italia", "Coppa Italia", "CI"), ("ger.dfb_pokal", "DFB-Pokal", "DFB"), ("fra.coupe_de_france", "Coupe de France", "CDF"),
 ]
 DAYS_BACK, DAYS_FWD = 1, 5
 
@@ -198,6 +202,32 @@ def football():
         matches.append(m)
     matches.sort(key=lambda m: m["kickoff"])
     return matches
+
+def football_extra(known):
+    """Every other football game ESPN lists (any league or cup), yesterday to two days ahead: track-only, so imported bets
+    on them still track and settle. Result and goals markets come from the same model at league-average strength."""
+    out, seen = [], set(known)
+    for i in range(-1, 3):
+        d = (today + dt.timedelta(days=i)).strftime("%Y%m%d")
+        sb = get(f"{BASE}/soccer/all/scoreboard?dates={d}&limit=1000", f"sball_{d}", 600 if i >= 0 else 3600) or {}
+        names = {str(l.get("id")): l.get("name", "") for l in sb.get("leagues", [])}
+        for e in sb.get("events", []):
+            if e["id"] in seen: continue
+            seen.add(e["id"])
+            try:
+                c = e["competitions"][0]; comps = {x["homeAway"]: x for x in c["competitors"]}
+                if "home" not in comps: continue
+                h, a = team_obj(comps["home"]), team_obj(comps["away"]); h["last5"], a["last5"] = [], []
+                lid = (re.search(r"~l:(\d+)", e.get("uid", "")) or [None, ""])[1]
+                m = {"id": e["id"], "league": "all", "lg": names.get(lid, "") or "Football", "lite": True, "kickoff": e["date"], "status": status_obj(e),
+                     "home": h, "away": a, "venue": (c.get("venue") or {}).get("fullName", ""), "events": []}
+                model(m, "all", {}, 1.35)
+                m["model"]["markets"] = [x for x in m["model"]["markets"] if not x["k"].startswith(("C", "Y"))]   # no corner/card history for these
+                out.append(m)
+            except Exception as ex:
+                print("extra game failed", e.get("id"), ex, file=sys.stderr)
+    out.sort(key=lambda m: m["kickoff"])
+    return out
 
 # ---------- football player bets (props) ----------
 # who plays: confirmed line-up (about an hour before kick-off) or recent starts in each team's last 5 games (summaries already fetched);
@@ -686,8 +716,10 @@ if __name__ == "__main__":
     data = {"updated": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
             "leagues": [{"id": l, "name": n, "short": s} for l, n, s in LEAGUES],
             "football": fb, "nba": nb}
+    try: data["extra"] = football_extra([m["id"] for m in fb])
+    except Exception as ex: print("extra games failed", ex, file=sys.stderr); data["extra"] = []
     chal = os.path.join(ROOT, "challenge.json")
     data["challenge"] = json.load(open(chal)) if os.path.exists(chal) else None
     tmp = os.path.join(SITE, "data.json.tmp"); json.dump(data, open(tmp, "w"), separators=(",", ":")); os.replace(tmp, os.path.join(SITE, "data.json"))
     if "--fast" not in sys.argv: json.dump(logos(), open(os.path.join(SITE, "logos.json"), "w"), separators=(",", ":"))
-    print(f"football {len(fb)} | nba {len(nb)} | {time.time() - t0:.1f}s")
+    print(f"football {len(fb)} | extra {len(data['extra'])} | nba {len(nb)} | {time.time() - t0:.1f}s")

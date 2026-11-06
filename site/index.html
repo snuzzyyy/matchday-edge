@@ -1286,7 +1286,10 @@ function logo(sport, t, cls = "") {
   return `<span class="mono ${cls}" style="background:${esc(t.color)}">${esc((t.abbr || t.name).slice(0, 3))}</span>`;
 }
 const formPills = f => f ? `<span class="form" aria-label="Form ${esc(f)}">${[...f.slice(-5)].map(c => `<i class="${c}"></i>`).join("")}</span>` : "";
-const findGame = (sport, id) => games(sport).find(g => g.id === id);
+/* track-only games (any other league or cup, from data.extra): found for bets, never listed in tips, fixtures or accas */
+const extraGames = () => (S.data && S.data.extra) || [];
+const anyGames = sport => sport === "nba" ? S.data.nba : [...S.data.football, ...extraGames()];
+const findGame = (sport, id) => anyGames(sport).find(g => g.id === id);
 const mkt = (g, k) => g.model.markets.find(m => m.k === k);
 const vs = (sport, g) => sport === "nba" ? `${g.away.name} @ ${g.home.name}` : `${g.home.name} v ${g.away.name}`;
 const minute = g => { const n = parseInt(g.status.clock || g.status.detail); return isNaN(n) ? null : n; };
@@ -2577,7 +2580,7 @@ const findAlias = (txt, al, from = 0) => { let best = null; for (const a of al) 
 // games whose two team names both appear in the text, in the order they appear
 function gamesInText(txt) {
   const now = Date.now(), found = [];
-  for (const sp of ["football", "nba"]) for (const g of games(sp)) {
+  for (const sp of ["football", "nba"]) for (const g of anyGames(sp)) {
     const t = +new Date(kick(g)); if (!(isLive(g) || (isPre(g) && t - now < 3 * 864e5) || (g.status.state === "post" && now - t < 864e5))) continue;
     const h = findAlias(txt, teamAliases(g.home)), a = findAlias(txt, teamAliases(g.away)); if (!h || !a) continue;
     found.push({ sp, g, start: Math.min(h.pos, a.pos), end: Math.max(h.end, a.end) });
@@ -2641,7 +2644,7 @@ const oddsIn = seg => { const m = String(seg).match(/(?:@|©|®| at )\s*(\d+\.\d
 /* a typed line that starts with one team ("Liverpool to win or draw"): that team's live game, else its next one */
 function oneTeamGame(txt) {
   const now = Date.now(), hits = [];
-  for (const sp of ["football", "nba"]) for (const g of games(sp)) {
+  for (const sp of ["football", "nba"]) for (const g of anyGames(sp)) {
     const t = +new Date(kick(g)); if (!(isLive(g) || (isPre(g) && t - now < 3 * 864e5))) continue;
     for (const T of [g.home, g.away]) { const f = findAlias(txt, teamAliases(T)); if (f && txt.slice(0, f.pos).trim().split(/\s+/).filter(Boolean).length <= 1) hits.push({ sp, g, start: f.pos, end: f.end, live: isLive(g), t }); }
   }
@@ -5141,10 +5144,10 @@ async function liveTick() {
   if (ticking || !S.data || (document.visibilityState === "hidden" && !(alertsOn() && (liveBetCount() || followActive())))) return; ticking = true;
   try {
     const now = Date.now(), due = g => g.status.state === "in" || g._fin || (g.status.state === "pre" && +new Date(kick(g)) <= now + 60e3 && now - +new Date(kick(g)) < 4 * 3600e3);
-    const paths = new Set([...S.data.football.filter(due).map(g => "soccer/" + g.league), ...(S.data.nba.some(due) ? ["basketball/nba"] : [])]);
+    const paths = new Set([...S.data.football.filter(due).map(g => "soccer/" + g.league), ...(extraGames().some(due) ? ["soccer/all"] : []), ...(S.data.nba.some(due) ? ["basketball/nba"] : [])]);
     let changed = false, ok = 0, tried = paths.size;
     await Promise.all([...paths].map(async p => { try { const sb = await getJ(`${SB}/${p}/scoreboard`); ok++; for (const e of sb.events || []) changed = applySB(p.startsWith("basketball") ? "nba" : "football", e) || changed; } catch {} }));
-    const live = [...S.data.football.filter(g => isLive(g) || g._fin).map(g => ["football", g]), ...S.data.nba.filter(g => isLive(g) || g._fin).map(g => ["nba", g])];
+    const live = [...anyGames("football").filter(g => isLive(g) || g._fin).map(g => ["football", g]), ...S.data.nba.filter(g => isLive(g) || g._fin).map(g => ["nba", g])];
     await Promise.all(live.map(async ([sp, g]) => { try { const s = await getJ(`${SB}/${sp === "nba" ? "basketball/nba" : "soccer/" + g.league}/summary?event=${g.id}`); const wasFin = g._fin; applyHeader(sp, g, s); sp === "nba" ? applyNba(g, s) : applyFb(g, s); if (wasFin || g.status.state !== "post") g._fin = false; changed = true; } catch {} }));
     if (ok || !tried) { S.liveAt = new Date().toISOString(); S.liveFail = 0; } else S.liveFail = (S.liveFail || 0) + 1;
     const ae = document.activeElement, typing = ae && /^(INPUT|SELECT|TEXTAREA)$/.test(ae.tagName) && ae.type !== "checkbox" && Date.now() - (S._typedAt || 0) < (ae.tagName === "SELECT" ? 20e3 : 8e3);   /* only hold the redraw while someone is actually typing or choosing */
@@ -5200,7 +5203,7 @@ try { const v = JSON.parse(sessionStorage.getItem("mde:view") || "null"); if (v 
 try { const hd = window.claude?.hot?.data; if (hd && hd.t) restored = hd; } catch {}
 if (restored) { S.drawer = restored.drawer || null; S.slipOpen = !!restored.slipOpen; S.boxSide = restored.boxSide || {}; S.sport = restored.sport || S.sport; S.win = restored.win || S.win; S.league = restored.league || S.league; S.accaWin = restored.accaWin; }
 Promise.all([fetch("data.json").then(r => r.json()), fetch("logos.json").then(r => r.json()).catch(() => ({}))]).then(([d, l]) => {
-  S.data = d; S.logos = Object.assign(l, LOGO_FIX);
+  S.data = d; S.logos = Object.assign(l, LOGO_FIX); if (!(d.leagues || []).some(x => x.id === "all")) (d.leagues = d.leagues || []).push({ id: "all", name: "Football", short: "FB" });
   // drop slip legs whose game has started or vanished
   S.slip = S.slip.filter(x => { const g = findGame(x.sport, x.gid); return g && isPre(g); }); save();
   render();

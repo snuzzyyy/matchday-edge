@@ -411,6 +411,10 @@ No server of our own. ESPN is free, has no key and is about 1–3 minutes behind
 - Accas page: one `.acca-panel` card at the top (Pre-match / In-play / ⚽+🏀 multi-sport via `data-gomulti`, level, day chips on one swipeable line); Ready-made accas first (no second set of day chips); "Build your own" (pick best 3/5, same-game option, your acca, game list) below; themed accas folded in a `<details class="maths">`.
 - £1K: the "Step N · no bet picked yet" box is hidden when the picks are right below; The maths is folded.
 
+## Every game tracked (Nov 6)
+- LEAGUES now include the cups: FA Cup, Carabao Cup, EFL Trophy, Conference League, Scottish Cup and League Cup, Copa del Rey, Coppa Italia, DFB-Pokal, Coupe de France (full games: tips, accas, props).
+- `football_extra()` adds every other game from ESPN's `soccer/all/scoreboard` (yesterday to +2 days, ~500–700 games, league "all", `lite: true`, model at league-average strength, no corners/cards) as `data.extra`. Client: `anyGames()` / `findGame` / `gamesInText` / `oneTeamGame` / liveTick use them; `games()` (tips, fixtures, accas, bot) does not. settle.py's GAMES includes them. Summaries work under `soccer/all/`.
+
 ## Import fixes (Nov 6)
 - `matchLegsIn` normalises accents (NFD) so "Alavés" matches. `marketIn.pickTeam` falls back to counting team names with spaces removed (OCR "Derb y").
 - `readShot`: Sky slips' "Full Time Result - A v B" for games we don't cover become manual legs ("A v B: X to win"); the slip total is read from "N Fold … Odds 195.25"; Sky's price-drop arrow (OCR "V"/"Vv") and "✕" are stripped.

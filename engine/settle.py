@@ -38,7 +38,7 @@ def num(v):
 
 
 data = json.load(open(os.path.join(SITE, "data.json")))
-GAMES = {("football", str(g["id"])): g for g in data.get("football", [])}
+GAMES = {("football", str(g["id"])): g for g in data.get("football", []) + data.get("extra", [])}   # extra: every other league/cup, track-only
 GAMES.update({("nba", str(g["id"])): g for g in data.get("nba", [])})
 SUM = {}
 
