@@ -411,6 +411,11 @@ No server of our own. ESPN is free, has no key and is about 1–3 minutes behind
 - Accas page: one `.acca-panel` card at the top (Pre-match / In-play / ⚽+🏀 multi-sport via `data-gomulti`, level, day chips on one swipeable line); Ready-made accas first (no second set of day chips); "Build your own" (pick best 3/5, same-game option, your acca, game list) below; themed accas folded in a `<details class="maths">`.
 - £1K: the "Step N · no bet picked yet" box is hidden when the picks are right below; The maths is folded.
 
+## Ready-made cards (Nov 6)
+- `pLegs()` / `legIcon()`: each leg on a ready-made card is a row with an icon: ESPN headshot (combiner, team badge in the corner, falls back to the badge) for player bets, the team's badge for team bets, both badges for match bets.
+- Ready-mades now include Five-fold and Six-fold (shown only when they fit the level's odds range).
+- PC: the Accas control panel is two rows (type + level side by side, chips below) via `.acca-panel:has(> .acmode)`.
+
 ## Winners-only accas (Nov 6)
 - "🏆 Outrights" chip (was "Winners only") on Accas and Multi-sport (`S.winOnly`, saved): `legOptions` keeps only `WIN_KEYS` (football 1/2, NBA ML1/ML2), so ready-mades, Build your own and multi-sport use straight winners at the chosen level; titles read "Balanced outrights treble"; themed accas/mixes hidden while on.
 

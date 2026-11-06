@@ -630,7 +630,7 @@ a.prof-bdg{text-decoration:none}
 .preset:hover{border-color:var(--blue)}
 .preset .pt{font-family:var(--display);font-weight:700;font-size:20px;text-transform:uppercase}
 .preset .pd{font-size:12.5px;color:var(--fg-2)}
-.preset .po{display:flex;justify-content:space-between;align-items:baseline;margin-top:4px}
+.preset .po{display:flex;justify-content:space-between;align-items:baseline;margin-top:4px}.preset{display:flex;flex-direction:column;justify-content:flex-start}.preset .po{margin-top:auto;padding-top:6px}
 .preset .po b{font-family:var(--display);font-size:24px}
 .slipwide .slip{max-height:none}
 .bar{flex-wrap:nowrap}
@@ -793,6 +793,12 @@ a.prof-bdg{text-decoration:none}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 .acca-ctrl{display:grid;gap:10px}
 .chip.win-only[aria-pressed=true]{background:rgba(250,204,21,.15);color:#facc15;border-color:rgba(250,204,21,.55);box-shadow:none}
+.pl-legs{list-style:none;margin:2px 0 4px;padding:0;display:grid;gap:8px;text-align:left}.pl-legs li{display:grid;grid-template-columns:34px minmax(0,1fr);gap:10px;align-items:center}
+.pl-ic{position:relative;width:34px;height:34px;border-radius:50%;background:#151d33;display:grid;place-items:center;overflow:hidden;flex:none}.pl-ic .logo,.pl-ic .mono{width:22px!important;height:22px!important;font-size:9px}
+.pl-hs .logo,.pl-hs .mono{position:absolute;right:-2px;bottom:-2px;width:16px!important;height:16px!important;z-index:2;background:#151d33;border-radius:50%;padding:1px}.pl-hs img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top}
+.pl-two{display:flex}.pl-two>*{width:17px!important;height:17px!important}.pl-two>*:last-child{margin-left:-5px}
+.pl-t{display:grid;min-width:0}.pl-t b{font-size:14px;font-weight:700;line-height:1.25}.pl-t small{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media (min-width:900px){.acca-panel:has(> .acmode){grid-template-columns:1fr 1fr}.acca-panel:has(> .acmode) .chips{grid-column:1/-1}}
 .acca-panel{display:grid;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:10px;margin-bottom:18px}.acca-panel .seg3{margin:0}.acca-panel .seg3 button{padding:9px 6px;font-size:14px}.acca-panel .chips{margin:0;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}.acca-panel .chips::-webkit-scrollbar{display:none}.acca-panel .chip{flex:none}
 .seg3{display:grid;grid-template-columns:repeat(3,1fr);background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:4px;gap:4px}
 .seg3 button{padding:10px 6px;border-radius:9px;font-weight:700;font-size:13.5px;color:var(--muted)}
@@ -1769,9 +1775,18 @@ function presetLegs(id) {
   const [a, b, c] = String(id).split(":");
   return a === "lvl" ? levelPreset(+b) : a === "th" ? buildPreset(c, null, b) : a === "mp" ? multiPreset(+b) : a === "mt" ? multiTheme(b) : buildPreset(a);
 }
+/* a ready-made acca's legs: player photo (team badge behind it) for player bets, the team's badge for team bets */
+function legIcon(l) {
+  const g = findGame(l.sport, l.gid); if (!g) return `<span class="pl-ic"></span>`;
+  if (l.pid) { const T = l.side === "a" ? g.away : g.home, hs = `https://a.espncdn.com/combiner/i?img=/i/headshots/${l.sport === "nba" ? "nba" : "soccer"}/players/full/${l.pid}.png&w=96&h=70`;
+    return `<span class="pl-ic pl-hs">${logo(l.sport, T)}<img src="${hs}" alt="" loading="lazy" onerror="this.remove()"></span>`; }
+  const lab = normT(l.label || ""), T = [g.home, g.away].find(t => lab.startsWith(normT(t.name)) || lab.startsWith(normT(t.full || t.name)));
+  return `<span class="pl-ic">${T ? logo(l.sport, T) : `<span class="pl-two">${logo(l.sport, l.sport === "nba" ? g.away : g.home)}${logo(l.sport, l.sport === "nba" ? g.home : g.away)}</span>`}</span>`;
+}
+const pLegs = legs => `<ul class="pl-legs">${legs.map(l => `<li>${legIcon(l)}<span class="pl-t"><b>${esc(legText(l))}</b><small>${legs.some(x => x.sport !== l.sport) ? (l.sport === "nba" ? "NBA · " : "Football · ") : ""}${esc(l.match || "")} · ${esc(whenLabel(l.kick))}</small></span></li>`).join("")}</ul>`;
 function presetCard(id, title, desc, raw, extra) {
   if (raw.length < 2) return ""; const legs = asLegs(raw), c = slipCalc(legs);
-  return `<button class="preset" data-preset="${id}" data-ptitle="${esc(String(title).replace(/<[^>]+>/g, ""))}"><span class="pt">${title}</span><span class="pd">${desc}</span><span class="pd">${legs.map(l => `${legs.some(x => x.sport !== l.sport) ? `<span class="ch-sp">${l.sport === "nba" ? "NBA" : "FB"}</span>` : ""}${esc(legText(l))} <span style="color:var(--muted)">(${whenLabel(l.kick)})</span>`).join(" · ")}</span><span class="po"><b>${odds(c.dec)}</b><span class="pill ${c.p > .3 ? "good" : "hot"}">${pct(c.p)} chance</span></span>${extra || ""}</button>`;
+  return `<button class="preset" data-preset="${id}" data-ptitle="${esc(String(title).replace(/<[^>]+>/g, ""))}"><span class="pt">${title}</span><span class="pd">${desc}</span>${pLegs(legs)}<span class="po"><b>${odds(c.dec)}</b><span class="pill ${c.p > .3 ? "good" : "hot"}">${pct(c.p)} chance</span></span>${extra || ""}</button>`;
 }
 function viewMulti() {
   const w = multiWin(), R = RISK[S.accaRisk || "safe"], risk = S.accaRisk || "safe";
@@ -1806,9 +1821,10 @@ function levelPreset(n) {
 }
 function presetsHTML() {
   const aw = accaWin(), R = RISK[S.accaRisk || "safe"];
-  const lvl = [[2, "Double", "Two games, one bet each."], [3, "Treble", "Three games, one bet each."], [4, "Four-fold", "Four games, one bet each."], [1, "Same-game", "A few bets from one game that go together."]].map(([n, t, d]) => {
+  const lvl = [[2, "Double"], [3, "Treble"], [4, "Four-fold"], [5, "Five-fold"], [6, "Six-fold"], [1, "Same-game"]].map(([n, t]) => {
     const raw = levelPreset(n); if (raw.length < (n === 1 ? 2 : n)) return ""; const legs = asLegs(raw), c = slipCalc(legs), ok = c.dec >= R.lo && c.dec <= R.hi;
-    return `<button class="preset" data-preset="lvl:${n}" data-ptitle="${esc(R.name + (S.winOnly ? " outrights " : " ") + t.toLowerCase())}"><span class="pt">${R.name}${S.winOnly ? " outrights" : ""} ${t.toLowerCase()}</span><span class="pd">${d}</span><span class="pd">${legs.map(l => esc(legText(l)) + ` <span style="color:var(--muted)">(${whenLabel(l.kick)})</span>`).join(" · ")}</span><span class="po"><b>${odds(c.dec)}</b><span class="pill ${c.p > .3 ? "good" : "hot"}">${pct(c.p)} chance</span></span>${ok ? "" : `<span class="pd" style="color:var(--amber)">Closest we could get to the ${R.name} range</span>`}</button>`;
+    if (n >= 5 && !ok) return "";   /* five and six legs only when they still fit the level */
+    return `<button class="preset" data-preset="lvl:${n}" data-ptitle="${esc(R.name + (S.winOnly ? " outrights " : " ") + t.toLowerCase())}"><span class="pt">${R.name}${S.winOnly ? " outrights" : ""} ${t.toLowerCase()}</span>${pLegs(legs)}<span class="po"><b>${odds(c.dec)}</b><span class="pill ${c.p > .3 ? "good" : "hot"}">${pct(c.p)} chance</span></span>${ok ? "" : `<span class="pd" style="color:var(--amber)">Closest we could get to the ${R.name} range</span>`}</button>`;
   }).join("");
   const presets = THEMES[S.sport].map(([k, t, d]) => presetCard(`th:${S.sport}:${k}`, k === "safe" ? `${R.name} four` : t, d, buildPreset(k))).join("");
   return `<section class="section"><div class="hd"><h2>Ready-made accas</h2></div>
