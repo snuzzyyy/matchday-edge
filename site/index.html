@@ -1052,6 +1052,7 @@ button.setrow{width:100%;text-align:left;font:inherit;color:inherit;background:n
 .fb-tag{display:inline-flex;align-items:center;gap:3px;margin-left:6px;padding:2px 7px;border-radius:999px;background:rgba(250,204,21,.14);border:1px solid rgba(250,204,21,.4);color:#fde047;font-size:10.5px;font-weight:800;letter-spacing:.02em;white-space:nowrap;vertical-align:middle}
 .bt-foot .fb-tag{margin:0 6px 0 0}.trk-hd .fb-tag{margin-top:4px}
 .fb-btn{padding:5px 11px;border-radius:999px;border:1px dashed var(--line-2);background:none;color:var(--fg-2);font:inherit;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}.fb-btn[aria-pressed=true]{border-style:solid;border-color:rgba(250,204,21,.5);background:rgba(250,204,21,.12);color:#fde047}
+.src-tag{display:block;width:max-content;max-width:100%;margin-top:4px;padding:2px 9px;border-radius:999px;background:rgba(255,122,47,.13);color:#ffb27a;font-size:11.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bc-foot{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;padding-top:6px}.bv-foot{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
 .fb-check{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--bg-2);cursor:pointer;font-size:14px;font-weight:700}.fb-check input{width:18px;height:18px;margin-top:2px;accent-color:#facc15;flex:none}.hf-free{grid-column:1 / -1}.fb-check small{display:block;font-weight:500;font-size:12px;color:var(--muted);margin-top:2px}
 .strip.upd{border-color:rgba(255,122,47,.5);background:radial-gradient(120% 160% at 100% 0%,rgba(255,122,47,.18),transparent 60%),var(--surface)}.strip .upd-btn{background:var(--tang);color:#fff!important;font-weight:800;font-size:13px;padding:7px 14px;border-radius:999px;white-space:nowrap}
@@ -1718,7 +1719,7 @@ function presetLegs(id) {
 }
 function presetCard(id, title, desc, raw, extra) {
   if (raw.length < 2) return ""; const legs = asLegs(raw), c = slipCalc(legs);
-  return `<button class="preset" data-preset="${id}"><span class="pt">${title}</span><span class="pd">${desc}</span><span class="pd">${legs.map(l => `${legs.some(x => x.sport !== l.sport) ? `<span class="ch-sp">${l.sport === "nba" ? "NBA" : "FB"}</span>` : ""}${esc(legText(l))} <span style="color:var(--muted)">(${whenLabel(l.kick)})</span>`).join(" · ")}</span><span class="po"><b>${odds(c.dec)}</b><span class="pill ${c.p > .3 ? "good" : "hot"}">${pct(c.p)} chance</span></span>${extra || ""}</button>`;
+  return `<button class="preset" data-preset="${id}" data-ptitle="${esc(String(title).replace(/<[^>]+>/g, ""))}"><span class="pt">${title}</span><span class="pd">${desc}</span><span class="pd">${legs.map(l => `${legs.some(x => x.sport !== l.sport) ? `<span class="ch-sp">${l.sport === "nba" ? "NBA" : "FB"}</span>` : ""}${esc(legText(l))} <span style="color:var(--muted)">(${whenLabel(l.kick)})</span>`).join(" · ")}</span><span class="po"><b>${odds(c.dec)}</b><span class="pill ${c.p > .3 ? "good" : "hot"}">${pct(c.p)} chance</span></span>${extra || ""}</button>`;
 }
 function viewMulti() {
   const w = multiWin(), R = RISK[S.accaRisk || "safe"], risk = S.accaRisk || "safe";
@@ -1755,7 +1756,7 @@ function presetsHTML() {
   const aw = accaWin(), R = RISK[S.accaRisk || "safe"];
   const lvl = [[2, "Double", "Two games, one bet each."], [3, "Treble", "Three games, one bet each."], [4, "Four-fold", "Four games, one bet each."], [1, "Same-game", "A few bets from one game that go together."]].map(([n, t, d]) => {
     const raw = levelPreset(n); if (raw.length < (n === 1 ? 2 : n)) return ""; const legs = asLegs(raw), c = slipCalc(legs), ok = c.dec >= R.lo && c.dec <= R.hi;
-    return `<button class="preset" data-preset="lvl:${n}"><span class="pt">${R.name} ${t.toLowerCase()}</span><span class="pd">${d}</span><span class="pd">${legs.map(l => esc(legText(l)) + ` <span style="color:var(--muted)">(${whenLabel(l.kick)})</span>`).join(" · ")}</span><span class="po"><b>${odds(c.dec)}</b><span class="pill ${c.p > .3 ? "good" : "hot"}">${pct(c.p)} chance</span></span>${ok ? "" : `<span class="pd" style="color:var(--amber)">Closest we could get to the ${R.name} range</span>`}</button>`;
+    return `<button class="preset" data-preset="lvl:${n}" data-ptitle="${esc(R.name + " " + t.toLowerCase())}"><span class="pt">${R.name} ${t.toLowerCase()}</span><span class="pd">${d}</span><span class="pd">${legs.map(l => esc(legText(l)) + ` <span style="color:var(--muted)">(${whenLabel(l.kick)})</span>`).join(" · ")}</span><span class="po"><b>${odds(c.dec)}</b><span class="pill ${c.p > .3 ? "good" : "hot"}">${pct(c.p)} chance</span></span>${ok ? "" : `<span class="pd" style="color:var(--amber)">Closest we could get to the ${R.name} range</span>`}</button>`;
   }).join("");
   const presets = THEMES[S.sport].map(([k, t, d]) => presetCard(`th:${S.sport}:${k}`, k === "safe" ? `${R.name} four` : t, d, buildPreset(k))).join("");
   return `<section class="section"><div class="hd"><h2>Ready-made accas · ${R.name} · ${WIN_NAME[aw]}</h2><div class="chips">${["today", "tomorrow", "48h"].map(k => `<button class="chip" data-accawin="${k}" aria-pressed="${aw === k}" ${upcoming(S.sport, k).length ? "" : "disabled style=\"opacity:.4\""}>${WIN_NAME[k]}</button>`).join("")}</div></div>
@@ -2429,7 +2430,7 @@ function popularHTML(sport, g, compact) {
   const keys = sport === "nba" ? ["ML1", "ML2", "SP1", "SP2", "TO", "TU"] : ["1", "X", "2", "O25", "U25", "BTTS"], sing = keys.map(k => opts.find(m => m.k === k)).filter(Boolean);
   if (live && !picks.length) return "";   /* in play with no sensible acca left: say nothing rather than show 50/1 singles */
   if (!picks.length && !sing.length) return "";
-  const cards = picks.map(({ name, b, d }) => `<div class="pop-card"><div class="pop-hd"><span class="tag evens">${name}</span><b>${odds(d)}</b></div><ul>${b.legs.map(m => `<li>${esc(legText(m))} <small>${pct(m.p)}</small></li>`).join("")}</ul><div class="pop-ft"><span>${pct(b.p)} chance${live ? " now" : ""}</span><button class="btn sm" data-gbb="${sport}|${g.id}|${b.legs.map(m => m.k).join(",")}|${live ? 1 : 0}">Add to slip</button></div></div>`).join("");
+  const cards = picks.map(({ name, b, d }) => `<div class="pop-card"><div class="pop-hd"><span class="tag evens">${name}</span><b>${odds(d)}</b></div><ul>${b.legs.map(m => `<li>${esc(legText(m))} <small>${pct(m.p)}</small></li>`).join("")}</ul><div class="pop-ft"><span>${pct(b.p)} chance${live ? " now" : ""}</span><button class="btn sm" data-gbb="${sport}|${g.id}|${b.legs.map(m => m.k).join(",")}|${live ? 1 : 0}|${esc(String(name).split(" ·")[0])}">Add to slip</button></div></div>`).join("");
   const sBtn = m => live ? `<button class="odd addlive" data-liveleg="${sport}|${g.id}|${m.k}"><span class="pr">${odds(livePrice(m.p))}</span><span class="pp">${pct(m.p)}</span></button>` : oddBtn(sport, g, m.k);
   return `<section class="section"><h2>Ready-made accas${live ? asOf(g) : ""}</h2>${cards ? `<p class="sub" style="margin:-6px 0 8px">Low, medium and high odds bet builders for this game. Your bookie prices bet builders differently, so check theirs.</p><div class="pop-grid">${cards}</div>` : ""}
     ${sing.length && !(compact && cards) ? `<div class="pop-singles">${sing.map(m => `<div class="pop-s"><span>${esc(m.label)}</span>${sBtn(m)}</div>`).join("")}</div>` : ""}</section>`;
@@ -3013,7 +3014,7 @@ function betCard(t) {
   const x = t.noX ? "" : t.saved ? `<button class="x" data-delbet="${t.saved}" aria-label="Delete bet">✕</button>` : `<button class="x" data-untrack="${t.id}" aria-label="Stop tracking">✕</button>`;
   const BC = !t.result || t.result === "open" ? betChance(t.legs) : null, showC = BC && !lost && !(hit && hit + voids === n) && BC.unknown < n;
   const chanceCell = showC ? `<span title="${BC.unknown ? `${BC.unknown} leg${BC.unknown > 1 ? "s" : ""} you mark yourself not counted` : ""}"><small>Chance</small><b style="color:${tierColor(BC.p)}">${BC.p > 0 && BC.p < .005 ? "<1%" : pct(BC.p)}</b></span>` : "", chanceBar = showC ? `<div class="meter bc-meter"><i style="width:${Math.max(2, BC.p * 100)}%"></i></div>` : "";
-  return `<article class="trk-card ${t.chal ? "chalcard" : ""}"><div class="trk-hd"><div>${t.tag ? `<a class="chaltag" href="#challenge" ${t.chal ? `data-chalsel="${t.chal}"` : ""}>🏆 ${esc(t.tag)} ›</a>` : ""}<b>${esc(title)}</b>${t.free ? FREE_TAG : ""}</div>${overall}${x}</div>${t.stake || t.dec || chanceCell ? `<div class="bc-money ${chanceCell ? "four" : ""}"><span><small>${t.free ? "Free stake" : "Stake"}</small><b>${t.stake ? money(+t.stake) : "–"}</b></span><span><small>Odds</small><b>${t.dec ? odds(t.dec) : "–"}</b></span><span><small>${t.result === "won" ? "Returned" : "Returns"}</small><b class="pos">${t.stake ? money(t.stake * (t.dec || 1) - (t.free || 0)) : "–"}</b></span>${chanceCell}</div>` : ""}${segs}<div class="bc-legs">${legGroups(t.legs, info)}</div>${t.bet ? `<div class="bc-foot">${editBtn(t.bet)}${freeBtn(t.bet)}</div>` : ""}</article>`;
+  return `<article class="trk-card ${t.chal ? "chalcard" : ""}"><div class="trk-hd"><div>${t.tag ? `<a class="chaltag" href="#challenge" ${t.chal ? `data-chalsel="${t.chal}"` : ""}>🏆 ${esc(t.tag)} ›</a>` : ""}<b>${esc(title)}</b>${t.free ? FREE_TAG : ""}${srcTag(t.legs)}</div>${overall}${x}</div>${t.stake || t.dec || chanceCell ? `<div class="bc-money ${chanceCell ? "four" : ""}"><span><small>${t.free ? "Free stake" : "Stake"}</small><b>${t.stake ? money(+t.stake) : "–"}</b></span><span><small>Odds</small><b>${t.dec ? odds(t.dec) : "–"}</b></span><span><small>${t.result === "won" ? "Returned" : "Returns"}</small><b class="pos">${t.stake ? money(t.stake * (t.dec || 1) - (t.free || 0)) : "–"}</b></span>${chanceCell}</div>` : ""}${segs}<div class="bc-legs">${legGroups(t.legs, info)}</div>${t.bet ? `<div class="bc-foot">${editBtn(t.bet)}${freeBtn(t.bet)}</div>` : ""}</article>`;
 }
 function trackerHTML(bare, extra) {
   const all = [...(S.tracked || []), ...(extra || [])], sportOf = t => (t.legs[0] || {}).sport, T = bare ? all : all.filter(t => sportOf(t) === S.sport), other = all.length - T.length;
@@ -4431,6 +4432,17 @@ const freeBtn = b => S.user && b.user_id === S.user.id ? `<button class="fb-btn"
 const editBtn = b => S.user && b.user_id === S.user.id && b.result === "open" ? `<button class="fb-btn" data-editbet="${b.id}">✏️ Edit bet</button>` : "";
 /* a saved bet back in the import box, one leg per line, so legs can be fixed, swapped or added */
 function betToText(b) { return (b.legs || []).map(l => { if (l.manual) return l.label; if (l.pid) return legText(l); const g = l.gid && findGame(l.sport, l.gid); return `${g ? `${g.home.name} v ${g.away.name}` : l.match || ""}: ${l.label}`.replace(/^: /, ""); }).join("\n") || b.label || ""; }
+/* which Accabox ready-made acca a bet was copied from: stamped on its legs when added, else recognised from the game's three accas */
+function betSrc(legs) {
+  const L = (legs || []).filter(l => l.pid || l.k); if (L.length < 2) return "";
+  if (L.every(l => l.src && l.src === L[0].src)) return L[0].src;
+  if (L.some(l => l.src) || !L.every(l => l.gid === L[0].gid && l.sport === L[0].sport)) return "";
+  const g = findGame(L[0].sport, L[0].gid); if (!g) return "";
+  const key = l => l.pid ? `P:${l.pid}:${l.stat}:${l.target}` : l.k, mine = L.map(key).sort().join(",");
+  const pk = gaPicks(L[0].sport, g).find(pk => pk.legs.map(key).sort().join(",") === mine);
+  return pk ? `${String(pk.name).split(" ·")[0]} acca · ${vs(L[0].sport, g)}` : "";
+}
+const srcTag = legs => { const s = betSrc(legs); return s ? `<span class="src-tag" title="Copied from an Accabox ready-made acca">📦 ${esc(s)}</span>` : ""; };
 const FREE_TAG = `<span class="fb-tag" title="Placed with a free bet">🎁 Free bet</span>`;
 async function insertBet(row) {   /* free_stake needs a quick database update; until then the bet still saves, without it */
   let r = await sb.from("bets").insert(row).select().single();
@@ -4766,8 +4778,8 @@ document.addEventListener("click", async e => {
   const d = t.dataset;
   if (d.sport) { S.sport = d.sport; S.league = "all"; S.newsFilter = "all"; store.set("sport", S.sport); render(); }
   else if (d.fmt) { S.fmt = d.fmt; store.set("fmt", S.fmt); render(); }
-  else if (d.gbb) { const [sp, gid, ks, lv] = d.gbb.split("|"), g = findGame(sp, gid); if (!g) return; let n = 0;
-    for (const k of ks.split(",")) { if (lv === "1") { const m = liveLegFor(sp, g, k); if (m) { pushLiveLeg(sp, g, m); n++; } } else { const m = mkt(g, k); if (!m) continue; const leg = asLegs([{ sport: sp, g, m }])[0]; S.slip = S.slip.filter(l => l.id !== leg.id && !(l.sport === sp && l.gid === gid && conflicts(l.k, k))); S.slip.push(leg); n++; } }
+  else if (d.gbb) { const [sp, gid, ks, lv, lvName] = d.gbb.split("|"), g = findGame(sp, gid); if (!g) return; let n = 0; const src = lvName ? `${lvName} acca · ${vs(sp, g)}` : "";
+    for (const k of ks.split(",")) { if (lv === "1") { const m = liveLegFor(sp, g, k); if (m) { pushLiveLeg(sp, g, m); n++; } } else { const m = mkt(g, k); if (!m) continue; const leg = { ...asLegs([{ sport: sp, g, m }])[0], ...(src ? { src } : {}) }; S.slip = S.slip.filter(l => l.id !== leg.id && !(l.sport === sp && l.gid === gid && conflicts(l.k, k))); S.slip.push(leg); n++; } }
     S.slipTot = null; save(); render(); toast(n ? `Added ${n} bets from this game to your slip. Check your bookie's bet builder price` : "Those bets have closed"); }
   else if (d.liveleg) {
     const [sp, gid, k] = d.liveleg.split("|"), g = findGame(sp, gid), m = g && liveLegFor(sp, g, k); if (!m) return;
@@ -4935,7 +4947,7 @@ document.addEventListener("click", async e => {
   else if (d.gtab) { S.gtab = d.gtab; render(); const dr = $(".drawer"); if (dr) { const hero = dr.querySelector(".score-hero"), top = dr.querySelector(".gtop"); dr.scrollTo(0, Math.min(dr.scrollTop, hero ? hero.offsetTop + hero.offsetHeight - (top ? top.offsetHeight : 0) : 0)); } }
   else if (d.boxside) { const [gid, sd] = d.boxside.split("|"); S.boxSide[gid] = sd; render(); }
   else if (d.multiwin) { S.multiWin = d.multiwin; render(); }
-  else if (d.preset) { S.slip = asLegs(presetLegs(d.preset)); S.slipTot = null; save(); S.slipOpen = innerWidth <= 1100; render(); toast("Acca loaded into your slip"); }
+  else if (d.preset) { S.slip = asLegs(presetLegs(d.preset)).map(l => d.ptitle ? { ...l, src: `${d.ptitle} · Accabox ready-made` } : l); S.slipTot = null; save(); S.slipOpen = innerWidth <= 1100; render(); toast("Acca loaded into your slip"); }
   else if (d.double) { const [sp, g1, k1, g2, k2] = d.double.split("|"); S.slip = []; for (const [g, k] of [[g1, k1], [g2, k2]]) { const G = findGame(sp, g), m = mkt(G, k); S.slip.push(...asLegs([{ sport: sp, g: G, m }])); } save(); render(); toast("Double loaded into your slip"); }
   else if (t.id === "fab") { S.slipOpen = true; S.drawer = null; render(); }
 });
