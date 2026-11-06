@@ -411,6 +411,9 @@ No server of our own. ESPN is free, has no key and is about 1–3 minutes behind
 - Accas page: one `.acca-panel` card at the top (Pre-match / In-play / ⚽+🏀 multi-sport via `data-gomulti`, level, day chips on one swipeable line); Ready-made accas first (no second set of day chips); "Build your own" (pick best 3/5, same-game option, your acca, game list) below; themed accas folded in a `<details class="maths">`.
 - £1K: the "Step N · no bet picked yet" box is hidden when the picks are right below; The maths is folded.
 
+## Live pitch (Nov 6)
+- `livePitch(g)`: first section on a live football game (Overview and Stats tabs). Uses ESPN commentary positions (`fieldPositionX/Y`, kept on `g.plays` as x, y, x2, y2, tid = team id or name, clk, txt). Positions are from the acting team's view, so away actions are flipped (home attacks right). Ball at the latest action with a pulse, trail of the last 5, shot line, box flashes on danger, "Pressure" bar = share of the last 12 actions. Not true ball tracking (that's a paid feed); it moves on each action, refreshed every 10 s.
+
 ## Every game tracked (Nov 6)
 - LEAGUES now include the cups: FA Cup, Carabao Cup, EFL Trophy, Conference League, Scottish Cup and League Cup, Copa del Rey, Coppa Italia, DFB-Pokal, Coupe de France (full games: tips, accas, props).
 - `football_extra()` adds every other game from ESPN's `soccer/all/scoreboard` (yesterday to +2 days, ~500–700 games, league "all", `lite: true`, model at league-average strength, no corners/cards) as `data.extra`. Client: `anyGames()` / `findGame` / `gamesInText` / `oneTeamGame` / liveTick use them; `games()` (tips, fixtures, accas, bot) does not. settle.py's GAMES includes them. Summaries work under `soccer/all/`.
