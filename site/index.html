@@ -1119,6 +1119,7 @@ button.setrow{width:100%;text-align:left;font:inherit;color:inherit;background:n
 .bp-t{display:grid;min-width:0}.bp-t b{font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.bp-t small{font-size:11.5px;color:var(--muted)}
 .bp-about summary{cursor:pointer;font-weight:700;color:var(--blue-2)}.bp-about ul{margin:8px 0 0;padding-left:18px;display:grid;gap:6px;font-size:13.5px;color:var(--fg-2)}
 .bot-tick{display:inline-grid;place-items:center;width:16px;height:16px;border-radius:50%;background:var(--tang);color:#fff;font-size:10px;font-weight:900;margin:0 4px 0 4px;vertical-align:1px}
+.maths summary{cursor:pointer;list-style:none}.maths summary::-webkit-details-marker{display:none}.maths summary::after{content:" ›";color:var(--muted);font-size:20px}.maths[open] summary::after{content:" ⌄"}
 .fd-acca{display:grid;gap:6px}.fd-acca + .fd-acca{border-top:1px solid var(--line);padding-top:10px}.fd-dot{width:8px;height:8px;border-radius:50%;background:var(--tang);margin:6px 5px 0}
 .bot-card{grid-column:1/-1;min-width:0;display:grid;gap:8px;background:var(--bg-2);border:1px solid var(--line);border-radius:14px;padding:12px}.bot-hd{display:flex;justify-content:space-between;align-items:center;gap:8px;min-width:0}.bot-hd .tag{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.bot-hd b{font-family:var(--display);font-size:24px}
 .bot-legs{list-style:none;margin:0;padding:0;display:grid;gap:7px}.bot-legs li{display:grid;grid-template-columns:20px minmax(0,1fr);gap:8px;align-items:start}.bot-legs b{display:block;font-size:14px;font-weight:600}.bot-legs small{font-size:12px;color:var(--muted)}
@@ -1482,12 +1483,12 @@ function viewLive() {
   const live = all.filter(isLive);
   const now = Date.now();
   const recent = all.filter(g => g.status.state === "post" && now - new Date(kick(g)) < 864e5 * 1.2).sort((a, b) => new Date(kick(b)) - new Date(kick(a))).slice(0, 40);
-  const next = all.filter(isPre).slice(0, 6);
+  const next = all.filter(isPre).slice(0, 4), allFx = `<a class="linkbtn" href="#fixtures" style="display:inline-block;margin-top:8px">All fixtures ›</a>`;
   return `<div class="strips">${appUpdateStrip()}${promo()}${liveBetCount() ? `<a class="strip" href="#mybets"><span class="ic-dot"><span class="dot red"></span></span><span><b>Your bets in play</b><small>${liveBetCount()} live now · follow them in My Bets</small></span><span aria-hidden="true">›</span></a>` : ""}</div><div class="hd"><div><h1>${sp === "nba" ? "NBA" : "Football"} live</h1><p class="sub">Updates every 10 seconds. Tap a game for stats and markets.</p></div><div class="hd-btns"><button class="btn ghost sm nf-btn" data-notif>${BELL_SVG}Notifications${gFollows().length ? ` <span class="nf-n">${gFollows().length}</span>` : ""}</button>${(S.tracked || []).length ? "" : `<button class="btn ghost sm" data-import>+ Import a bet to track</button>`}</div></div>
   ${live.length ? `<section class="section"><div class="live-grid">${live.map(g => liveCard(sp, g)).join("")}</div></section>`
     : `<div class="idle"><span class="idle-ic" aria-hidden="true">⏸</span><span><b>Nothing in play right now</b><span>${next[0] ? `Next up: <b>${esc(vs(sp, next[0]))}</b> at ${hm(kick(next[0]))} (${dayLabel(dayKey(kick(next[0])))[0].toLowerCase()}).` : "Check back when games kick off."}</span></span></div>`}
-  ${next.length && live.length ? `<section class="section"><h2>Starting soon</h2>${fixtureBlocks(sp, next, false)}</section>` : ""}
-  ${!live.length && next.length ? `<section class="section"><h2>Up next</h2>${fixtureBlocks(sp, next, false)}</section>` : ""}
+  ${next.length && live.length ? `<section class="section"><h2>Starting soon</h2>${fixtureBlocks(sp, next, false)}${allFx}</section>` : ""}
+  ${!live.length && next.length ? `<section class="section"><h2>Up next</h2>${fixtureBlocks(sp, next, false)}${allFx}</section>` : ""}
   ${recent.length ? `<section class="section"><h2>Latest results</h2><div class="res-list">${recent.slice(0, S.allRes ? 40 : 8).map(g => resRow(sp, g)).join("")}</div>${recent.length > 8 && !S.allRes ? `<button class="linkbtn" data-allres>Show all ${recent.length} results</button>` : ""}</section>` : ""}`;
 }
 
@@ -1573,7 +1574,13 @@ function viewFixtures() {
   ${sp === "football" ? `<div class="chips scroll"><button class="chip" data-league="all" aria-pressed="${S.league === "all"}">All leagues</button>${S.data.leagues.filter(l => leagues.includes(l.id)).map(l => `<button class="chip" data-league="${l.id}" aria-pressed="${S.league === l.id}">${esc(l.name)}</button>`).join("")}</div>` : ""}
   ${(() => { const mine = list.filter(g => isPre(g) && (isFav(sp, g.home) || isFav(sp, g.away))).slice(0, 6); return mine.length ? `<div class="day"><div class="dayhd"><h2>Your teams</h2><span>★ favourites from your account</span></div>${fixtureBlocks(sp, mine, false)}</div>` : ""; })()}
   ${list.some(isLive) ? `<div class="day"><div class="dayhd"><h2>In play</h2><span>${list.filter(isLive).length} live · updating every 10s</span></div><div class="lg-block"><div class="lg-hd live-hd"><span><span class="dot red"></span>Live now</span><span>Tap a game for full stats</span></div>${list.filter(isLive).map(g => lvRow(sp, g)).join("")}</div></div>` : ""}
-  ${list.some(isPre) ? fixtureBlocks(sp, list.filter(isPre)) : list.some(isLive) ? "" : `<div class="empty">No upcoming games in the feed.</div>`}`;
+  ${(() => { const pre = list.filter(isPre); if (!pre.length) return list.some(isLive) ? "" : `<div class="empty">No upcoming games in the feed.</div>`;
+    /* one day at a time: a row of day chips instead of the whole week in one long scroll */
+    const dk = g => new Date(kick(g)).toLocaleDateString("en-CA", { timeZone: TZ }), days = [...new Set(pre.map(dk))].sort();
+    const t0 = new Date().toLocaleDateString("en-CA", { timeZone: TZ }), t1 = new Date(Date.now() + 864e5).toLocaleDateString("en-CA", { timeZone: TZ });
+    const lab = d => d === t0 ? "Today" : d === t1 ? "Tomorrow" : new Date(d + "T12:00:00Z").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", timeZone: "UTC" });
+    const day = days.includes(S.fxDay) ? S.fxDay : days[0];
+    return `<div class="chips scroll" role="group" aria-label="Day">${days.map(d => `<button class="chip" data-fxday="${d}" aria-pressed="${d === day}">${lab(d)} <small>${pre.filter(g => dk(g) === d).length}</small></button>`).join("")}</div>${fixtureBlocks(sp, pre.filter(g => dk(g) === day))}`; })()}`;
 }
 
 /* ---------- best bets ---------- */
@@ -1762,9 +1769,9 @@ function presetsHTML() {
     return `<button class="preset" data-preset="lvl:${n}" data-ptitle="${esc(R.name + " " + t.toLowerCase())}"><span class="pt">${R.name} ${t.toLowerCase()}</span><span class="pd">${d}</span><span class="pd">${legs.map(l => esc(legText(l)) + ` <span style="color:var(--muted)">(${whenLabel(l.kick)})</span>`).join(" · ")}</span><span class="po"><b>${odds(c.dec)}</b><span class="pill ${c.p > .3 ? "good" : "hot"}">${pct(c.p)} chance</span></span>${ok ? "" : `<span class="pd" style="color:var(--amber)">Closest we could get to the ${R.name} range</span>`}</button>`;
   }).join("");
   const presets = THEMES[S.sport].map(([k, t, d]) => presetCard(`th:${S.sport}:${k}`, k === "safe" ? `${R.name} four` : t, d, buildPreset(k))).join("");
-  return `<section class="section"><div class="hd"><h2>Ready-made accas · ${R.name} · ${WIN_NAME[aw]}</h2><div class="chips">${["today", "tomorrow", "48h"].map(k => `<button class="chip" data-accawin="${k}" aria-pressed="${aw === k}" ${upcoming(S.sport, k).length ? "" : "disabled style=\"opacity:.4\""}>${WIN_NAME[k]}</button>`).join("")}</div></div>
+  return `<section class="section"><div class="hd"><h2>Ready-made accas</h2></div>
   ${firstWin(S.sport) !== "today" && !S.accaWin ? `<div class="note">All of today's ${S.sport === "nba" ? "NBA" : "football"} has started, so these use ${WIN_NAME[aw].toLowerCase()}'s games.${S.sport === "football" && upcoming("nba", "today").length ? ` Switch to <b>NBA</b> at the top for tonight's games.` : ""}</div>` : ""}<p class="sub" style="margin:-4px 0 10px">Built for the level you've picked above: the whole acca at ${R.hi > 1e8 ? odds(R.lo) + " or bigger" : R.lo < 1.1 ? "under " + odds(R.hi) : odds(R.lo) + " to " + odds(R.hi)}. Tap one to load it into your slip.</p>
-  <div class="presets">${lvl || `<div class="empty">Not enough upcoming games to build one.</div>`}</div>${presets ? `<h3 class="bv-h" style="margin-top:14px">Themed accas</h3><div class="presets">${presets}</div>` : ""}</section>
+  <div class="presets">${lvl || `<div class="empty">Not enough upcoming games to build one.</div>`}</div>${presets ? `<details class="maths" style="margin-top:14px"><summary><h3 class="bv-h" style="display:inline">Themed accas · shots, fouls, goals, corners</h3></summary><div class="presets" style="margin-top:10px">${presets}</div></details>` : ""}</section>
 `;
 }
 /* ---------- acca builder: pick games, it picks the safest leg in each ---------- */
@@ -1968,15 +1975,18 @@ function viewAcca() {
         <span class="ag-main"><span class="ag-teams">${logo(sp, sp === "nba" ? g.away : g.home)}<b>${esc(sp === "nba" ? g.away.name : g.home.name)}</b><span class="ag-v">${sp === "nba" ? "@" : "v"}</span>${logo(sp, sp === "nba" ? g.home : g.away)}<b>${esc(sp === "nba" ? g.home.name : g.away.name)}</b></span>
         <span class="ag-meta">${hm(kick(g))}${sp === "football" ? " · " + esc(leagueName(g.league)) : ""}</span>
         ${m ? `<span class="ag-pick"><span>${esc(m.label)}</span><b style="color:${tierColor(m.p)}">${pct(m.p)}</b></span>` : ""}</span></button>`; }).join("")}</div></div>`).join("");
-  return `<div class="hd"><div><h1>Acca builder</h1><p class="sub">Tap the games you want and we'll pick the safest bet in each.</p></div><a class="btn ghost sm" href="#multi">⚽ + 🏀 Multi-sport ›</a></div>
+  return `<div class="hd"><div><h1>Accas</h1><p class="sub">Pick your level and day: ready-made accas first, or build your own below.</p></div><a class="btn ghost sm" href="#multi">⚽ + 🏀 Multi-sport ›</a></div>
   ${accaModeSeg()}
   <div class="acca-ctrl"><div class="seg3" role="group" aria-label="Safety level">${Object.entries(RISK).map(([k, r]) => `<button data-accarisk="${k}" aria-pressed="${risk === k}">${r.name}</button>`).join("")}</div>
-    <p class="risk-desc">${RISK[risk].desc}</p><label class="optrow sgopt"><input type="checkbox" id="sgOpt" ${sgAuto() ? "checked" : ""}> Add bets from the same game when that's the likelier way to hit the odds</label>
+    <p class="risk-desc">${RISK[risk].desc}</p>
     <div class="chips">${["today", "tomorrow", "48h", "week"].map(k => `<button class="chip" data-accawin="${k}" aria-pressed="${w === k}" ${upcoming(sp, k).length ? "" : "disabled style=\"opacity:.4\""}>${WIN_NAME[k]}</button>`).join("")}</div>
-    <div class="auto"><button class="btn ghost sm" data-accaauto="3">Pick the best 3 for me</button><button class="btn ghost sm" data-accaauto="5">Pick the best 5</button></div></div>
-  ${summary}
-  ${list.length ? rows : `<div class="empty">No ${sp === "nba" ? "NBA" : "football"} games left in this window.</div>`}
-  ${presetsHTML()}`;
+  </div>
+  ${presetsHTML()}
+  <section class="section"><div class="hd"><h2>Build your own</h2></div><p class="sub" style="margin:-6px 0 10px">Tap games below and we'll pick the safest bet in each, or let us pick.</p>
+    <div class="auto"><button class="btn ghost sm" data-accaauto="3">Pick the best 3 for me</button><button class="btn ghost sm" data-accaauto="5">Pick the best 5</button></div>
+    <label class="optrow sgopt"><input type="checkbox" id="sgOpt" ${sgAuto() ? "checked" : ""}> Add bets from the same game when that's the likelier way to hit the odds</label>
+    ${summary}
+    ${list.length ? rows : `<div class="empty">No ${sp === "nba" ? "NBA" : "football"} games left in this window.</div>`}</section>`;
 }
 const fmtRow = () => `<div class="fmt-row"><span>Odds format</span><div class="fmt fmt-big" role="group" aria-label="Odds format"><button data-fmt="frac" aria-pressed="${S.fmt === "frac"}"><b>Fractional</b><small>e.g. 5/2</small></button><button data-fmt="dec" aria-pressed="${S.fmt === "dec"}"><b>Decimal</b><small>e.g. 3.50</small></button></div></div>`;
 function slipHTML(mode = "rail") {
@@ -2170,7 +2180,7 @@ function viewChallenge() {
     <div class="ladder" style="grid-template-columns:repeat(${C.rungs},minmax(0,1fr))" aria-label="Challenge ladder. Tap a bet to see it.">${ladder}</div>
     <p class="lad-key"><span><i class="k-done"></i>Won</span><span><i class="k-now"></i>This bet</span><span><i></i>To come</span><span class="lad-what">Each bar is one bet: what you'll have if it wins</span></p>
     ${mine && !done && !A && C.bank > 0 && (C.rung > 0 || C.history.length) ? `<div class="cash-row"><span>${C.taken ? `${money(C.taken)} taken out so far` : "Want to bank some winnings?"}</span><button class="btn ghost sm" data-cashopen="take">Take money out</button></div>` : C.taken ? `<div class="cash-row"><span>${money(C.taken)} taken out so far</span></div>` : ""}
-    <div class="rdetail" aria-live="polite">${rungDetail(C, sel)}</div>
+    ${sel === C.rung && !C.active && C.rung < C.rungs ? "" : `<div class="rdetail" aria-live="polite">${rungDetail(C, sel)}</div>`}
   </section>
   ${!mine ? `<div class="note">Playing with friends? <a href="#account">Create a free account</a> to run your own ladder.</div>` : ""}
   ${done && mine ? `<div class="chal-log"><b>You did it. ${money(+C.start)} → ${fmtBank(C.bank)}.</b><button class="btn" data-chalreset>Save it and start again</button></div>` : running}
@@ -2183,12 +2193,12 @@ function viewChallenge() {
   ${mine ? `<details class="ownbet"><summary>Placed a different bet? Log it yourself</summary>${chalLogForm(C)}</details>` : ""}</section>` : ""}
   <section class="section"><div class="hd"><h2>This attempt</h2>${mine ? `<span>${C.history.length || A ? `<button class="linkbtn" data-chalreset>Give up and start again</button>` : ""}${L.length > 1 || C.history.length || A ? ` <button class="linkbtn" data-chalclose style="color:var(--loss);margin-left:10px">Close this challenge</button>` : ""}</span>` : ""}</div>${thisAttempt}</section>
   <section class="section"><h2>Previous challenges</h2>${past}</section>
-  <section class="section"><h2>The maths</h2><div class="odds-math">
+  <details class="section maths"><summary><h2 style="display:inline">The maths</h2></summary><div class="odds-math" style="margin-top:10px">
     <div class="cbox"><span class="k">At 50% a bet</span><span class="v">1 in ${Math.round(1 / pAt(.5)).toLocaleString("en-GB")}</span><span class="k">to finish from here</span></div>
     <div class="cbox"><span class="k">At 55% a bet</span><span class="v">1 in ${Math.round(1 / pAt(.55)).toLocaleString("en-GB")}</span><span class="k">to finish from here</span></div>
     <div class="cbox"><span class="k">At 60% a bet</span><span class="v">1 in ${Math.round(1 / pAt(.6)).toLocaleString("en-GB")}</span><span class="k">to finish from here</span></div>
     <div class="cbox"><span class="k">Most you can lose</span><span class="v">${money(+C.start)}</span><span class="k">per attempt</span></div>
-  </div><p class="note">Each step is a fresh coin-flip-ish bet, so the chances multiply. That's why it's a £1 challenge: the downside is a quid and the upside is a grand.</p></section>`;
+  </div><p class="note">Each step is a fresh coin-flip-ish bet, so the chances multiply. That's why it's a £1 challenge: the downside is a quid and the upside is a grand.</p></details>`;
 }
 function chalLogForm(C) {
   return `<form class="chal-log" id="chalLog"><b>Log step ${C.rung + 1}: ${fmtBank(C.bank)} → about ${fmtBank(C.bank * 2)}</b><div class="addrow"><div class="field"><label for="cl-bet">Your bet</label><input id="cl-bet" placeholder="e.g. Grizzlies to win" required></div><div class="field" style="flex:0 1 120px"><label for="cl-odds">Odds</label><input id="cl-odds" placeholder="EVS or 2.0" required></div></div>
@@ -4949,6 +4959,7 @@ document.addEventListener("click", async e => {
     else if (d.twcopy !== undefined) { const ta = document.querySelector(`[data-twedit="${d.twcopy}"]`); if (ta) copyText(ta.value, "Copied. Paste it into X"); return; }
     render();
   }
+  else if (d.fxday) { S.fxDay = d.fxday; render(); }
   else if (d.feedtab) { S.feedTab = d.feedtab; render(); scrollTo({ top: 0 }); }
   else if (d.allbadges) { S.allBadges = d.allbadges; render(); }
   else if (d.mbtab) { S.mbTab = d.mbtab; render(); scrollTo({ top: 0 }); }

@@ -406,6 +406,11 @@ No server of our own. ESPN is free, has no key and is about 1–3 minutes behind
 - Import: combined player stats (`combo:a,b`, e.g. "combine for 8+ shots & foul involvements") are summed in `legValue`/`chkLam`/settle.py. "Away Over/Under 0.5 Goals: Over" → "<team> to score". OCR odds that lose the dot ("@136") read as 1.36. `SKIP` is now only "12" (Over 0.5 goals is allowed in picks).
 - Both teams to score legs: one bar, half full per team that has scored, with "Needs <team> to score".
 
+## Streamline pass (Nov 6)
+- Fixtures: one day at a time (`data-fxday`, `S.fxDay`) instead of the whole week. Live "Up next" = next 4 + "All fixtures ›".
+- Accas page: level + day controls once at the top; Ready-made accas first (no second set of day chips); "Build your own" (pick best 3/5, same-game option, your acca, game list) below; themed accas folded in a `<details class="maths">`.
+- £1K: the "Step N · no bet picked yet" box is hidden when the picks are right below; The maths is folded.
+
 ## Feed tab (Nov 6)
 - Nav: Live · Games · Bets · £1K · Feed (`#feed`, `viewFeed()`). Only Accabox posts: "Up next" = the Low/Medium/High `gaPicks` for the next 6 games within 24 h (Add to slip via `data-gbb`, so bets get the source tag); "Winners" = `bot_accas` won in the last 7 days (`loadBotWins`, refreshed every 5 min, needs sign-in). No other users' posts.
 
