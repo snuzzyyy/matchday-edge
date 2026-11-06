@@ -87,7 +87,7 @@ a{color:var(--blue-2)}
 .tbadge.alt{background:var(--blue)}
 .tab-chal .tl-long,.tab-chal .tl-short{background:linear-gradient(90deg,var(--tang-2),#FF6F91);-webkit-background-clip:text;background-clip:text;color:transparent;font-weight:700}
 @media (max-width:640px){
-  .tabs{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:0;overflow:visible;padding-top:2px}
+  .tabs{display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:0;overflow:visible;padding-top:2px}
   .tab{flex-direction:column;justify-content:center;align-items:center;padding:8px 0 10px;font-size:11.5px;font-weight:600;gap:4px;letter-spacing:0;color:var(--muted)}
   .tab .ti{display:block;position:relative;width:22px;height:22px}
   .tab .ti svg{width:22px;height:22px;display:block}
@@ -1213,12 +1213,14 @@ const TAB_ICONS = (() => { const svg = p => `<svg viewBox="0 0 24 24" fill="none
   news: svg('<path d="M5 4.5h11.5V19a1.5 1.5 0 001.5 1.5H6.5A1.5 1.5 0 015 19z"/><path d="M16.5 8.5H19a1 1 0 011 1V19a1.5 1.5 0 01-1.5 1.5M8 8.5h5.5M8 12h5.5M8 15.5h3.5"/>'),
   challenge: svg('<path d="M8 4h8v5a4 4 0 01-8 0z"/><path d="M8 6H5a2 2 0 002 4h1M16 6h3a2 2 0 01-2 4h-1M12 13v3.5M8.5 20h7M9.5 20l.5-3.5h4l.5 3.5"/>')
 }; })();
-const NAV = [["live", "Live", ["live"], "live"], ["games", "Games", ["fixtures", "tables", "news"], "fixtures"], ["betsg", "Bets", ["bets", "acca", "check", "mybets"], "bets"], ["challenge", "£1K Challenge", ["challenge"], "challenge"], ["friends", "Social", ["friends"], "friends"]];
+/* Social is switched off for now (kept for a future update): set to true to bring back the tab, the page and the Friends link */
+const SOCIAL_ON = false;
+const NAV = [["live", "Live", ["live"], "live"], ["games", "Games", ["fixtures", "tables", "news"], "fixtures"], ["betsg", "Bets", ["bets", "acca", "check", "mybets"], "bets"], ["challenge", "£1K Challenge", ["challenge"], "challenge"], ...(SOCIAL_ON ? [["friends", "Social", ["friends"], "friends"]] : [])];
 const SUBNAME = { fixtures: "Fixtures", tables: "Tables", news: "News", bets: "Tips", acca: "Accas", check: "Checker", mybets: "My Bets" };
 const NAV_ALIAS = { multi: "acca", stats: "mybets" };   /* pages reached from inside another tab */
 const navOf = v => NAV.find(n => n[2].includes(NAV_ALIAS[v] || v));
 S.lastSub = store.get("lastSub", {});
-const view = () => { const h = location.hash.slice(1); return h === "account" || h === "perks" || h === "stats" || h === "tweets" || VIEWS.some(v => v[0] === h) ? h : "live"; };
+const view = () => { const h = location.hash.slice(1); if (h === "friends" && !SOCIAL_ON) return "live"; return h === "account" || h === "perks" || h === "stats" || h === "tweets" || VIEWS.some(v => v[0] === h) ? h : "live"; };
 
 /* ---------- odds ---------- */
 const FR = [[1,20],[1,16],[1,14],[1,12],[1,10],[1,9],[1,8],[1,7],[1,6],[1,5],[2,9],[1,4],[2,7],[3,10],[1,3],[4,11],[2,5],[4,9],[1,2],[8,15],[4,7],[8,13],[4,6],[8,11],[4,5],[5,6],[10,11],[19,20],[20,21],[1,1],[21,20],[11,10],[6,5],[5,4],[11,8],[7,5],[6,4],[8,5],[13,8],[7,4],[9,5],[15,8],[2,1],[85,40],[9,4],[12,5],[5,2],[13,5],[11,4],[3,1],[10,3],[7,2],[4,1],[9,2],[5,1],[11,2],[6,1],[13,2],[7,1],[15,2],[8,1],[17,2],[9,1],[10,1],[11,1],[12,1],[14,1],[16,1],[18,1],[20,1],[22,1],[25,1],[28,1],[33,1],[40,1],[50,1],[66,1],[80,1],[100,1],[125,1],[150,1],[200,1],[250,1],[300,1],[400,1],[500,1],[750,1],[1000,1]];
@@ -3401,7 +3403,7 @@ function viewAccount(mode = "account") {
     ${S.socialReady && P.friend_code ? `<div class="prof-code"><div><small>Friend code</small><b class="fcode">${esc(P.friend_code)}</b></div><div class="prof-acts"><button class="fc-btn" data-copycode aria-label="Copy friend code">⧉ Copy</button><button class="fc-btn" data-invite aria-label="Share invite link">↗ Share</button></div></div>` : ""}</section>
   ${m}
   ${profileShowcase(S.user.id)}
-  <div class="setcard links"><a class="setrow" href="#friends">${avatarStack()}<span><b>Friends</b><small>${nFr ? `${nFr} friend${nFr > 1 ? "s" : ""}` : "Invite your friends"}</small></span><span class="rchev" aria-hidden="true">›</span></a>
+  <div class="setcard links">${SOCIAL_ON ? `<a class="setrow" href="#friends">${avatarStack()}<span><b>Friends</b><small>${nFr ? `${nFr} friend${nFr > 1 ? "s" : ""}` : "Invite your friends"}</small></span><span class="rchev" aria-hidden="true">›</span></a>` : ""}
   ${isOwner() ? `<a class="setrow" href="#tweets"><span class="ic-dot">✍️</span><span><b>Tweet maker</b><small>Owner only · tweets and images from tonight's stats</small></span><span class="rchev" aria-hidden="true">›</span></a>` : ""}
   <a class="setrow" href="#perks"><span class="ic-dot">${(S.profile || {}).plan === "pro" ? "★" : "☆"}</span><span><b>Your plan & perks</b><small>${(S.profile || {}).plan === "pro" ? "Pro · see everything you get" : "Free · see what Pro adds"}</small></span><span class="rchev" aria-hidden="true">›</span></a>
   <a class="setrow" href="#mybets"><span class="ic-dot">${ICON.chart}</span><span><b>My Bets</b><small>${S.bets.length ? `${S.bets.length} saved` : "Your bets and profit"}</small></span><span class="rchev" aria-hidden="true">›</span></a></div>

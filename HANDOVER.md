@@ -406,7 +406,7 @@ No server of our own. ESPN is free, has no key and is about 1–3 minutes behind
 - Import: combined player stats (`combo:a,b`, e.g. "combine for 8+ shots & foul involvements") are summed in `legValue`/`chkLam`/settle.py. "Away Over/Under 0.5 Goals: Over" → "<team> to score". OCR odds that lose the dot ("@136") read as 1.36. `SKIP` is now only "12" (Over 0.5 goals is allowed in picks).
 - Both teams to score legs: one bar, half full per team that has scored, with "Needs <team> to score".
 
-## Social (was Friends)
+## Social (was Friends) — SWITCHED OFF (Nov 6, owner: "for future updates"). `SOCIAL_ON = false` hides the tab, sends #friends to Live and hides the Friends link in Account; all code kept. Set it to true to bring it back.
 - Nav label "Social". Tabs (`S.friendTab`): Timeline (`feedView("timeline")`: `S.feedBets` + `S.pubBets` (unfiltered bets query; RLS returns public ones) + Accabox bot winners), Friends (friends' feed, week, live, £1K), Leaderboards (`S.lbScope` friends → `boardView`, everyone → `topView`), People. Posts render via `feedPost`; one centred column (`.soc`).
 - Declutter (Nov 2): Live results are one-line `resRow`s (8, then "Show all"), compact idle box, iPhone install tip only on Live, £1K banner only before the first challenge, 4 suggestions, 4 locked badges.
 - Player bet legs show `playerTag()`: pre-match Starting / On the bench / Not in squad (line-ups fetched within 90 min of kick-off), live On pitch / On the bench / Subbed off / Sent off; NBA On court / On the bench.
