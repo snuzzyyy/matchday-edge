@@ -411,6 +411,12 @@ No server of our own. ESPN is free, has no key and is about 1–3 minutes behind
 - Accas page: one `.acca-panel` card at the top (Pre-match / In-play / ⚽+🏀 multi-sport via `data-gomulti`, level, day chips on one swipeable line); Ready-made accas first (no second set of day chips); "Build your own" (pick best 3/5, same-game option, your acca, game list) below; themed accas folded in a `<details class="maths">`.
 - £1K: the "Step N · no bet picked yet" box is hidden when the picks are right below; The maths is folded.
 
+## Makeover (Nov 6, part 2)
+- Every page opens with one `.acca-panel` control card (Tips: Every game/Top picks + days; Fixtures: leagues + days; Accas; Feed: Up next/Winners + one line); page titles/intro lines removed where the tab already says it.
+- `fixtureBlocks`: one card per day, leagues as thin `.lg-sub` labels inside (no box per league). Fixtures shows one day (`fixtureBlocks(…, false)`, no repeated day heading).
+- Live: no £1K promo strip (it has a tab; `promo()` now unused), no intro line, "+ Track a bet", slim `.idle-line` instead of the "Nothing in play" box.
+- Feed posts: the inner acca box is flattened (`.fi.bot .bot-card`).
+
 ## Feed tab (Nov 6)
 - Nav: Live · Games · Bets · £1K · Feed (`#feed`, `viewFeed()`). Only Accabox posts: "Up next" = the Low/Medium/High `gaPicks` for the next 6 games within 24 h (Add to slip via `data-gbb`, so bets get the source tag); "Winners" = `bot_accas` won in the last 7 days (`loadBotWins`, refreshed every 5 min, needs sign-in). No other users' posts.
 

@@ -435,6 +435,8 @@ a.prof-bdg{text-decoration:none}
 .lv-foot .last span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @media (max-width:700px){.lv{grid-template-columns:minmax(0,1fr)}}
 .lgn{font-size:12px;color:var(--muted);font-weight:600;white-space:nowrap;text-align:right;min-width:202px}
+.idle-line{display:flex;align-items:center;gap:8px;margin:0 0 6px;font-size:13.5px;color:var(--muted)}.idle-line .dot{background:var(--dim);animation:none}
+.lg-sub{padding:10px 14px 2px;font-size:11px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--blue-2);border-top:1px solid var(--line)}.lg-sub + .fx{border-top:0}
 .lg-hd.live-hd{color:var(--live)}
 .lg-hd.live-hd span{display:flex;align-items:center;gap:8px}
 .chips.scroll{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-mask-image:linear-gradient(90deg,#000 85%,transparent);mask-image:linear-gradient(90deg,#000 85%,transparent);padding-right:24px}
@@ -1121,6 +1123,7 @@ button.setrow{width:100%;text-align:left;font:inherit;color:inherit;background:n
 .bp-about summary{cursor:pointer;font-weight:700;color:var(--blue-2)}.bp-about ul{margin:8px 0 0;padding-left:18px;display:grid;gap:6px;font-size:13.5px;color:var(--fg-2)}
 .bot-tick{display:inline-grid;place-items:center;width:16px;height:16px;border-radius:50%;background:var(--tang);color:#fff;font-size:10px;font-weight:900;margin:0 4px 0 4px;vertical-align:1px}
 .maths summary{cursor:pointer;list-style:none}.maths summary::-webkit-details-marker{display:none}.maths summary::after{content:" ›";color:var(--muted);font-size:20px}.maths[open] summary::after{content:" ⌄"}
+.fi.bot .bot-card{background:none;border:0;padding:4px 0 0;border-top:1px solid var(--line);border-radius:0}.fi.bot .fd-acca + .fd-acca{border-top:1px dashed var(--line)}
 .fd-acca{display:grid;gap:6px}.fd-acca + .fd-acca{border-top:1px solid var(--line);padding-top:10px}.fd-dot{width:8px;height:8px;border-radius:50%;background:var(--tang);margin:6px 5px 0}
 .bot-card{grid-column:1/-1;min-width:0;display:grid;gap:8px;background:var(--bg-2);border:1px solid var(--line);border-radius:14px;padding:12px}.bot-hd{display:flex;justify-content:space-between;align-items:center;gap:8px;min-width:0}.bot-hd .tag{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.bot-hd b{font-family:var(--display);font-size:24px}
 .bot-legs{list-style:none;margin:0;padding:0;display:grid;gap:7px}.bot-legs li{display:grid;grid-template-columns:20px minmax(0,1fr);gap:8px;align-items:start}.bot-legs b{display:block;font-size:14px;font-weight:600}.bot-legs small{font-size:12px;color:var(--muted)}
@@ -1485,9 +1488,9 @@ function viewLive() {
   const now = Date.now();
   const recent = all.filter(g => g.status.state === "post" && now - new Date(kick(g)) < 864e5 * 1.2).sort((a, b) => new Date(kick(b)) - new Date(kick(a))).slice(0, 40);
   const next = all.filter(isPre).slice(0, 4), allFx = `<a class="linkbtn" href="#fixtures" style="display:inline-block;margin-top:8px">All fixtures ›</a>`;
-  return `<div class="strips">${appUpdateStrip()}${promo()}${liveBetCount() ? `<a class="strip" href="#mybets"><span class="ic-dot"><span class="dot red"></span></span><span><b>Your bets in play</b><small>${liveBetCount()} live now · follow them in My Bets</small></span><span aria-hidden="true">›</span></a>` : ""}</div><div class="hd"><div><h1>${sp === "nba" ? "NBA" : "Football"} live</h1><p class="sub">Updates every 10 seconds. Tap a game for stats and markets.</p></div><div class="hd-btns"><button class="btn ghost sm nf-btn" data-notif>${BELL_SVG}Notifications${gFollows().length ? ` <span class="nf-n">${gFollows().length}</span>` : ""}</button>${(S.tracked || []).length ? "" : `<button class="btn ghost sm" data-import>+ Import a bet to track</button>`}</div></div>
+  return `<div class="strips">${appUpdateStrip()}${liveBetCount() ? `<a class="strip" href="#mybets"><span class="ic-dot"><span class="dot red"></span></span><span><b>Your bets in play</b><small>${liveBetCount()} live now · follow them in My Bets</small></span><span aria-hidden="true">›</span></a>` : ""}</div><div class="hd"><div><h1>${sp === "nba" ? "NBA" : "Football"} live</h1></div><div class="hd-btns"><button class="btn ghost sm nf-btn" data-notif>${BELL_SVG}Notifications${gFollows().length ? ` <span class="nf-n">${gFollows().length}</span>` : ""}</button>${(S.tracked || []).length ? "" : `<button class="btn ghost sm" data-import>+ Track a bet</button>`}</div></div>
   ${live.length ? `<section class="section"><div class="live-grid">${live.map(g => liveCard(sp, g)).join("")}</div></section>`
-    : `<div class="idle"><span class="idle-ic" aria-hidden="true">⏸</span><span><b>Nothing in play right now</b><span>${next[0] ? `Next up: <b>${esc(vs(sp, next[0]))}</b> at ${hm(kick(next[0]))} (${dayLabel(dayKey(kick(next[0])))[0].toLowerCase()}).` : "Check back when games kick off."}</span></span></div>`}
+    : `<p class="idle-line"><span class="dot"></span>Nothing in play right now. Live games appear here as soon as they kick off.</p>`}
   ${next.length && live.length ? `<section class="section"><h2>Starting soon</h2>${fixtureBlocks(sp, next, false)}${allFx}</section>` : ""}
   ${!live.length && next.length ? `<section class="section"><h2>Up next</h2>${fixtureBlocks(sp, next, false)}${allFx}</section>` : ""}
   ${recent.length ? `<section class="section"><h2>Latest results</h2><div class="res-list">${recent.slice(0, S.allRes ? 40 : 8).map(g => resRow(sp, g)).join("")}</div>${recent.length > 8 && !S.allRes ? `<button class="linkbtn" data-allres>Show all ${recent.length} results</button>` : ""}</section>` : ""}`;
@@ -1561,7 +1564,8 @@ function fixtureBlocks(sport, list, groupDay = true) {
     const byL = new Map();
     for (const g of gs) { const L = sport === "nba" ? "NBA" : leagueName(g.league); if (!byL.has(L)) byL.set(L, []); byL.get(L).push(g); }
     const cols = sport === "nba" ? ["Away", "Home", "Total"] : ["Home", "Draw", "Away"];
-    const blocks = [...byL].map(([L, arr]) => `<div class="lg-block"><div class="lg-hd"><span>${esc(L)}</span><span class="cols">${cols.map(c => `<span>${c}</span>`).join("")}</span></div>${arr.map(g => fxRow(sport, g)).join("")}</div>`).join("");
+    /* one card per day: leagues are thin labels inside it, not boxes of their own */
+    const blocks = `<div class="lg-block"><div class="lg-hd"><span>${sport === "nba" ? "NBA" : byL.size > 1 ? `${gs.length} games` : esc([...byL.keys()][0])}</span><span class="cols">${cols.map(c => `<span>${c}</span>`).join("")}</span></div>${[...byL].map(([L, arr]) => `${sport !== "nba" && byL.size > 1 ? `<div class="lg-sub">${esc(L)}</div>` : ""}${arr.map(g => fxRow(sport, g)).join("")}`).join("")}</div>`;
     if (groupDay) { const [a, b] = dayLabel(dk); html += `<div class="day"><div class="dayhd"><h2>${a}</h2><span>${b}</span></div>${blocks}</div>`; }
     else html += blocks;
   }
@@ -1571,17 +1575,16 @@ function viewFixtures() {
   const sp = S.sport; let list = games(sp).filter(g => g.status.state !== "post");
   const leagues = sp === "football" ? [...new Set(list.map(g => g.league))] : [];
   if (sp === "football" && S.league !== "all") list = list.filter(g => g.league === S.league);
-  return `<div class="hd"><div><h1>Fixtures</h1><p class="sub">UK times. Tap a price to add it to your slip.</p></div></div>
-  ${sp === "football" ? `<div class="chips scroll"><button class="chip" data-league="all" aria-pressed="${S.league === "all"}">All leagues</button>${S.data.leagues.filter(l => leagues.includes(l.id)).map(l => `<button class="chip" data-league="${l.id}" aria-pressed="${S.league === l.id}">${esc(l.name)}</button>`).join("")}</div>` : ""}
+  /* one day at a time: a row of day chips instead of the whole week in one long scroll */
+  const pre = list.filter(isPre), dk = g => new Date(kick(g)).toLocaleDateString("en-CA", { timeZone: TZ }), days = [...new Set(pre.map(dk))].sort();
+  const t0 = new Date().toLocaleDateString("en-CA", { timeZone: TZ }), t1 = new Date(Date.now() + 864e5).toLocaleDateString("en-CA", { timeZone: TZ });
+  const lab = d => d === t0 ? "Today" : d === t1 ? "Tomorrow" : new Date(d + "T12:00:00Z").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", timeZone: "UTC" });
+  const day = days.includes(S.fxDay) ? S.fxDay : days[0];
+  const dayChips = days.length ? `<div class="chips scroll" role="group" aria-label="Day">${days.map(d => `<button class="chip" data-fxday="${d}" aria-pressed="${d === day}">${lab(d)} <small>${pre.filter(g => dk(g) === d).length}</small></button>`).join("")}</div>` : "";
+  return `<div class="acca-panel">${sp === "football" ? `<div class="chips scroll"><button class="chip" data-league="all" aria-pressed="${S.league === "all"}">All leagues</button>${S.data.leagues.filter(l => leagues.includes(l.id)).map(l => `<button class="chip" data-league="${l.id}" aria-pressed="${S.league === l.id}">${esc(l.name)}</button>`).join("")}</div>` : ""}${dayChips}</div>
   ${(() => { const mine = list.filter(g => isPre(g) && (isFav(sp, g.home) || isFav(sp, g.away))).slice(0, 6); return mine.length ? `<div class="day"><div class="dayhd"><h2>Your teams</h2><span>★ favourites from your account</span></div>${fixtureBlocks(sp, mine, false)}</div>` : ""; })()}
   ${list.some(isLive) ? `<div class="day"><div class="dayhd"><h2>In play</h2><span>${list.filter(isLive).length} live · updating every 10s</span></div><div class="lg-block"><div class="lg-hd live-hd"><span><span class="dot red"></span>Live now</span><span>Tap a game for full stats</span></div>${list.filter(isLive).map(g => lvRow(sp, g)).join("")}</div></div>` : ""}
-  ${(() => { const pre = list.filter(isPre); if (!pre.length) return list.some(isLive) ? "" : `<div class="empty">No upcoming games in the feed.</div>`;
-    /* one day at a time: a row of day chips instead of the whole week in one long scroll */
-    const dk = g => new Date(kick(g)).toLocaleDateString("en-CA", { timeZone: TZ }), days = [...new Set(pre.map(dk))].sort();
-    const t0 = new Date().toLocaleDateString("en-CA", { timeZone: TZ }), t1 = new Date(Date.now() + 864e5).toLocaleDateString("en-CA", { timeZone: TZ });
-    const lab = d => d === t0 ? "Today" : d === t1 ? "Tomorrow" : new Date(d + "T12:00:00Z").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", timeZone: "UTC" });
-    const day = days.includes(S.fxDay) ? S.fxDay : days[0];
-    return `<div class="chips scroll" role="group" aria-label="Day">${days.map(d => `<button class="chip" data-fxday="${d}" aria-pressed="${d === day}">${lab(d)} <small>${pre.filter(g => dk(g) === d).length}</small></button>`).join("")}</div>${fixtureBlocks(sp, pre.filter(g => dk(g) === day))}`; })()}`;
+  ${!pre.length ? (list.some(isLive) ? "" : `<div class="empty">No upcoming games in the feed.</div>`) : fixtureBlocks(sp, pre.filter(g => dk(g) === day), false)}`;
 }
 
 /* ---------- best bets ---------- */
@@ -1626,8 +1629,7 @@ function everyGameView(sp) {
 }
 function viewBets() {
   const mode = S.tipMode || store.get("tipMode", "all");
-  return `<div class="hd"><div><h1>Tips</h1><p class="sub">${mode === "all" ? "A pick for every game. The % is how likely our model thinks it is." : "The strongest picks across all games."}</p></div>${winChips()}</div>
-  <div class="seg3 two" role="group" aria-label="Which tips"><button data-tipmode="all" aria-pressed="${mode === "all"}">Every game</button><button data-tipmode="top" aria-pressed="${mode === "top"}">Top picks</button></div>
+  return `<div class="acca-panel"><div class="seg3 two" role="group" aria-label="Which tips"><button data-tipmode="all" aria-pressed="${mode === "all"}">Every game</button><button data-tipmode="top" aria-pressed="${mode === "top"}">Top picks</button></div>${winChips()}</div>
   ${mode === "all" ? everyGameView(S.sport) : viewTopPicks()}`;
 }
 function viewTopPicks() {
@@ -2170,7 +2172,7 @@ function viewChallenge() {
       <div class="hist">${(p.history || []).map(histRow).join("")}</div></details>`).join("")}</div>` : `<div class="empty">Finished attempts show here: how far each one got and every bet in it.</div>`;
   if (none) return `<div class="hd"><div><h1>£1 → £1K challenge</h1><p class="sub">Turn £1 into £1K, one bet at around evens at a time. Use football or NBA bets, and run up to ${CH_MAX} challenges at once.</p></div></div>
     <img class="banner" src="${art("challenge-banner.webp")}" alt="A glowing staircase of ten steps rising to the top">${chalSummary()}<section class="section"><h2>Previous challenges</h2>${past}</section>`;
-  return `<div class="hd"><div><h1>£1 → £1K challenge</h1><p class="sub">Turn £1 into £1K, one bet at around evens at a time. Use football or NBA bets${mine ? `, and run up to ${CH_MAX} challenges at once.` : "."} ${mine ? "" : "Sign in to run your own ladder."}</p></div></div>
+  return `<div class="hd"><div><h1>£1 → £1K challenge</h1><p class="sub">One bet at about evens at a time.${mine ? "" : " Sign in to run your own ladder."}</p></div></div>
   ${L.length ? "" : `<img class="banner" src="${art("challenge-banner.webp")}" alt="A glowing staircase of ten steps rising to the top">`}
   ${mine ? chalSummary() : ""}
   <section class="chal-hero">
@@ -3643,8 +3645,7 @@ function viewFeed() {
       <div class="bot-card">${P.map(pk => `<div class="fd-acca"><div class="bot-hd"><span class="tag evens">${esc(String(pk.name).split(" ·")[0])}</span><b>${odds(pk.d)}</b></div><ul class="bot-legs">${pk.legs.map(l => `<li><span class="fd-dot"></span><span><b>${esc(legText(l))}</b></span></li>`).join("")}</ul>
         <div class="bot-ft"><span>${pct(pk.p)} chance</span><button class="btn sm" data-gbb="${sp}|${g.id}|${pk.legs.map(key).join(",")}|0|${esc(String(pk.name).split(" ·")[0])}">Add to slip</button></div></div>`).join("")}</div></article>`); }
   const wins = (S.botWins || []).map(w => botPost({ t: w.settled_at, bot: w, html: `${head} ${w.sport === "nba" ? "🏀" : "⚽"} landed the <b>${esc(w.title)}</b> at <span class="pos">${odds(+w.odds_dec)}</span> 🎉` }));
-  return `<div class="soc"><div class="hd"><div><h1>Feed</h1><p class="sub">Accabox's ready-made accas for the next games, and every one that lands.</p></div></div>
-    <div class="seg3 two" role="group" aria-label="Feed" style="margin-bottom:12px"><button data-feedtab="up" aria-pressed="${S.feedTab !== "wins"}">Up next</button><button data-feedtab="wins" aria-pressed="${S.feedTab === "wins"}">Winners${(S.botWins || []).length ? ` (${S.botWins.length})` : ""}</button></div>
+  return `<div class="soc"><div class="acca-panel"><div class="seg3 two" role="group" aria-label="Feed"><button data-feedtab="up" aria-pressed="${S.feedTab !== "wins"}">Up next</button><button data-feedtab="wins" aria-pressed="${S.feedTab === "wins"}">Winners${(S.botWins || []).length ? ` (${S.botWins.length})` : ""}</button></div><p class="risk-desc" style="margin:0 4px">${S.feedTab === "wins" ? "Every Accabox acca that landed this week." : "Accabox's Low, Medium and High accas for the next games."}</p></div>
     ${S.feedTab !== "wins" ? `<div class="feed soc-feed">${ups.join("") || `<div class="empty">No games in the next 24 hours.</div>`}</div>` : `<div class="feed soc-feed">${S.botWins === undefined ? `<div class="loadbox">Loading…</div>` : wins.join("") || `<div class="empty">${S.user ? "No winners in the last week yet. They post here as soon as they land." : `<a href="#account">Sign in</a> to see Accabox's winners.`}</div>`}</div>`}</div>`;
 }
 function feedView(scope = "friends") {
