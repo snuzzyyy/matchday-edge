@@ -150,11 +150,16 @@ def football():
         v = [r[k] for r in rows if r.get(k) is not None]
         return (sum(v) / len(v), len(v)) if v else (None, 0)
 
+    # cup ties between two clubs from leagues we don't cover (e.g. Coupe de France rounds in French Guiana) aren't priced by UK bookies:
+    # leave them out of tips and accas; football_extra() still keeps them so imported bets track
+    CUPS = {"eng.fa", "eng.league_cup", "eng.trophy", "sco.tennents", "sco.cis", "esp.copa_del_rey", "ita.coppa_italia", "ger.dfb_pokal", "fra.coupe_de_france"}
+    covered = {tid for (L, tid) in table if L not in CUPS}
     matches = []
     for eid, (L, e) in events.items():
         c = e["competitions"][0]
         comps = {x["homeAway"]: x for x in c["competitors"]}
         if "home" not in comps: continue
+        if L in CUPS and covered and not ({comps["home"]["team"]["id"], comps["away"]["team"]["id"]} & covered): continue
         h, a = team_obj(comps["home"]), team_obj(comps["away"])
         for t in (h, a): logo_urls[("soccer", t["id"])] = t["logo"]
         s = sums.get(eid, {})
