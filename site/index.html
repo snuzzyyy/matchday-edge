@@ -2635,7 +2635,7 @@ function oneTeamGame(txt) {
 function matchLegsIn(text, single) {
   const txt = String(text).toLowerCase();
   let G = gamesInText(txt.replace(/[̀-ͯ]/g, ""));
-  if (!G.length && single) { const one = oneTeamGame(txt.replace(/[̀-ͯ]/g, "").trim())[0], m = one && marketIn(txt, one.sp, one.g);   /* the whole line: "Liverpool to win or draw" */
+  if (!G.length && single && !/\s(?:v|vs|versus|@)\.?\s/i.test(txt)) {   /* "Team v Team" we don't cover: never swap in a different game */ const one = oneTeamGame(txt.replace(/[̀-ͯ]/g, "").trim())[0], m = one && marketIn(txt, one.sp, one.g);   /* the whole line: "Liverpool to win or draw" */
     return m ? { legs: [{ sport: one.sp, gid: one.g.id, k: m.k, label: m.label, match: vs(one.sp, one.g), team: "", kick: kick(one.g) }], odds: [oddsIn(txt)] } : { legs: [], odds: [] }; }
   if (!G.length) return { legs: [], odds: [] };
   const seg = (i, before) => before ? txt.slice(i ? G[i - 1].end : 0, G[i].start) : txt.slice(G[i].end, i + 1 < G.length ? G[i + 1].start : txt.length);
@@ -2649,7 +2649,7 @@ function matchLegsIn(text, single) {
 }
 function parseBet(text, idx) {
   const legs = [], missing = [], unread = [], om = text.match(/@\s*([0-9]+(?:\.[0-9]+)?(?:\s*\/\s*[0-9]+)?|evs|evens)/i); let oddsFound = null;
-  const LEG = l => l.match(/^(.*?)\s+(?:to\s+|-\s+|:\s*)(.+)$/i) || l.match(/^(.*?)\s+((?:over\s+)?\d.*)$/i);
+  const LEG = l => l.match(/^(.*?)\s+(?:to\s+|-\s+|:\s*)(.+)$/i) || l.match(/^(.*?)\s+((?:over\s+)?\d.*)$/i) || l.match(/^(.*?)\s+((?:anytime|first|last)\s+(?:goal\s*)?scorer.*)$/i);
   // "A 20+ points & B 6+ assists" is two legs; "A & B to score 25+ each" shares one stat
   const groups = [];
   // bookie slips often put the player on one line and "To Record 4+ Rebounds" on the next: join them back up
@@ -2691,12 +2691,18 @@ function parseBet(text, idx) {
       else pend.push(part);
     }
   }
+  /* which sport the wording is about, so a footballer is never matched to an NBA player with the same surname */
+  const FB_WORDS = /\b(?:to score|anytime|score or assist|scorer|goals?|shots?|on target|headers?|headed|fouls?|fouled|carded|booked|cards?|tackles?|saves?|offsides?|corners?|clean sheet)\b/i;
+  const NBA_WORDS = /\b(?:points?|pts|rebounds?|reb|threes?|3-?pointers?|3pm|pra|steals?|blocks?|double-double|triple-double)\b/i;
+  const sportOf = r => FB_WORDS.test(r) && !NBA_WORDS.test(r) ? "football" : NBA_WORDS.test(r) && !FB_WORDS.test(r) ? "nba" : null;
   for (const { names: nms, rest: rest0 } of groups) {
     const names = nms.map(x => x.replace(/\b(?:all|both|each|to)\b/gi, " ").replace(/\s+/g, " ").trim()).filter(Boolean);   // "A, B & C all to score"
+    const sp0 = sportOf(rest0), idxS = sp0 ? idx.filter(p => p.sport === sp0) : idx;
+    if (nms.length === 1 && /\s(?:v|vs|versus|@)\.?\s/i.test(nms[0])) { unread.push(`${nms[0].trim().replace(/:$/, "")}: ${rest0.trim()}`); continue; }   /* a match we don't cover, not a player: you mark it yourself */
     const rest = rest0.replace(/\(\s*\d+\s*so far\s*\)/gi, " ").replace(/\b(\d+)\s*(?:or more|or over|plus)\b/gi, "$1+").replace(/\bat least (\d+)/gi, "$1+");   /* Sky adds "(5 so far)" in My Bets */
     const tgt = (rest.match(/(\d+(?:\.\d+)?)\s*\+/) || [])[1], ov = (rest.match(/over\s*(\d+(?:\.\d+)?)/i) || [])[1];
     if (names.length > 1 && /\bbetween\b|\bcombined\b|\bin total\b/i.test(rest)) {   /* one target shared by the players: their numbers add up */
-      const ps = names.map(nm => [nm, findPlayer(idx, nm)]), miss = ps.filter(x => !x[1]).map(x => x[0]); if (miss.length) { missing.push(...miss); continue; }
+      const ps = names.map(nm => [nm, findPlayer(idxS, nm)]), miss = ps.filter(x => !x[1]).map(x => x[0]); if (miss.length) { missing.push(...miss); continue; }
       const P = ps.map(x => x[1]), p = P[0], st = (PROPS[p.sport].find(([re]) => re.test(rest)) || PROPS[p.sport][p.sport === "nba" ? 6 : 5]);
       const half = p.sport === "football" && /\b(1st|first) half\b/i.test(rest) ? 1 : p.sport === "football" && /\b(2nd|second) half\b/i.test(rest) ? 2 : 0;
       const nm = P.length > 1 ? P.slice(0, -1).map(x => x.name).join(", ") + " & " + P[P.length - 1].name : p.name;
@@ -2705,7 +2711,7 @@ function parseBet(text, idx) {
       continue;
     }
     for (const nm of names) {
-      const p = findPlayer(idx, nm); if (!p) { missing.push(names.length > 1 ? nm : `${nm} ${/^\d/.test(rest.trim()) ? "" : "to "}${rest.trim()}`.replace(/\s+/g, " ")); continue; }
+      const p = findPlayer(idxS, nm); if (!p) { missing.push(names.length > 1 ? nm : `${nm} ${/^\d/.test(rest.trim()) ? "" : "to "}${rest.trim()}`.replace(/\s+/g, " ")); continue; }
       let st = (PROPS[p.sport].find(([re]) => re.test(rest)) || PROPS[p.sport][p.sport === "nba" ? 6 : 5]);
       { /* "combine for 8+ shots & foul involvements": two stats added together */
         const parts = rest.replace(/\(.*?\)/g, " ").split(/\s*(?:&|\+|,|\band\b)\s*/i).map(x => x.trim()).filter(Boolean), found = [];
