@@ -782,6 +782,7 @@ a.prof-bdg{text-decoration:none}
 /* acca builder */
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 .acca-ctrl{display:grid;gap:10px}
+.acca-panel{display:grid;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:10px;margin-bottom:18px}.acca-panel .seg3{margin:0}.acca-panel .seg3 button{padding:9px 6px;font-size:14px}.acca-panel .chips{margin:0;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}.acca-panel .chips::-webkit-scrollbar{display:none}.acca-panel .chip{flex:none}
 .seg3{display:grid;grid-template-columns:repeat(3,1fr);background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:4px;gap:4px}
 .seg3 button{padding:10px 6px;border-radius:9px;font-weight:700;font-size:13.5px;color:var(--muted)}
 .seg3 button[aria-pressed=true]{background:var(--blue);color:#fff}
@@ -1770,7 +1771,7 @@ function presetsHTML() {
   }).join("");
   const presets = THEMES[S.sport].map(([k, t, d]) => presetCard(`th:${S.sport}:${k}`, k === "safe" ? `${R.name} four` : t, d, buildPreset(k))).join("");
   return `<section class="section"><div class="hd"><h2>Ready-made accas</h2></div>
-  ${firstWin(S.sport) !== "today" && !S.accaWin ? `<div class="note">All of today's ${S.sport === "nba" ? "NBA" : "football"} has started, so these use ${WIN_NAME[aw].toLowerCase()}'s games.${S.sport === "football" && upcoming("nba", "today").length ? ` Switch to <b>NBA</b> at the top for tonight's games.` : ""}</div>` : ""}<p class="sub" style="margin:-4px 0 10px">Built for the level you've picked above: the whole acca at ${R.hi > 1e8 ? odds(R.lo) + " or bigger" : R.lo < 1.1 ? "under " + odds(R.hi) : odds(R.lo) + " to " + odds(R.hi)}. Tap one to load it into your slip.</p>
+  ${firstWin(S.sport) !== "today" && !S.accaWin ? `<div class="note">All of today's ${S.sport === "nba" ? "NBA" : "football"} has started, so these use ${WIN_NAME[aw].toLowerCase()}'s games.${S.sport === "football" && upcoming("nba", "today").length ? ` Switch to <b>NBA</b> at the top for tonight's games.` : ""}</div>` : ""}<p class="sub" style="margin:-4px 0 10px">${R.name}: the whole acca ${R.hi > 1e8 ? odds(R.lo) + " or bigger" : R.lo < 1.1 ? "under " + odds(R.hi) : odds(R.lo) + " to " + odds(R.hi)}. Tap one to add it to your slip.</p>
   <div class="presets">${lvl || `<div class="empty">Not enough upcoming games to build one.</div>`}</div>${presets ? `<details class="maths" style="margin-top:14px"><summary><h3 class="bv-h" style="display:inline">Themed accas · shots, fouls, goals, corners</h3></summary><div class="presets" style="margin-top:10px">${presets}</div></details>` : ""}</section>
 `;
 }
@@ -1921,7 +1922,7 @@ function accaLiveLegs0(sp, ids) {
   const its = gs.map(g => { const { o } = liveAccaLeg(sp, g), k = (S.accaLivePick || {})[g.id]; return { g, o, id: g.id, opts: withBundles(riskOpts(o, lp), lp), fixed: k && o.find(m => m.k === k) }; });
   const J = jointPick(its, bundlePrice(lp)); return its.flatMap(it => expandPick(it.g, J.get(it.id), { o: it.o }));
 }
-const accaModeSeg = () => `<div class="seg3 two acmode" role="group" aria-label="Pre-match or in-play"><button data-accamode="pre" aria-pressed="${S.accaMode !== "live"}">Pre-match</button><button data-accamode="live" aria-pressed="${S.accaMode === "live"}">${games(S.sport).some(isLive) ? '<span class="dot red"></span> ' : ""}In-play</button></div>`;
+const accaModeSeg = () => `<div class="seg3 acmode" role="group" aria-label="Acca type"><button data-accamode="pre" aria-pressed="${S.accaMode !== "live"}">Pre-match</button><button data-accamode="live" aria-pressed="${S.accaMode === "live"}">${games(S.sport).some(isLive) ? '<span class="dot red"></span> ' : ""}In-play</button><button data-gomulti aria-pressed="false">⚽+🏀</button></div>`;
 const accOdds = (live, dec, sig) => { const T = (S.accaTyped || {})[live ? "live" : "pre"], mine = T && T.sig === sig ? T.dec : null;
   return { mine, html: `<div class="acc-odds"><label for="acco-${live ? "l" : "p"}"><b>Your bookie's odds</b><small>Bet builders are priced differently. Type Sky's total to check the returns.</small></label><input id="acco-${live ? "l" : "p"}" class="oddin ${mine ? "mine" : ""}" data-accaodds="${live ? "live" : "pre"}" value="${mine ? odds(mine) : ""}" placeholder="${odds(dec)}" autocomplete="off" inputmode="text"></div>` }; };
 function viewAccaLive() {
@@ -1975,11 +1976,9 @@ function viewAcca() {
         <span class="ag-main"><span class="ag-teams">${logo(sp, sp === "nba" ? g.away : g.home)}<b>${esc(sp === "nba" ? g.away.name : g.home.name)}</b><span class="ag-v">${sp === "nba" ? "@" : "v"}</span>${logo(sp, sp === "nba" ? g.home : g.away)}<b>${esc(sp === "nba" ? g.home.name : g.away.name)}</b></span>
         <span class="ag-meta">${hm(kick(g))}${sp === "football" ? " · " + esc(leagueName(g.league)) : ""}</span>
         ${m ? `<span class="ag-pick"><span>${esc(m.label)}</span><b style="color:${tierColor(m.p)}">${pct(m.p)}</b></span>` : ""}</span></button>`; }).join("")}</div></div>`).join("");
-  return `<div class="hd"><div><h1>Accas</h1><p class="sub">Pick your level and day: ready-made accas first, or build your own below.</p></div><a class="btn ghost sm" href="#multi">⚽ + 🏀 Multi-sport ›</a></div>
-  ${accaModeSeg()}
-  <div class="acca-ctrl"><div class="seg3" role="group" aria-label="Safety level">${Object.entries(RISK).map(([k, r]) => `<button data-accarisk="${k}" aria-pressed="${risk === k}">${r.name}</button>`).join("")}</div>
-    <p class="risk-desc">${RISK[risk].desc}</p>
-    <div class="chips">${["today", "tomorrow", "48h", "week"].map(k => `<button class="chip" data-accawin="${k}" aria-pressed="${w === k}" ${upcoming(sp, k).length ? "" : "disabled style=\"opacity:.4\""}>${WIN_NAME[k]}</button>`).join("")}</div>
+  return `<div class="acca-panel">${accaModeSeg()}
+  <div class="seg3" role="group" aria-label="Safety level">${Object.entries(RISK).map(([k, r]) => `<button data-accarisk="${k}" aria-pressed="${risk === k}">${r.name}</button>`).join("")}</div>
+    <div class="chips scroll">${["today", "tomorrow", "48h", "week"].map(k => `<button class="chip" data-accawin="${k}" aria-pressed="${w === k}" ${upcoming(sp, k).length ? "" : "disabled style=\"opacity:.4\""}>${WIN_NAME[k]}</button>`).join("")}</div>
   </div>
   ${presetsHTML()}
   <section class="section"><div class="hd"><h2>Build your own</h2></div><p class="sub" style="margin:-6px 0 10px">Tap games below and we'll pick the safest bet in each, or let us pick.</p>
@@ -4960,6 +4959,7 @@ document.addEventListener("click", async e => {
     render();
   }
   else if (d.fxday) { S.fxDay = d.fxday; render(); }
+  else if (d.gomulti !== undefined) { location.hash = "multi"; }
   else if (d.feedtab) { S.feedTab = d.feedtab; render(); scrollTo({ top: 0 }); }
   else if (d.allbadges) { S.allBadges = d.allbadges; render(); }
   else if (d.mbtab) { S.mbTab = d.mbtab; render(); scrollTo({ top: 0 }); }
