@@ -23,13 +23,20 @@ jobs:
       # published data is 13+ minutes old (GitHub Pages allows about 10 rebuilds an hour). Pushes always rebuild.
       - name: Rebuild this time, or just settle?
         id: mode
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           full=1
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            if curl -sf "https://snuzzyyy.github.io/matchday-edge/data.json" -o /tmp/live.json; then
-              age=$(python3 -c "import json,datetime as d;u=json.load(open('/tmp/live.json'))['updated'];print(int((d.datetime.now(d.timezone.utc)-d.datetime.fromisoformat(u)).total_seconds()))" 2>/dev/null || echo 99999)
-              if [ "$age" -lt 780 ]; then full=0; cp /tmp/live.json site/data.json; fi
-              echo "published data is ${age}s old"
+            # age of the last rebuild = the last push to gh-pages (the published site can lag behind it)
+            last=$(gh api "repos/${{ github.repository }}/commits/gh-pages" --jq .commit.committer.date 2>/dev/null || echo "")
+            if [ -n "$last" ]; then
+              age=$(( $(date -u +%s) - $(date -u -d "$last" +%s) ))
+              echo "last rebuild ${age}s ago"
+              if [ "$age" -lt 780 ]; then
+                full=0
+                curl -sf "https://snuzzyyy.github.io/matchday-edge/data.json" -o site/data.json || true
+              fi
             fi
           fi
           echo "full=$full" >> "$GITHUB_OUTPUT"; echo "full rebuild: $full"
