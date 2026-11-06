@@ -630,7 +630,7 @@ a.prof-bdg{text-decoration:none}
 .preset:hover{border-color:var(--blue)}
 .preset .pt{font-family:var(--display);font-weight:700;font-size:20px;text-transform:uppercase}
 .preset .pd{font-size:12.5px;color:var(--fg-2)}
-.preset .po{display:flex;justify-content:space-between;align-items:baseline;margin-top:4px}.preset{display:flex;flex-direction:column;justify-content:flex-start}.preset .po{margin-top:auto;padding-top:6px}
+.preset .po{display:flex;justify-content:space-between;align-items:baseline;margin-top:4px}.preset{display:flex;flex-direction:column;justify-content:flex-start;cursor:pointer}.preset .po{margin-top:auto;padding-top:6px}
 .preset .po b{font-family:var(--display);font-size:24px}
 .slipwide .slip{max-height:none}
 .bar{flex-wrap:nowrap}
@@ -793,6 +793,9 @@ a.prof-bdg{text-decoration:none}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 .acca-ctrl{display:grid;gap:10px}
 .chip.win-only[aria-pressed=true]{background:rgba(250,204,21,.15);color:#facc15;border-color:rgba(250,204,21,.55);box-shadow:none}
+.pl-legs li{position:relative}.pl-legs li:has(.pl-sw){grid-template-columns:34px minmax(0,1fr) 30px}.pl-sw{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;color:var(--fg-2);border:1px solid var(--line-2);background:var(--surface-2);cursor:pointer;transition:transform .2s,color .2s}.pl-sw svg{width:14px;height:14px}.pl-sw:hover{color:var(--tang);transform:rotate(-90deg)}
+.pl-new{animation:plSwap .75s cubic-bezier(.2,.8,.2,1)}.pl-new .pl-sw{color:var(--tang)}.pl-new::after{content:"";position:absolute;inset:-4px -6px;border-radius:12px;box-shadow:0 0 0 1.5px rgba(255,122,47,.7),0 0 18px rgba(255,122,47,.35);animation:plGlow 1s ease-out forwards;pointer-events:none}
+@keyframes plSwap{0%{opacity:0;transform:perspective(400px) rotateX(-85deg) translateY(-6px)}60%{opacity:1;transform:perspective(400px) rotateX(12deg)}100%{transform:none}}@keyframes plGlow{0%{opacity:1}100%{opacity:0}}
 .pl-legs{list-style:none;margin:2px 0 4px;padding:0;display:grid;gap:8px;text-align:left}.pl-legs li{display:grid;grid-template-columns:34px minmax(0,1fr);gap:10px;align-items:center}
 .pl-ic{position:relative;width:34px;height:34px;border-radius:50%;background:#151d33;display:grid;place-items:center;overflow:hidden;flex:none}.pl-ic .logo,.pl-ic .mono{width:22px!important;height:22px!important;font-size:9px}
 .pl-hs .logo,.pl-hs .mono{position:absolute;right:-2px;bottom:-2px;width:16px!important;height:16px!important;z-index:2;background:#151d33;border-radius:50%;padding:1px}.pl-hs img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top}
@@ -1771,9 +1774,10 @@ function multiTheme0(kind) {
   return [];
 }
 /* any ready-made acca by its id: lvl:n (your level), th:sport:kind (themed), mp:n (multi-sport), mt:kind (multi-sport themed) */
+function presetLegs0(id) { const [a, b, c] = String(id).split(":"); return a === "lvl" ? levelPreset(+b) : a === "th" ? buildPreset(c, null, b) : a === "mp" ? multiPreset(+b) : a === "mt" ? multiTheme(b) : buildPreset(a); }
 function presetLegs(id) {
   const [a, b, c] = String(id).split(":");
-  return a === "lvl" ? levelPreset(+b) : a === "th" ? buildPreset(c, null, b) : a === "mp" ? multiPreset(+b) : a === "mt" ? multiTheme(b) : buildPreset(a);
+  return applySwaps(id, a === "lvl" ? levelPreset(+b) : a === "th" ? buildPreset(c, null, b) : a === "mp" ? multiPreset(+b) : a === "mt" ? multiTheme(b) : buildPreset(a));
 }
 /* a ready-made acca's legs: player photo (team badge behind it) for player bets, the team's badge for team bets */
 function legIcon(l) {
@@ -1783,10 +1787,25 @@ function legIcon(l) {
   const lab = normT(l.label || ""), T = [g.home, g.away].find(t => lab.startsWith(normT(t.name)) || lab.startsWith(normT(t.full || t.name)));
   return `<span class="pl-ic">${T ? logo(l.sport, T) : `<span class="pl-two">${logo(l.sport, l.sport === "nba" ? g.away : g.home)}${logo(l.sport, l.sport === "nba" ? g.home : g.away)}</span>`}</span>`;
 }
-const pLegs = legs => `<ul class="pl-legs">${legs.map(l => `<li>${legIcon(l)}<span class="pl-t"><b>${esc(legText(l))}</b><small>${legs.some(x => x.sport !== l.sport) ? (l.sport === "nba" ? "NBA · " : "Football · ") : ""}${esc(l.match || "")} · ${esc(whenLabel(l.kick))}</small></span></li>`).join("")}</ul>`;
-function presetCard(id, title, desc, raw, extra) {
-  if (raw.length < 2) return ""; const legs = asLegs(raw), c = slipCalc(legs);
-  return `<button class="preset" data-preset="${id}" data-ptitle="${esc(String(title).replace(/<[^>]+>/g, ""))}"><span class="pt">${title}</span><span class="pd">${desc}</span>${pLegs(legs)}<span class="po"><b>${odds(c.dec)}</b><span class="pill ${c.p > .3 ? "good" : "hot"}">${pct(c.p)} chance</span></span>${extra || ""}</button>`;
+const swKey = id => [S.sport, S.accaRisk || "safe", S.accaWin || "", S.multiWin || "", S.winOnly ? "w" : "", id].join("|");
+const sKey = x => `${x.g.id}:${x.m.k}`;
+function altLeg(cur, ex, others) {
+  const target = priceOf(cur.m), busyG = new Set(others.map(o => o.g.id)), taken = new Set(others.map(sKey));
+  const ok = (sp, g, m) => !ex.includes(`${g.id}:${m.k}`) && !taken.has(`${g.id}:${m.k}`) && !others.some(o => o.g.id === g.id && conflicts(o.m.k, m.k)) && priceOf(m) >= 1.05;
+  const same = legOptions(cur.sport, cur.g).map(x => x.m).filter(m => ok(cur.sport, cur.g, m)).map(m => ({ sport: cur.sport, g: cur.g, m }));
+  const other = upcoming(cur.sport, cur.sport === S.sport ? accaWin() : multiWin()).filter(g => isPre(g) && g.id !== cur.g.id && !busyG.has(g.id)).flatMap(g => legOptions(cur.sport, g).map(x => x.m).filter(m => ok(cur.sport, g, m)).map(m => ({ sport: cur.sport, g, m })));
+  const sc = x => Math.abs(Math.log(priceOf(x.m) / target)) - .6 * x.m.p;
+  return [...same, ...other].sort((a, b) => sc(a) - sc(b))[0] || null;
+}
+function applySwaps(id, raw) {
+  const sw = (S.pswap || {})[swKey(id)]; if (!sw) return raw; const out = [...raw];
+  for (const i of Object.keys(sw).map(Number).sort((a, b) => a - b)) { if (!out[i]) continue; const alt = altLeg(out[i], sw[i], out.filter((_, j) => j !== i)); if (alt) out[i] = alt; }
+  return out;
+}
+const pLegs = (legs, id) => `<ul class="pl-legs">${legs.map((l, i) => `<li class="${S._swapAnim === swKey(id) + "|" + i ? "pl-new" : ""}">${legIcon(l)}<span class="pl-t"><b>${esc(legText(l))}</b><small>${legs.some(x => x.sport !== l.sport) ? (l.sport === "nba" ? "NBA · " : "Football · ") : ""}${esc(l.match || "")} · ${esc(whenLabel(l.kick))}</small></span>${id ? `<span class="pl-sw" role="button" tabindex="0" data-pswap="${id}|${i}" aria-label="Swap ${esc(legText(l))} for another bet" title="Not at your bookie? Swap it">${ROLL_SVG}</span>` : ""}</li>`).join("")}</ul>`;
+function presetCard(id, title, desc, raw0, extra) {
+  const raw = applySwaps(id, raw0); if (raw.length < 2) return ""; const legs = asLegs(raw), c = slipCalc(legs);
+  return `<div class="preset" role="button" tabindex="0" data-preset="${id}" data-ptitle="${esc(String(title).replace(/<[^>]+>/g, ""))}"><span class="pt">${title}</span><span class="pd">${desc}</span>${pLegs(legs, id)}<span class="po"><b>${odds(c.dec)}</b><span class="pill ${c.p > .3 ? "good" : "hot"}">${pct(c.p)} chance</span></span>${extra || ""}</div>`;
 }
 function viewMulti() {
   const w = multiWin(), R = RISK[S.accaRisk || "safe"], risk = S.accaRisk || "safe";
@@ -1822,9 +1841,9 @@ function levelPreset(n) {
 function presetsHTML() {
   const aw = accaWin(), R = RISK[S.accaRisk || "safe"];
   const lvl = [[2, "Double"], [3, "Treble"], [4, "Four-fold"], [5, "Five-fold"], [6, "Six-fold"], [1, "Same-game"]].map(([n, t]) => {
-    const raw = levelPreset(n); if (raw.length < (n === 1 ? 2 : n)) return ""; const legs = asLegs(raw), c = slipCalc(legs), ok = c.dec >= R.lo && c.dec <= R.hi;
+    const raw = applySwaps(`lvl:${n}`, levelPreset(n)); if (raw.length < (n === 1 ? 2 : n)) return ""; const legs = asLegs(raw), c = slipCalc(legs), ok = c.dec >= R.lo && c.dec <= R.hi;
     if (n >= 5 && !ok) return "";   /* five and six legs only when they still fit the level */
-    return `<button class="preset" data-preset="lvl:${n}" data-ptitle="${esc(R.name + (S.winOnly ? " outrights " : " ") + t.toLowerCase())}"><span class="pt">${R.name}${S.winOnly ? " outrights" : ""} ${t.toLowerCase()}</span>${pLegs(legs)}<span class="po"><b>${odds(c.dec)}</b><span class="pill ${c.p > .3 ? "good" : "hot"}">${pct(c.p)} chance</span></span>${ok ? "" : `<span class="pd" style="color:var(--amber)">Closest we could get to the ${R.name} range</span>`}</button>`;
+    return `<div class="preset" role="button" tabindex="0" data-preset="lvl:${n}" data-ptitle="${esc(R.name + (S.winOnly ? " outrights " : " ") + t.toLowerCase())}"><span class="pt">${R.name}${S.winOnly ? " outrights" : ""} ${t.toLowerCase()}</span>${pLegs(legs, `lvl:${n}`)}<span class="po"><b>${odds(c.dec)}</b><span class="pill ${c.p > .3 ? "good" : "hot"}">${pct(c.p)} chance</span></span>${ok ? "" : `<span class="pd" style="color:var(--amber)">Closest we could get to the ${R.name} range</span>`}</div>`;
   }).join("");
   const presets = THEMES[S.sport].map(([k, t, d]) => presetCard(`th:${S.sport}:${k}`, k === "safe" ? `${R.name} four` : t, d, buildPreset(k))).join("");
   return `<section class="section"><div class="hd"><h2>Ready-made accas</h2></div>
@@ -4876,7 +4895,7 @@ function render() {
 }
 
 document.addEventListener("click", async e => {
-  const t = e.target.closest("button,[data-close],[data-notifx]"); if (!t) return;
+  const t = e.target.closest("[data-pswap],button,[data-close],[data-notifx],[data-preset]"); if (!t) return;
   const d = t.dataset;
   if (d.sport) { S.sport = d.sport; S.league = "all"; S.newsFilter = "all"; store.set("sport", S.sport); render(); }
   else if (d.fmt) { S.fmt = d.fmt; store.set("fmt", S.fmt); render(); }
@@ -5053,6 +5072,10 @@ document.addEventListener("click", async e => {
   else if (d.gtab) { S.gtab = d.gtab; render(); const dr = $(".drawer"); if (dr) { const hero = dr.querySelector(".score-hero"), top = dr.querySelector(".gtop"); dr.scrollTo(0, Math.min(dr.scrollTop, hero ? hero.offsetTop + hero.offsetHeight - (top ? top.offsetHeight : 0) : 0)); } }
   else if (d.boxside) { const [gid, sd] = d.boxside.split("|"); S.boxSide[gid] = sd; render(); }
   else if (d.multiwin) { S.multiWin = d.multiwin; render(); }
+  else if (d.pswap) { const [id, i] = [d.pswap.slice(0, d.pswap.lastIndexOf("|")), +d.pswap.slice(d.pswap.lastIndexOf("|") + 1)], k = swKey(id), cur = applySwaps(id, presetLegs0(id))[i]; if (!cur) return;
+    S.pswap = S.pswap || {}; const sw = (S.pswap[k] = S.pswap[k] || {}); sw[i] = [...(sw[i] || []), sKey(cur)]; const nx = applySwaps(id, presetLegs0(id))[i];
+    if (!nx || sKey(nx) === sKey(cur)) { sw[i].pop(); toast("No other good bet left for that spot"); return; }
+    S._swapAnim = k + "|" + i; render(); setTimeout(() => { S._swapAnim = null; }, 900); toast(`Swapped for ${legText(asLegs([nx])[0])}`); }
   else if (d.preset) { S.slip = asLegs(presetLegs(d.preset)).map(l => d.ptitle ? { ...l, src: `${d.ptitle} · Accabox ready-made` } : l); S.slipTot = null; save(); S.slipOpen = innerWidth <= 1100; render(); toast("Acca loaded into your slip"); }
   else if (d.double) { const [sp, g1, k1, g2, k2] = d.double.split("|"); S.slip = []; for (const [g, k] of [[g1, k1], [g2, k2]]) { const G = findGame(sp, g), m = mkt(G, k); S.slip.push(...asLegs([{ sport: sp, g: G, m }])); } save(); render(); toast("Double loaded into your slip"); }
   else if (t.id === "fab") { S.slipOpen = true; S.drawer = null; render(); }
