@@ -1775,11 +1775,11 @@ function presetCard(id, title, desc, raw, extra) {
 }
 function viewMulti() {
   const w = multiWin(), R = RISK[S.accaRisk || "safe"], risk = S.accaRisk || "safe";
-  const lvl = [[2, "Double"], [3, "Treble"], [4, "Four-fold"], [5, "Five-fold"]].map(([n, t]) => { const raw = multiPreset(n), c = raw.length ? slipCalc(asLegs(raw)) : null; return presetCard(`mp:${n}`, `${R.name}${S.winOnly ? " winners" : ""} ${t.toLowerCase()}`, "Football and NBA mixed, one bet per game.", raw, c && !(c.dec >= R.lo && c.dec <= R.hi) ? `<span class="pd" style="color:var(--amber)">Closest we could get to the ${R.name} range</span>` : ""); }).join("");
+  const lvl = [[2, "Double"], [3, "Treble"], [4, "Four-fold"], [5, "Five-fold"]].map(([n, t]) => { const raw = multiPreset(n), c = raw.length ? slipCalc(asLegs(raw)) : null; return presetCard(`mp:${n}`, `${R.name}${S.winOnly ? " outrights" : ""} ${t.toLowerCase()}`, "Football and NBA mixed, one bet per game.", raw, c && !(c.dec >= R.lo && c.dec <= R.hi) ? `<span class="pd" style="color:var(--amber)">Closest we could get to the ${R.name} range</span>` : ""); }).join("");
   const themed = [["bankers", "Banker mix", "The two safest bets in each sport."], ["players", "Player mix", "Football shots on target and NBA points."], ["mix", "Mix it up", "Results, goals, corners and cards with NBA winners, totals and player bets."]].map(([k, t, d]) => presetCard(`mt:${k}`, t, d, multiTheme(k))).join("");
   const T = ["football", "nba"].map(sp => tiers(sp, w)), picks = []; for (let i = 0; i < 6; i++) for (const t of T) { const c = [...t.bank, ...t.strong][i]; if (c) picks.push(c); }
   return `<a class="linkbtn back-l" href="#acca">‹ Accas</a><div class="hd"><div><h1>Multi-sport</h1><p class="sub">Football and NBA in one acca. Ready-made for your level, or add the best picks from both yourself.</p></div></div>
-  <div class="acca-ctrl"><div class="seg3" role="group" aria-label="Level">${Object.entries(RISK).map(([k, r]) => `<button data-accarisk="${k}" aria-pressed="${risk === k}">${r.name}</button>`).join("")}</div><div class="chips"><button class="chip win-only" data-winonly aria-pressed="${!!S.winOnly}">🏆 Winners only</button></div><p class="risk-desc">${R.desc}</p>
+  <div class="acca-ctrl"><div class="seg3" role="group" aria-label="Level">${Object.entries(RISK).map(([k, r]) => `<button data-accarisk="${k}" aria-pressed="${risk === k}">${r.name}</button>`).join("")}</div><div class="chips"><button class="chip win-only" data-winonly aria-pressed="${!!S.winOnly}">🏆 Outrights</button></div><p class="risk-desc">${R.desc}</p>
     <div class="chips">${["today", "tomorrow", "48h"].map(k => `<button class="chip" data-multiwin="${k}" aria-pressed="${w === k}" ${upcoming("football", k).some(isPre) && upcoming("nba", k).some(isPre) ? "" : "disabled style=\"opacity:.4\""}>${WIN_NAME[k]}</button>`).join("")}</div></div>${(() => { const miss = ["today", "tomorrow"].filter(k => !(upcoming("football", k).some(isPre) && upcoming("nba", k).some(isPre))).map(k => `${WIN_NAME[k].toLowerCase()} (no ${upcoming("nba", k).some(isPre) ? "football" : "NBA"} games left)`); return miss.length ? `<p class="risk-desc" style="margin-top:6px">Not available ${miss.join(" or ")}. A multi-sport acca needs games from both.</p>` : ""; })()}
   <section class="section"><h2>Ready-made multi-sport accas · ${R.name}</h2><div class="presets">${lvl || `<div class="empty">Not enough football and NBA games in this window. Try another day above.</div>`}</div></section>
   ${themed && !S.winOnly ? `<section class="section"><h2>Themed mixes</h2><div class="presets">${themed}</div></section>` : ""}
@@ -1808,7 +1808,7 @@ function presetsHTML() {
   const aw = accaWin(), R = RISK[S.accaRisk || "safe"];
   const lvl = [[2, "Double", "Two games, one bet each."], [3, "Treble", "Three games, one bet each."], [4, "Four-fold", "Four games, one bet each."], [1, "Same-game", "A few bets from one game that go together."]].map(([n, t, d]) => {
     const raw = levelPreset(n); if (raw.length < (n === 1 ? 2 : n)) return ""; const legs = asLegs(raw), c = slipCalc(legs), ok = c.dec >= R.lo && c.dec <= R.hi;
-    return `<button class="preset" data-preset="lvl:${n}" data-ptitle="${esc(R.name + (S.winOnly ? " winners " : " ") + t.toLowerCase())}"><span class="pt">${R.name}${S.winOnly ? " winners" : ""} ${t.toLowerCase()}</span><span class="pd">${d}</span><span class="pd">${legs.map(l => esc(legText(l)) + ` <span style="color:var(--muted)">(${whenLabel(l.kick)})</span>`).join(" · ")}</span><span class="po"><b>${odds(c.dec)}</b><span class="pill ${c.p > .3 ? "good" : "hot"}">${pct(c.p)} chance</span></span>${ok ? "" : `<span class="pd" style="color:var(--amber)">Closest we could get to the ${R.name} range</span>`}</button>`;
+    return `<button class="preset" data-preset="lvl:${n}" data-ptitle="${esc(R.name + (S.winOnly ? " outrights " : " ") + t.toLowerCase())}"><span class="pt">${R.name}${S.winOnly ? " outrights" : ""} ${t.toLowerCase()}</span><span class="pd">${d}</span><span class="pd">${legs.map(l => esc(legText(l)) + ` <span style="color:var(--muted)">(${whenLabel(l.kick)})</span>`).join(" · ")}</span><span class="po"><b>${odds(c.dec)}</b><span class="pill ${c.p > .3 ? "good" : "hot"}">${pct(c.p)} chance</span></span>${ok ? "" : `<span class="pd" style="color:var(--amber)">Closest we could get to the ${R.name} range</span>`}</button>`;
   }).join("");
   const presets = THEMES[S.sport].map(([k, t, d]) => presetCard(`th:${S.sport}:${k}`, k === "safe" ? `${R.name} four` : t, d, buildPreset(k))).join("");
   return `<section class="section"><div class="hd"><h2>Ready-made accas</h2></div>
@@ -2021,7 +2021,7 @@ function viewAcca() {
         ${m ? `<span class="ag-pick"><span>${esc(m.label)}</span><b style="color:${tierColor(m.p)}">${pct(m.p)}</b></span>` : ""}</span></button>`; }).join("")}</div></div>`).join("");
   return `<div class="acca-panel">${accaModeSeg()}
   <div class="seg3" role="group" aria-label="Safety level">${Object.entries(RISK).map(([k, r]) => `<button data-accarisk="${k}" aria-pressed="${risk === k}">${r.name}</button>`).join("")}</div>
-    <div class="chips scroll"><button class="chip win-only" data-winonly aria-pressed="${!!S.winOnly}">🏆 Winners only</button>${["today", "tomorrow", "48h", "week"].map(k => `<button class="chip" data-accawin="${k}" aria-pressed="${w === k}" ${upcoming(sp, k).length ? "" : "disabled style=\"opacity:.4\""}>${WIN_NAME[k]}</button>`).join("")}</div>
+    <div class="chips scroll"><button class="chip win-only" data-winonly aria-pressed="${!!S.winOnly}">🏆 Outrights</button>${["today", "tomorrow", "48h", "week"].map(k => `<button class="chip" data-accawin="${k}" aria-pressed="${w === k}" ${upcoming(sp, k).length ? "" : "disabled style=\"opacity:.4\""}>${WIN_NAME[k]}</button>`).join("")}</div>
   </div>
   ${presetsHTML()}
   <section class="section"><div class="hd"><h2>Build your own</h2></div><p class="sub" style="margin:-6px 0 10px">Tap games below and we'll pick the safest bet in each, or let us pick.</p>
@@ -5008,7 +5008,7 @@ document.addEventListener("click", async e => {
     render();
   }
   else if (d.fxday) { S.fxDay = d.fxday; render(); }
-  else if (d.winonly !== undefined) { S.winOnly = !S.winOnly; store.set("winOnly", S.winOnly); S._lvl = {}; render(); toast(S.winOnly ? "Ready-made accas now use match winners only" : "Ready-made accas use every type of bet again"); }
+  else if (d.winonly !== undefined) { S.winOnly = !S.winOnly; store.set("winOnly", S.winOnly); S._lvl = {}; render(); toast(S.winOnly ? "Outrights: ready-made accas use match winners only" : "Ready-made accas use every type of bet again"); }
   else if (d.gomulti !== undefined) { location.hash = "multi"; }
   else if (d.feedtab) { S.feedTab = d.feedtab; render(); scrollTo({ top: 0 }); }
   else if (d.allbadges) { S.allBadges = d.allbadges; render(); }
