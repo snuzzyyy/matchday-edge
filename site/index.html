@@ -1119,6 +1119,7 @@ button.setrow{width:100%;text-align:left;font:inherit;color:inherit;background:n
 .bp-t{display:grid;min-width:0}.bp-t b{font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.bp-t small{font-size:11.5px;color:var(--muted)}
 .bp-about summary{cursor:pointer;font-weight:700;color:var(--blue-2)}.bp-about ul{margin:8px 0 0;padding-left:18px;display:grid;gap:6px;font-size:13.5px;color:var(--fg-2)}
 .bot-tick{display:inline-grid;place-items:center;width:16px;height:16px;border-radius:50%;background:var(--tang);color:#fff;font-size:10px;font-weight:900;margin:0 4px 0 4px;vertical-align:1px}
+.fd-acca{display:grid;gap:6px}.fd-acca + .fd-acca{border-top:1px solid var(--line);padding-top:10px}.fd-dot{width:8px;height:8px;border-radius:50%;background:var(--tang);margin:6px 5px 0}
 .bot-card{grid-column:1/-1;min-width:0;display:grid;gap:8px;background:var(--bg-2);border:1px solid var(--line);border-radius:14px;padding:12px}.bot-hd{display:flex;justify-content:space-between;align-items:center;gap:8px;min-width:0}.bot-hd .tag{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.bot-hd b{font-family:var(--display);font-size:24px}
 .bot-legs{list-style:none;margin:0;padding:0;display:grid;gap:7px}.bot-legs li{display:grid;grid-template-columns:20px minmax(0,1fr);gap:8px;align-items:start}.bot-legs b{display:block;font-size:14px;font-weight:600}.bot-legs small{font-size:12px;color:var(--muted)}
 .bot-ok{width:18px;height:18px;border-radius:50%;background:var(--win);color:#04210f;display:grid;place-items:center;font-size:11px;font-weight:900;margin-top:1px}
@@ -1201,7 +1202,7 @@ const store = { get(k, d) { try { const v = localStorage.getItem("mde:" + k); re
 
 const S = { comments: {}, data: null, logos: {}, sport: store.get("sport", "football"), fmt: store.get("fmt", "frac"), slip: store.get("slip", []),
             stake: store.get("stake", 5), slipTot: store.get("slipTot", null), chalOdds: store.get("chalOdds", "over"), chalWin: store.get("chalWin", "24h"), boxSide: {}, league: "all", win: "today", drawer: null, slipOpen: false };
-const VIEWS = [["check", "Bet checker", "Checker"], ["live", "Live", "Live"], ["fixtures", "Fixtures", "Games"], ["acca", "Accas", "Accas"], ["multi", "Multi-sport", "Multi"], ["bets", "Best Bets", "Tips"], ["mybets", "My Bets", "My Bets"], ["friends", "Social", "Social"], ["tables", "Tables", "Tables"], ["news", "News", "News"], ["challenge", "£1K Challenge", "£1K"]];
+const VIEWS = [["check", "Bet checker", "Checker"], ["live", "Live", "Live"], ["fixtures", "Fixtures", "Games"], ["acca", "Accas", "Accas"], ["multi", "Multi-sport", "Multi"], ["bets", "Best Bets", "Tips"], ["mybets", "My Bets", "My Bets"], ["friends", "Social", "Social"], ["feed", "Feed", "Feed"], ["tables", "Tables", "Tables"], ["news", "News", "News"], ["challenge", "£1K Challenge", "£1K"]];
 const TAB_ICONS = (() => { const svg = p => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`; return {
   live: svg('<circle cx="12" cy="12" r="2.2"/><path d="M7.8 7.8a6 6 0 000 8.4M16.2 7.8a6 6 0 010 8.4M5 5a10 10 0 000 14M19 5a10 10 0 010 14"/>'),
   fixtures: svg('<rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/>'),
@@ -1215,7 +1216,7 @@ const TAB_ICONS = (() => { const svg = p => `<svg viewBox="0 0 24 24" fill="none
 }; })();
 /* Social is switched off for now (kept for a future update): set to true to bring back the tab, the page and the Friends link */
 const SOCIAL_ON = false;
-const NAV = [["live", "Live", ["live"], "live"], ["games", "Games", ["fixtures", "tables", "news"], "fixtures"], ["betsg", "Bets", ["bets", "acca", "check", "mybets"], "bets"], ["challenge", "£1K Challenge", ["challenge"], "challenge"], ...(SOCIAL_ON ? [["friends", "Social", ["friends"], "friends"]] : [])];
+const NAV = [["live", "Live", ["live"], "live"], ["games", "Games", ["fixtures", "tables", "news"], "fixtures"], ["betsg", "Bets", ["bets", "acca", "check", "mybets"], "bets"], ["challenge", "£1K Challenge", ["challenge"], "challenge"], ["feedg", "Feed", ["feed"], "friends"], ...(SOCIAL_ON ? [["friends", "Social", ["friends"], "friends"]] : [])];
 const SUBNAME = { fixtures: "Fixtures", tables: "Tables", news: "News", bets: "Tips", acca: "Accas", check: "Checker", mybets: "My Bets" };
 const NAV_ALIAS = { multi: "acca", stats: "mybets" };   /* pages reached from inside another tab */
 const navOf = v => NAV.find(n => n[2].includes(NAV_ALIAS[v] || v));
@@ -3618,6 +3619,25 @@ function botPost(it) {
       <ul class="bot-legs">${L.map(l => `<li><span class="bot-ok">✓</span><span><b>${esc(String(legText(l) || "").replace(/ \(in-play\)$/, ""))}</b><small>${esc(l.match || l.team || "")}</small></span></li>`).join("")}</ul>
       <div class="bot-ft"><span>£10 returned <b class="pos">${money(10 * dec)}</b></span><span>Built by Accabox before kick-off · we had it at ${pct(+w.chance || 0)}</span></div></div></article>`;
 }
+/* the Feed tab: only Accabox posts. Its ready-made accas for the next games, then the ones that won */
+async function loadBotWins() {
+  S.botWinsAt = Date.now(); if (!sb || !S.user) { S.botWins = []; render(); return; }
+  const bw = await sb.from("bot_accas").select("*").eq("result", "won").gte("settled_at", new Date(Date.now() - 7 * 864e5).toISOString()).order("settled_at", { ascending: false }).limit(40);
+  S.botWins = bw.error ? [] : bw.data || []; render();
+}
+function viewFeed() {
+  if (S.botWins === undefined || Date.now() - (S.botWinsAt || 0) > 5 * 60e3) { if (!S._bwLoading) { S._bwLoading = true; loadBotWins().finally(() => { S._bwLoading = false; }); } }
+  const now = Date.now(), soon = ["football", "nba"].flatMap(sp => games(sp).filter(g => isPre(g) && +new Date(kick(g)) - now < 864e5).map(g => ({ sp, g }))).sort((x, y) => +new Date(kick(x.g)) - +new Date(kick(y.g)));
+  const head = `<b>Accabox</b><span class="bot-tick" title="Official Accabox account">✓</span>`, key = l => l.pid ? `P:${l.pid}:${l.stat}:${l.target}` : l.k;
+  const ups = []; for (const { sp, g } of soon) { if (ups.length >= 6) break; const P = gaPicks(sp, g); if (!P.length) continue;
+    ups.push(`<article class="fi bot"><span class="fi-av bot-av"><img src="mark.png" alt="Accabox"></span><div class="fi-body"><div class="fi-top"><span>${head} ${sp === "nba" ? "🏀" : "⚽"} accas for <button class="more" data-open="${sp}:${g.id}"><b>${esc(vs(sp, g))}</b></button></span><time>${esc(twTime(kick(g)))}</time></div></div>
+      <div class="bot-card">${P.map(pk => `<div class="fd-acca"><div class="bot-hd"><span class="tag evens">${esc(String(pk.name).split(" ·")[0])}</span><b>${odds(pk.d)}</b></div><ul class="bot-legs">${pk.legs.map(l => `<li><span class="fd-dot"></span><span><b>${esc(legText(l))}</b></span></li>`).join("")}</ul>
+        <div class="bot-ft"><span>${pct(pk.p)} chance</span><button class="btn sm" data-gbb="${sp}|${g.id}|${pk.legs.map(key).join(",")}|0|${esc(String(pk.name).split(" ·")[0])}">Add to slip</button></div></div>`).join("")}</div></article>`); }
+  const wins = (S.botWins || []).map(w => botPost({ t: w.settled_at, bot: w, html: `${head} ${w.sport === "nba" ? "🏀" : "⚽"} landed the <b>${esc(w.title)}</b> at <span class="pos">${odds(+w.odds_dec)}</span> 🎉` }));
+  return `<div class="soc"><div class="hd"><div><h1>Feed</h1><p class="sub">Accabox's ready-made accas for the next games, and every one that lands.</p></div></div>
+    <div class="seg3 two" role="group" aria-label="Feed" style="margin-bottom:12px"><button data-feedtab="up" aria-pressed="${S.feedTab !== "wins"}">Up next</button><button data-feedtab="wins" aria-pressed="${S.feedTab === "wins"}">Winners${(S.botWins || []).length ? ` (${S.botWins.length})` : ""}</button></div>
+    ${S.feedTab !== "wins" ? `<div class="feed soc-feed">${ups.join("") || `<div class="empty">No games in the next 24 hours.</div>`}</div>` : `<div class="feed soc-feed">${S.botWins === undefined ? `<div class="loadbox">Loading…</div>` : wins.join("") || `<div class="empty">${S.user ? "No winners in the last week yet. They post here as soon as they land." : `<a href="#account">Sign in</a> to see Accabox's winners.`}</div>`}</div>`}</div>`;
+}
 function feedView(scope = "friends") {
   if (S.socialReady === undefined) return `<div class="loadbox">Loading…</div>`;
   const nFr = Object.keys(S.friends || {}).length, items = feedItems(scope);
@@ -4743,7 +4763,7 @@ function render() {
   setTimeout(autoSettle, 0);
   const v = view();
   { const g = navOf(v); if (g && g[2].length > 1 && S.lastSub[g[0]] !== v) { S.lastSub[g[0]] = v; store.set("lastSub", S.lastSub); } }
-  const MAIN = $("#main"), html = iosTip() + subnav(v) + (v === "friends" ? viewAccount("friends") : v === "account" ? viewAccount() : v === "perks" ? viewPerks() : v === "tweets" ? viewTweets() : v === "stats" ? viewStats() : v === "tables" ? viewTables() : v === "news" ? viewNews() : v === "fixtures" ? viewFixtures() : v === "bets" ? viewBets() : v === "mybets" ? viewMyBets() : v === "multi" ? viewMulti() : v === "acca" ? viewAcca() : v === "check" ? viewCheck() : v === "challenge" ? viewChallenge() : viewLive());
+  const MAIN = $("#main"), html = iosTip() + subnav(v) + (v === "feed" ? viewFeed() : v === "friends" ? viewAccount("friends") : v === "account" ? viewAccount() : v === "perks" ? viewPerks() : v === "tweets" ? viewTweets() : v === "stats" ? viewStats() : v === "tables" ? viewTables() : v === "news" ? viewNews() : v === "fixtures" ? viewFixtures() : v === "bets" ? viewBets() : v === "mybets" ? viewMyBets() : v === "multi" ? viewMulti() : v === "acca" ? viewAcca() : v === "check" ? viewCheck() : v === "challenge" ? viewChallenge() : viewLive());
   if (MAIN._h !== html) {
     const sx = [...MAIN.querySelectorAll(".tw,.chips,.scroller")].map(e => e.scrollLeft), sy = [...MAIN.querySelectorAll(".tw-games")].map(e => e.scrollTop);
     const ae = document.activeElement, keep = ae && ae.id && MAIN.contains(ae) && /^(INPUT|TEXTAREA)$/.test(ae.tagName) ? { id: ae.id, a: ae.selectionStart, b: ae.selectionEnd } : null;
@@ -4752,7 +4772,7 @@ function render() {
     [...MAIN.querySelectorAll(".tw,.chips,.scroller")].forEach((e, k) => { if (sx[k]) e.scrollLeft = sx[k]; });
     [...MAIN.querySelectorAll(".tw-games")].forEach((e, k) => { if (sy[k]) e.scrollTop = sy[k]; });   /* ticking a game keeps the list where it was */
   }
-  const norail = v === "account" || v === "friends" || v === "perks" || v === "tweets"; document.querySelector(".page").classList.toggle("norail", norail);
+  const norail = v === "account" || v === "friends" || v === "feed" || v === "perks" || v === "tweets"; document.querySelector(".page").classList.toggle("norail", norail);
   $("#rail").innerHTML = norail ? "" : slipHTML();
   const L = $("#layer"), prevDr = $(".drawer"), dkey = S.drawer || (S.slipOpen ? "slip" : ""), same = !!(prevDr && dkey && prevDr.dataset.key === dkey), keepTop = same ? prevDr.scrollTop : 0;
   const sheetTop = {}; for (const el of L.querySelectorAll(".ijsheet")) sheetTop[el.getAttribute("aria-label")] = el.scrollTop;   /* keep sheets where they were, and a half-typed comment */
@@ -4929,6 +4949,7 @@ document.addEventListener("click", async e => {
     else if (d.twcopy !== undefined) { const ta = document.querySelector(`[data-twedit="${d.twcopy}"]`); if (ta) copyText(ta.value, "Copied. Paste it into X"); return; }
     render();
   }
+  else if (d.feedtab) { S.feedTab = d.feedtab; render(); scrollTo({ top: 0 }); }
   else if (d.allbadges) { S.allBadges = d.allbadges; render(); }
   else if (d.mbtab) { S.mbTab = d.mbtab; render(); scrollTo({ top: 0 }); }
   else if (d.allres !== undefined) { S.allRes = true; render(); }
