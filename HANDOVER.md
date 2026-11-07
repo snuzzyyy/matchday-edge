@@ -428,6 +428,7 @@ No server of our own. ESPN is free, has no key and is about 1–3 minutes behind
 
 ## Ready-made cards (Nov 6)
 - `pLegs()` / `legIcon()`: each leg on a ready-made card is a row with an icon: ESPN headshot (combiner, team badge in the corner, falls back to the badge) for player bets, the team's badge for team bets, both badges for match bets.
+- Game-page ready-mades: "＋ Add a leg" (`data-gaadd`, `S.gaAdd`) appends the likeliest non-clashing bet in that game, "Undo" removes the last; odds and Add to slip include them.
 - Swap a leg: each leg on a ready-made card has a ↻ (`data-pswap`); game-page Low/Medium/High accas too (`data-gaswap`, `S.gaSwap`, same game only, odds recalculated). `S.pswap[swKey(id)][slot]` lists ruled-out bets; `applySwaps` picks the next best (`altLeg`: same game or another game, closest price, likelier first) for cards and for `presetLegs` when loading the slip. New leg flips in (`.pl-new`). Cards are `div role=button` now (no button-in-button).
 - Ready-mades now include Five-fold and Six-fold (shown only when they fit the level's odds range).
 - PC: the Accas control panel is two rows (type + level side by side, chips below) via `.acca-panel:has(> .acmode)`.
