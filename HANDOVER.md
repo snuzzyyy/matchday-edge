@@ -510,3 +510,4 @@ No server of our own. ESPN is free, has no key and is about 1–3 minutes behind
 - Handicap legs show a row per team (`hcRows`: "74 − 8.5 = 65.5 pts" vs "46 pts", with bars); `legLine` keeps `.hc-rows` like `.tl-teams`.
 - Funded balance = start + settled P/L − open stakes (the account's cash); a win pays stake × odds back. Target progress uses settled profit (`X.eq`, "N% of the way · £X profit to go").
 - Funded "My bets" has Live / Upcoming / Settled tabs (`S.fdbTab`, same look as the Bets page); every bet, settled too, is a `betCard` (`fdCard`) with Won/Lost/Void or Reopen/Delete underneath.
+- Funded picker: Today & tonight (until 6am, default) / Next 24 hours switch (`S.fpDay`, `fpInWindow`). The stake drop-down opens as an overlay under its card so the grid never moves.

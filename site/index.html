@@ -455,7 +455,7 @@ a.prof-bdg{text-decoration:none}
 .fp-panel .seg3 button{font-size:13px;padding:9px 4px;white-space:nowrap}.fp-panel .seg3 button img,.fp-panel .seg3 button .spi{display:none}
 .fd-tabs{margin:14px 0 0}.fd-auto{font-size:12.5px;color:var(--fg-2);margin-right:auto}.fd-btabs{margin:16px 0 4px}.hc-rows{display:grid;gap:8px;margin-top:10px;grid-column:1/-1;width:100%}.hc-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;font-size:12.5px;color:var(--fg-2)}.hc-bar{grid-column:1/-1;height:5px;border-radius:5px;background:var(--surface-3);overflow:hidden}.hc-bar i{display:block;height:100%;border-radius:5px;background:var(--blue)}.hc-n{font-weight:700;color:var(--fg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.hc-v{white-space:nowrap}.hc-v b{font-family:var(--display);font-size:15px;color:var(--fg)}.hc-row.ok .hc-v b:last-of-type{color:var(--win)}.hc-row.ok .hc-bar i{background:var(--win)}.fd-cacts{margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}.fd-n{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 5px;margin-left:4px;border-radius:9px;background:var(--blue);color:#fff;font-size:11px}.fd-tools{display:flex;gap:8px;margin:16px 0 0;flex-wrap:wrap}.fd-tools .btn{flex:1 1 140px}.fd-card{margin-top:10px;padding:14px;background:var(--surface);border:1px solid var(--line);border-radius:14px}
 .fa-legs{display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:4px}.fa-legs>span{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;color:var(--fg-2)}.fa-legs .logo,.fa-legs .mono{width:16px!important;height:16px!important;font-size:7px}.fa-it{grid-template-columns:minmax(0,1fr) auto}
-.fp-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px;margin-top:10px;align-items:stretch}.fp-list>.fp-wrap{display:flex;flex-direction:column}.fp-list>.fp-wrap>.fp-it{flex:1}.fp-list>.fp-wrap.open{grid-column:1/-1}.fp-list>.fp-wrap.open>.fp-it{flex:none}.fp-wrap.open{border-radius:12px;box-shadow:0 0 0 1.5px var(--blue)}.fp-wrap.open .fp-it{border-color:transparent;border-radius:12px 12px 0 0}
+.fp-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px;margin-top:10px;align-items:stretch}.fp-list>.fp-wrap{display:flex;flex-direction:column}.fp-list>.fp-wrap>.fp-it{flex:1}.fp-list>.fp-wrap{position:relative}.fp-list>.fp-wrap.open{z-index:5}.fp-list .fp-drop{position:absolute;left:0;right:0;top:calc(100% - 2px);box-shadow:0 0 0 1.5px var(--blue),0 14px 30px rgba(0,0,0,.55)}.fp-list>.fp-wrap.open .fp-it{border-radius:12px 12px 0 0}.fp-wrap.open{border-radius:12px;box-shadow:0 0 0 1.5px var(--blue)}.fp-wrap.open .fp-it{border-color:transparent;border-radius:12px 12px 0 0}
 .fp-drop{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;background:var(--surface-2);border-radius:0 0 12px 12px;padding:10px;animation:fpIn .18s ease-out}.fp-drop label{display:grid;gap:4px}.fp-drop label span{font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}.fp-drop input{width:100%;min-width:0}.fp-drop .btn{height:40px}
 @keyframes fpIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
 .fp-it{width:100%;display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:10px;align-items:center;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px;color:inherit;font:inherit;cursor:pointer}.fp-it:hover{border-color:var(--blue)}.fp-o{display:grid;justify-items:end}.fp-o b{font-family:var(--display);font-size:20px}.fp-o small{font-size:11.5px;font-weight:700}
@@ -3911,9 +3911,12 @@ function fundedAuto(F) {   /* settle tracked singles by themselves */
 }
 /* bet picker for the funded account: singles in the next 24 hours, by odds band, a mix of bet types, never an unavailable player */
 const FP_BANDS = { low: ["Low odds", 1.25, 1.7], medium: ["Medium odds", 1.7, 2.6], high: ["High odds", 2.6, 6] };
+/* the picker's time window: "today" runs until 6am, so tonight's NBA games count; otherwise the next 24 hours */
+function fpInWindow(t) { if (S.fpDay === "24h") return t - Date.now() <= 864e5; const e = new Date(); e.setHours(6, 0, 0, 0); if (+e <= Date.now()) e.setDate(e.getDate() + 1); return t < +e; }
+const fpDayLabel = () => S.fpDay === "24h" ? "in the next 24 hours" : "today and tonight";
 function fundedPicks() {
   const band = FP_BANDS[S.fpBand] || FP_BANDS.low, sps = S.fpSport === "football" ? ["football"] : S.fpSport === "nba" ? ["nba"] : ["football", "nba"], now = Date.now(), pool = [];
-  for (const sp of sps) for (const g of games(sp)) { const t = +new Date(kick(g)); if (!isPre(g) || t < now || t - now > 864e5) continue;
+  for (const sp of sps) for (const g of games(sp)) { const t = +new Date(kick(g)); if (!isPre(g) || t < now || !fpInWindow(t)) continue;
     for (const { m } of legOptions(sp, g)) { const pr = priceOf(m); if (pr >= band[1] && pr < band[2]) pool.push({ sp, g, m, pr }); } }
   const seed = S.fpSeed || 0, rnd = chRand(seed + 7), score = c => c.m.p * c.pr + (seed ? rnd() * .3 : 0);   /* best expected return first; a refresh shuffles */
   const out = []; for (const c of pool.sort((a, b) => score(b) - score(a))) { if (out.length >= 9) break; if (out.some(o => o.g.id === c.g.id) || out.filter(o => chKind(o.m) === chKind(c.m)).length >= 2) continue; out.push(c); }
@@ -3965,7 +3968,7 @@ function fundedParse(raw) {
 const FA_BANDS = { low: ["Low odds", 1.9, 3.2], medium: ["Medium odds", 3.2, 6.5], high: ["High odds", 6.5, 18] };
 function fundedAccas() {
   const band = FA_BANDS[S.fpBand] || FA_BANDS.low, sps = S.fpSport === "football" ? ["football"] : S.fpSport === "nba" ? ["nba"] : ["football", "nba"], now = Date.now(), pool = [];
-  for (const sp of sps) for (const g of games(sp)) { const t = +new Date(kick(g)); if (!isPre(g) || t < now || t - now > 864e5) continue;
+  for (const sp of sps) for (const g of games(sp)) { const t = +new Date(kick(g)); if (!isPre(g) || t < now || !fpInWindow(t)) continue;
     const ms = g.model.markets.filter(m => WIN_KEYS.has(m.k) && priceOf(m) >= 1.08).sort((a, b) => b.p - a.p); if (ms[0]) pool.push({ sp, g, m: ms[0], pr: priceOf(ms[0]) }); }
   const rnd = chRand((S.fpSeed || 0) + 11), P = pool.map(c => ({ ...c, sc: c.m.p + (S.fpSeed ? rnd() * .25 : 0) })).sort((a, b) => b.sc - a.sc), out = [];
   for (const n of [2, 3, 4, 5]) {   /* the likeliest legs that land the total in the band */
@@ -3978,23 +3981,23 @@ function fundedAccas() {
 function fundedPickerHTML() {
   if (S.fpType === "acca") return fundedAccaHTML();
   const P = fundedPicks(), seg = (attr, cur, opts) => `<div class="seg3 ${opts.length === 2 ? "two" : ""}" role="group">${opts.map(([k, l]) => `<button ${attr}="${k}" aria-pressed="${cur === k}">${l}</button>`).join("")}</div>`;
-  return `<section class="section"><h2>Bet picker</h2><div class="acca-panel fp-panel">${seg("data-fptype", S.fpType || "single", [["single", "Singles"], ["acca", "Winner accas"]])}${seg("data-fpband", S.fpBand || "low", Object.entries(FP_BANDS).map(([k, v]) => [k, v[0]]))}
+  return `<section class="section"><h2>Bet picker</h2><div class="acca-panel fp-panel">${seg("data-fptype", S.fpType || "single", [["single", "Singles"], ["acca", "Winner accas"]])}${seg("data-fpband", S.fpBand || "low", Object.entries(FP_BANDS).map(([k, v]) => [k, v[0]]))}${seg("data-fpday", S.fpDay || "today", [["today", "Today & tonight"], ["24h", "Next 24 hours"]])}
     <div class="ch-tools" style="margin:0">${seg("data-fpsport", S.fpSport || "both", [["football", "⚽ Football"], ["nba", "🏀 NBA"], ["both", "Both"]])}<button class="reroll" data-fpshuffle aria-label="Show different bets" title="Show different bets">${ROLL_SVG}</button></div>
-    <p class="risk-desc" style="margin:0 4px">${(FP_BANDS[S.fpBand] || FP_BANDS.low)[0]}: singles from ${odds((FP_BANDS[S.fpBand] || FP_BANDS.low)[1])} to ${odds((FP_BANDS[S.fpBand] || FP_BANDS.low)[2])} in the next 24 hours. Tap one, type your stake, press Enter.</p></div>
+    <p class="risk-desc" style="margin:0 4px">${(FP_BANDS[S.fpBand] || FP_BANDS.low)[0]}: singles from ${odds((FP_BANDS[S.fpBand] || FP_BANDS.low)[1])} to ${odds((FP_BANDS[S.fpBand] || FP_BANDS.low)[2])} ${fpDayLabel()}. Tap one, type your stake, press Enter.</p></div>
     ${P.length ? `<div class="fp-list">${P.map(c => { const l = asLegs([{ sport: c.sp, g: c.g, m: c.m }])[0], key = `${c.sp}|${c.g.id}|${c.m.k}`, open = S.fpOpen === key, F = fundedNow(), X = fundedStats(F);
       return `<div class="fp-wrap ${open ? "open" : ""}"><button class="fp-it" data-fpick="${esc(key)}" aria-expanded="${open}">${legIcon(l)}<span class="pl-t"><b>${esc(c.m.label)}</b><small>${esc(vs(c.sp, c.g))} · ${esc(twTime(kick(c.g)))}</small>${l.pid ? playerTag(l) : ""}</span><span class="fp-o"><b>${odds(c.pr)}</b><small style="color:${tierColor(c.m.p)}">${pct(c.m.p)}</small></span></button>
         ${open ? `<div class="fp-drop"><label><span>Odds</span><input id="fpOdds" class="oddin" value="${esc(odds(c.pr))}" autocomplete="off" inputmode="decimal"></label><label><span>Stake £</span><input id="fpStake" class="oddin" inputmode="decimal" autocomplete="off" value="${Math.max(1, Math.round(X.bal * .02 * 2) / 2)}"></label><button class="btn sm" data-fpadd="${esc(key)}">Add</button></div>` : ""}</div>`; }).join("")}</div>`
-      : `<div class="empty">No ${(FP_BANDS[S.fpBand] || FP_BANDS.low)[0].toLowerCase()} singles in the next 24 hours. Try another band or sport.</div>`}</section>`;
+      : `<div class="empty">No ${(FP_BANDS[S.fpBand] || FP_BANDS.low)[0].toLowerCase()} singles ${fpDayLabel()}. Try another band, sport or Next 24 hours.</div>`}</section>`;
 }
 function fundedAccaHTML() {
   const A = fundedAccas(), seg = (attr, cur, opts) => `<div class="seg3 ${opts.length === 2 ? "two" : ""}" role="group">${opts.map(([k, l]) => `<button ${attr}="${k}" aria-pressed="${cur === k}">${l}</button>`).join("")}</div>`, b = FA_BANDS[S.fpBand] || FA_BANDS.low, X = fundedStats(fundedNow());
-  return `<section class="section"><h2>Bet picker</h2><div class="acca-panel fp-panel">${seg("data-fptype", "acca", [["single", "Singles"], ["acca", "Winner accas"]])}${seg("data-fpband", S.fpBand || "low", Object.entries(FA_BANDS).map(([k, v]) => [k, v[0]]))}
+  return `<section class="section"><h2>Bet picker</h2><div class="acca-panel fp-panel">${seg("data-fptype", "acca", [["single", "Singles"], ["acca", "Winner accas"]])}${seg("data-fpband", S.fpBand || "low", Object.entries(FA_BANDS).map(([k, v]) => [k, v[0]]))}${seg("data-fpday", S.fpDay || "today", [["today", "Today & tonight"], ["24h", "Next 24 hours"]])}
     <div class="ch-tools" style="margin:0">${seg("data-fpsport", S.fpSport || "both", [["football", "⚽ Football"], ["nba", "🏀 NBA"], ["both", "Both"]])}<button class="reroll" data-fpshuffle aria-label="Show different accas" title="Show different accas">${ROLL_SVG}</button></div>
-    <p class="risk-desc" style="margin:0 4px">${b[0]}: match-winner accas from ${odds(b[1])} to ${odds(b[2])} in the next 24 hours. Tap one, type your stake, press Enter.</p></div>
+    <p class="risk-desc" style="margin:0 4px">${b[0]}: match-winner accas from ${odds(b[1])} to ${odds(b[2])} ${fpDayLabel()}. Tap one, type your stake, press Enter.</p></div>
     ${A.length ? `<div class="fp-list">${A.map(a => { const key = "acca|" + a.legs.map(c => `${c.sp}:${c.g.id}:${c.m.k}`).join(","), open = S.fpOpen === key;
       return `<div class="fp-wrap ${open ? "open" : ""}"><button class="fp-it fa-it" data-fpick="${esc(key)}" aria-expanded="${open}"><span class="pl-t"><b>${a.n === 2 ? "Double" : a.n === 3 ? "Treble" : a.n + "-fold"}</b><span class="fa-legs">${a.legs.map(c => { const T = c.m.k === "1" || c.m.k === "ML1" ? c.g.home : c.g.away; return `<span>${logo(c.sp, T)}${esc(T.name)}</span>`; }).join("")}</span></span><span class="fp-o"><b>${odds(a.d)}</b><small style="color:${tierColor(a.p)}">${pct(a.p)}</small></span></button>
         ${open ? `<div class="fp-drop"><label><span>Odds</span><input id="fpOdds" class="oddin" value="${esc(odds(a.d))}" autocomplete="off" inputmode="decimal"></label><label><span>Stake £</span><input id="fpStake" class="oddin" inputmode="decimal" autocomplete="off" value="${Math.max(1, Math.round(X.bal * .02 * 2) / 2)}"></label><button class="btn sm" data-fpadd="${esc(key)}">Add</button></div>` : ""}</div>`; }).join("")}</div>`
-      : `<div class="empty">No ${b[0].toLowerCase()} winner accas in the next 24 hours. Try another band or sport.</div>`}</section>`;
+      : `<div class="empty">No ${b[0].toLowerCase()} winner accas ${fpDayLabel()}. Try another band, sport or Next 24 hours.</div>`}</section>`;
 }
 function viewFunded() {
   if (!S.user) return `<div class="acca-panel"><b>Funded account</b><p class="risk-desc" style="margin:0">Track a funded-betting evaluation: balance, singles, and your profit target. <a href="#account">Sign in</a> to start.</p></div>`;
@@ -5388,6 +5391,7 @@ document.addEventListener("click", async e => {
   else if (d.fdbtab) { S.fdbTab = d.fdbtab; render(); }
   else if (d.fdtab) { S.fdTab = d.fdtab; S.fpOpen = null; render(); }
   else if (d.fdpanel) { S.fdPanel = S.fdPanel === d.fdpanel ? null : d.fdpanel; render(); }
+  else if (d.fpday) { S.fpDay = d.fpday; S.fpOpen = null; render(); }
   else if (d.fptype) { S.fpType = d.fptype; S.fpOpen = null; S.fpSeed = 0; render(); }
   else if (d.fpband) { S.fpBand = d.fpband; S.fpSeed = 0; render(); }
   else if (d.fpsport) { S.fpSport = d.fpsport; S.fpSeed = 0; render(); }
