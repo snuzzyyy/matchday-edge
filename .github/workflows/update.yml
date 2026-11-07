@@ -33,7 +33,9 @@ jobs:
             if [ -n "$last" ]; then
               age=$(( $(date -u +%s) - $(date -u -d "$last" +%s) ))
               echo "last rebuild ${age}s ago"
-              if [ "$age" -lt 780 ]; then
+              msg=$(gh api "repos/${{ github.repository }}/commits/gh-pages" --jq .commit.message 2>/dev/null || echo "")
+              echo "last publish: $msg / code ${GITHUB_SHA::7}"
+              if [ "$age" -lt 780 ] && echo "$msg" | grep -q "${GITHUB_SHA::7}"; then   # rebuild anyway when this code hasn't been published yet
                 full=0
                 curl -sf "https://snuzzyyy.github.io/matchday-edge/data.json" -o site/data.json || true
               fi
@@ -63,5 +65,5 @@ jobs:
           touch .nojekyll
           git init -q -b gh-pages
           git add -A
-          git -c user.name="github-actions" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -q -m "Update $(date -u +%FT%TZ)"
+          git -c user.name="github-actions" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -q -m "Update $(date -u +%FT%TZ) ${GITHUB_SHA::7}"
           git push -q -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" HEAD:gh-pages
