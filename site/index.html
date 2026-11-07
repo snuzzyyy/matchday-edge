@@ -5270,6 +5270,7 @@ function applySB(sp, e) {
   const g = findGame(sp, e.id); if (!g) return false;
   const c = e.competitions[0], H = c.competitors.find(x => x.homeAway === "home"), A = c.competitors.find(x => x.homeAway === "away");
   const st = e.status, ty = st.type, prev = g.status.state, before = JSON.stringify([g.status, g.home.score, g.away.score]);
+  if (isOlder(sp, g, st, H, A)) return false;
   g.status = { state: ty.state, detail: ty.shortDetail || ty.detail, clock: st.displayClock, period: st.period, completed: !!ty.completed };
   g.home.score = H.score; g.away.score = A.score;
   if (sp === "nba") { g.home.lines = (H.linescores || []).map(x => Math.round(num(x.value))); g.away.lines = (A.linescores || []).map(x => Math.round(num(x.value))); }
@@ -5277,10 +5278,19 @@ function applySB(sp, e) {
   return before !== JSON.stringify([g.status, g.home.score, g.away.score]);
 }
 /* score and clock from a game's own page: it's often ahead of the scoreboard list, and games can drop off that list */
+/* how far through a game a status is, so an older copy of the score never replaces a newer one */
+function gameProg(sp, st, hs, as) {
+  const state = (st.type || {}).state || st.state, rank = state === "post" ? 3 : state === "in" ? 2 : 1, per = +st.period || 0;
+  const t = String(st.displayClock ?? st.clock ?? ""), m = t.match(/(\d+):(\d+)/), secs = m ? +m[1] * 60 + +m[2] : parseFloat(t) || 0;
+  const into = sp === "nba" ? (/end|half/i.test(String((st.type || {}).detail || st.detail || "")) ? 9999 : 720 - secs) : secs;   /* NBA clocks count down, football up */
+  return rank * 1e9 + per * 1e6 + into * 10 + ((+hs || 0) + (+as || 0)) / 1000;
+}
+const isOlder = (sp, g, st, H, A) => gameProg(sp, st, H.score, A.score) < gameProg(sp, g.status, g.home.score, g.away.score) - 1e-6;
 function applyHeader(sp, g, s) {
   const c = ((s.header || {}).competitions || [])[0]; if (!c || !c.status || !c.status.type) return false;
   const H = (c.competitors || []).find(x => x.homeAway === "home"), A = (c.competitors || []).find(x => x.homeAway === "away"); if (!H || !A || H.score == null) return false;
   const st = c.status, ty = st.type, prev = g.status.state, before = JSON.stringify([g.status, g.home.score, g.away.score]);
+  if (isOlder(sp, g, st, H, A)) return false;
   g.status = { state: ty.state, detail: ty.shortDetail || ty.detail, clock: st.displayClock, period: st.period, completed: !!ty.completed };
   g.home.score = H.score; g.away.score = A.score;
   if (sp === "nba" && (H.linescores || []).length) { g.home.lines = H.linescores.map(x => Math.round(num(x.displayValue ?? x.value))); g.away.lines = (A.linescores || []).map(x => Math.round(num(x.displayValue ?? x.value))); }

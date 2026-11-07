@@ -421,6 +421,7 @@ No server of our own. ESPN is free, has no key and is about 1–3 minutes behind
 
 ## Live speed (Nov 7)
 - `playerIndex(full)`: light by default (priced player bets, box scores, line-ups: no downloads). Squad lists (ESPN rosters, ~37 MB for all teams) only via `playerIndexFor(text)` when a typed name isn't found, or when reading a screenshot. Never call `playerIndex(true)` on page load.
+- `isOlder()` / `gameProg()`: applySB and applyHeader ignore a score/clock that is behind what the app already shows (the game-details copy can lag the scoreboard), so scores never jump backwards.
 - liveTick: no `soccer/all` scoreboard (860 KB); track-only games refresh through their own summary only when in your bets. Full game summaries every round only for games in your bets / followed / open; others once a minute. `getJ` aborts after 6 s; a 20 s watchdog clears a stuck round. A phone now pulls ~0.4 MB per 30 s instead of ~40 MB.
 
 ## Half-by-half team bets (Nov 7)
