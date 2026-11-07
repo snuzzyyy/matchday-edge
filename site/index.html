@@ -2953,8 +2953,8 @@ function legInfo(l) {
   return r;
 }
 function legInfo0(l) {   // -> { html, st: "pre" | "live" | "hit" | "miss" | "void" | "manual" }
-  if (l.manual) { const hit = l.fst === "hit", miss = l.fst === "miss";
-    return { st: l.fst || "manual", html: `<div class="tl-leg ${hit ? "hit" : miss ? "miss" : ""}"><div class="tl-top"><b>${esc(l.label)}</b><span>You mark this one</span></div><div class="tl-num"><span>${hit ? "" : miss ? "" : "We couldn't match it to a game"}</span><span>${hit ? "✓ Landed" : miss ? "✗ Lost" : ""}</span></div></div>` }; }
+  if (l.manual) { const hit = l.fst === "hit", miss = l.fst === "miss", vd = l.fst === "void";
+    return { st: l.fst || "manual", html: `<div class="tl-leg ${hit ? "hit" : miss ? "miss" : vd ? "void" : ""}"><div class="tl-top"><b>${esc(l.label)}</b><span>You mark this one</span></div><div class="tl-num"><span>${hit || miss || vd ? "" : "We couldn't match it to a game"}</span><span>${hit ? "✓ Landed" : miss ? "✗ Lost" : vd ? "Void" : ""}</span></div></div>` }; }
   if (l.fst && !findGame(l.sport, l.gid)) {   // the game has left the feed: show the numbers saved when it settled
     const hit = l.fst === "hit", miss = l.fst === "miss", name = l.pid ? l.name : String(l.label || "").replace(/ \(in-play\)$/, "");
     const w = l.pid && l.final != null ? Math.min(1, l.final / l.target) : hit ? 1 : miss ? .5 : 0;
@@ -3090,7 +3090,7 @@ function paceChance(cur, need, f, lam0, stat) {
   return full == null ? null : atLeast(need, Math.max(.01, full * (1 - f)), stat);
 }
 function legChance(l) {
-  if (l.manual) return l.fst === "hit" ? 1 : l.fst === "miss" ? 0 : null;
+  if (l.manual) return l.fst === "hit" || l.fst === "void" ? 1 : l.fst === "miss" ? 0 : null;
   if (l.pid && l.under) { const st = legInfo0(l).st; if (st === "hit" || st === "void") return 1; if (st === "miss") return 0; const o = legChance({ ...l, under: false, target: l.max + 1 }); return o == null ? null : 1 - o; }
   const st = legInfo0(l).st; if (st === "hit" || st === "void") return 1; if (st === "miss") return 0;
   const g = findGame(l.sport, l.gid); if (!g) return null;
@@ -3195,7 +3195,7 @@ function legGroups(legs, infos) {
 }
 function betCard(t) {
   const info = t.legs.map((l, i) => { const r = legInfo(i && l.pid && !l.group && t.legs[i - 1].pid === l.pid ? { ...l, _sub: true } : l);
-    if (l.manual && !l.fst && t.saved && !t.legs.some(x => legInfo0(x).st === "miss")) r.html = r.html.replace(/<\/div>$/, `<div class="mleg"><button class="btn sm win" data-mleg="${t.saved}|${i}|hit">Landed</button><button class="btn sm lose" data-mleg="${t.saved}|${i}|miss">Lost</button></div></div>`);
+    if (l.manual && !l.fst && t.saved && !t.legs.some(x => legInfo0(x).st === "miss")) r.html = r.html.replace(/<\/div>$/, `<div class="mleg"><button class="btn sm win" data-mleg="${t.saved}|${i}|hit">Landed</button><button class="btn sm lose" data-mleg="${t.saved}|${i}|miss">Lost</button><button class="btn sm ghost" data-mleg="${t.saved}|${i}|void">Void</button></div></div>`);
     return r; }), n = t.legs.length, hit = info.filter(i => i.st === "hit").length, voids = info.filter(i => i.st === "void").length;
   const lost = info.some(i => i.st === "miss"), started = info.some(i => i.st !== "pre");
   const gs0 = t.legs.map(l => l.gid && findGame(l.sport, l.gid)).filter(Boolean), anyLive = gs0.some(isLive), first = gs0.filter(isPre).map(kick).sort()[0];
@@ -5087,7 +5087,7 @@ document.addEventListener("click", async e => {
   else if (d.iosx !== undefined) { store.set("iosTipX", true); render(); }
   else if (d.mleg) { const [id, i, st] = d.mleg.split("|"), b = (S.bets || []).find(x => String(x.id) === id); if (!b) return;
     const legs = b.legs.map((l, k) => k === +i ? { ...l, fst: st } : l); b.legs = legs; render();
-    const r = await sb.from("bets").update({ legs }).eq("id", b.id); if (r.error) toast("Couldn't save. Check your connection."); else toast(st === "hit" ? "Marked as landed" : "Marked as lost"); autoAt = 0; autoSettle(); }
+    const r = await sb.from("bets").update({ legs }).eq("id", b.id); if (r.error) toast("Couldn't save. Check your connection."); else toast(st === "hit" ? "Marked as landed" : st === "void" ? "Marked as void. Tap \"Void leg · update returns\" to set your new returns" : "Marked as lost"); autoAt = 0; autoSettle(); }
   else if (d.impex) { S.importText = d.impex; const t = $("#imptext"); if (t) t.value = d.impex; S.impOddsTyped = false; impRefresh(); }
   else if (d.untrack) { S.tracked = S.tracked.filter(t => t.id !== d.untrack); store.set("tracked", S.tracked); render(); }
   else if (d.impgo !== undefined) {

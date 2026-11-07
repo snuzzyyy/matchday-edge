@@ -218,7 +218,7 @@ def outcome(legs):
     if not L: return None, legs
     rs = [leg_result(l) for l in L]
     if any(r == "lost" for r, _ in rs): res = "lost"
-    elif all(r == "won" for r, _ in rs) and all(l.get("fst") == "hit" for l in M): res = "won"
+    elif all(r == "won" for r, _ in rs) and all(l.get("fst") in ("hit", "void") for l in M): res = "won"
     else: return None, legs
     out, i = [], 0
     for l in legs:
