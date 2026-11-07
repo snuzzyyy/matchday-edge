@@ -4821,7 +4821,7 @@ document.addEventListener("click", async e => {
     const c = slipCalc(), row = { label: S.slip.map(legText).join(" + "), match: [...new Set(S.slip.map(l => l.match))].join(", "), legs: S.slip, odds_dec: Math.round(c.dec * 1000) / 1000, stake: S.stake, sport: S.slip[0].sport, kickoff: S.slip.map(l => l.kick).sort()[0], ...(S.slipFree ? { free_stake: S.stake } : {}) };
     S._saving = true; const lab = t.textContent; t.disabled = true; t.textContent = "Saving…";
     let r; try { r = await insertBet(row); } finally { S._saving = false; t.disabled = false; t.textContent = lab; }
-    if (r.error) toast("Couldn't save the bet."); else { S.bets.unshift(r.data); walletAdjust(-cashStake(r.data)); S.slipFree = false; toast(freeOf(r.data) ? "Saved to My Bets as a free bet 🎁" : "Saved to My Bets"); }
+    if (r.error) toast("Couldn't save the bet."); else { S.bets.unshift(r.data); walletAdjust(-cashStake(r.data)); S.slipFree = false; S.slip = []; S.slipTot = null; S.slipEx = {}; save(); render(); toast(freeOf(r.data) ? "Saved to My Bets as a free bet 🎁" : "Saved to My Bets"); }
   }
 });
 document.addEventListener("change", async e => { if (e.target.id === "alertOpt" || e.target.id === "alertOpt2") { if (e.target.checked) { const ok = await askAlerts(); store.set("alerts", true); store.set("alertKnown", []); toast(ok ? "Notifications on" : "Notifications on inside the app"); alertTick(); sendAlert("Notifications are on", "You'll hear about your bets and the games you follow", "test"); } else { store.set("alerts", false); toast("Notifications off"); } render(); } });
