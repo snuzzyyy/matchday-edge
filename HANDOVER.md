@@ -419,6 +419,10 @@ No server of our own. ESPN is free, has no key and is about 1–3 minutes behind
 - Save buttons (import and slip) lock with "Saving…" until the save finishes (`S._saving`), so repeated taps can't save the same bet many times.
 - `findGame` uses an id index and `mkt` a per-game Map (both WeakMap caches), as the extra games made the old scans slow.
 
+## Live speed (Nov 7)
+- `playerIndex(full)`: light by default (priced player bets, box scores, line-ups: no downloads). Squad lists (ESPN rosters, ~37 MB for all teams) only via `playerIndexFor(text)` when a typed name isn't found, or when reading a screenshot. Never call `playerIndex(true)` on page load.
+- liveTick: no `soccer/all` scoreboard (860 KB); track-only games refresh through their own summary only when in your bets. Full game summaries every round only for games in your bets / followed / open; others once a minute. `getJ` aborts after 6 s; a 20 s watchdog clears a stuck round. A phone now pulls ~0.4 MB per 30 s instead of ~40 MB.
+
 ## Half-by-half team bets (Nov 7)
 - NBA `nbaTeamPts()`: "each team to score 55+ points in each half" → `T:hpts:each:55`; also `pts` (game), `h1pts`/`h2pts`, for each/home/away. Tracked from `g.home/away.lines` (quarters); settle.py uses summary header linescores.
 - Football `fbHalfGoals()`: "both teams to score in both halves" → `T:hgoals:each:1`; "X to score in both halves / 1st half / 2nd half" (`h1goals`/`h2goals`). Tracked from `g.events` goal minutes (≤45 = 1st half); settle.py uses keyEvents period numbers.

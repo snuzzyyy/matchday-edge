@@ -2650,15 +2650,19 @@ const PROPS = {
 const deLetter = t => String(t || "").replace(/[øØ]/g, "o").replace(/[æÆ]/g, "ae").replace(/ß/g, "ss").replace(/[đĐ]/g, "d").replace(/[łŁ]/g, "l").replace(/ı/g, "i");
 const norm = t => deLetter(t).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z ]/g, " ").replace(/\s+/g, " ").trim();
 S.tracked = store.get("tracked", []);
-function playerIndex() {
+/* light: players from our own data (priced bets, box scores, line-ups). full: also download squad lists, only when a typed name isn't found */
+function playerIndexFor(text) { const L = playerIndex(false); if (!String(text || "").trim()) return L; const r = parseBet(text, L.idx); return r.missing.length ? playerIndex(true) : L; }
+function playerIndex(full = false) {
   const now = Date.now(), soon = g => isLive(g) || (isPre(g) && +new Date(kick(g)) - now < (S.impWide ? 5 : 1.5) * 864e5) || (g.status.state === "post" && now - +new Date(kick(g)) < 864e5);
   const idx = [], pending = [];
   for (const sp of ["nba", "football"]) for (const g of games(sp).filter(soon)) for (const [t, side] of [[g.home, "h"], [g.away, "a"]]) {
-    const url = sp === "nba" ? `${SB}/basketball/nba/teams/${t.id}/roster` : `${SB}/soccer/${g.league}/teams/${t.id}/roster`, f = feed(url, 6 * 3600e3);
+    const url = sp === "nba" ? `${SB}/basketball/nba/teams/${t.id}/roster` : `${SB}/soccer/${g.league}/teams/${t.id}/roster`;
     /* no download needed: players already in the game's box score or line-ups, and everyone we price a player bet for */
     const rank0 = isLive(g) ? 0 : isPre(g) ? 1 : 2, when0 = +new Date(kick(g)), have = (((sp === "nba" ? g.box : g.lineups) || {})[side] || {}).players || [];
     for (const P of have) { const nm = P.n || P.name; if (nm && P.id) idx.push({ sport: sp, gid: g.id, side, pid: String(P.id), name: nm, team: t.name, n: norm(nm), rank: rank0, when: when0 }); }
     const seenP = new Set(); for (const m of g.model.markets) { const q = m.prop; if (!q || q.side !== side || seenP.has(q.pid)) continue; seenP.add(q.pid); idx.push({ sport: sp, gid: g.id, side, pid: String(q.pid), name: q.name, team: t.name, n: norm(q.name), rank: rank0, when: when0 }); }
+    if (!full) continue;
+    const f = feed(url, 6 * 3600e3);
     if (!f.data) { if (f.loading && !have.length && !seenP.size) pending.push(url); continue; }
     const list = (f.data.athletes || []).flatMap(a => a.items ? a.items : [a]);
     const rank = isLive(g) ? 0 : isPre(g) ? 1 : 2, when = +new Date(kick(g));
@@ -3271,7 +3275,7 @@ async function readShot(file) {
   try {
     const [T, canvas] = await Promise.all([loadTess(), shotToCanvas(file)]);
     const res = await T.recognize(canvas, "eng", { logger: m => { if (m.status === "recognizing text") say(`Reading your screenshot… ${Math.round(m.progress * 100)}%`); } });
-    const raw = res.data.text || "", { idx } = playerIndex();
+    const raw = res.data.text || "", { idx } = playerIndex(true);
     const ml = matchLegsIn(raw), props = parseBet(raw.split("\n").filter(l => !matchLegsIn(l).legs.length).join("\n"), idx).legs.filter(l => l.pid && (l.group ? l.group.every(m => norm(raw).includes(norm(m.name))) : l.name.split(" ").length >= 2 && norm(raw).includes(norm(l.name))));
     const lines = [...ml.legs.map((l, i) => { const g = findGame(l.sport, l.gid); return `${g.home.name} v ${g.away.name}: ${l.label}${ml.odds[i] ? " @ " + (+ml.odds[i]).toFixed(2) : ""}`; }), ...props.map(l => `${l.name} ${l.target}+ ${l.label}`)];
     { /* Sky: "Cambridge Utd / Full Time Result - Bristol Rovers v [2.15 X] / Cambridge Utd": a game we don't cover still becomes a leg */
@@ -3290,7 +3294,7 @@ async function readShot(file) {
     S.impOddsTyped = false; if (odv) { S.impOdds = odm[1]; S.impOddsTyped = true; const o = $("#impodds"); if (o) o.value = odm[1]; } S.impShotMsg = `Found ${lines.length} leg${lines.length > 1 ? "s" : ""}. Check them below, then tap Track.`; saveImpDraft(); impRefresh();
   } catch (e) { S.impShotMsg = "Couldn't read that screenshot. Check your connection and try again, or type the bet below."; impRefresh(); }
 }
-function impParse() { const { idx, loading } = playerIndex(), txt = S.importText || ""; return { loading, r: txt.trim() ? parseBet(txt, idx) : { legs: [], missing: [], unread: [], dec: null } }; }
+function impParse() { const txt = S.importText || "", { idx, loading } = playerIndexFor(txt); return { loading, r: txt.trim() ? parseBet(txt, idx) : { legs: [], missing: [], unread: [], dec: null } }; }
 /* what we'll save: legs we can track, plus anything we couldn't match as legs you mark yourself */
 const impManual = (r, loading) => loading ? [] : [...r.missing.map(n => `${n}`), ...(r.unread || [])];
 function impEst(legs) {   // the app's odds for these legs, when it has a price for every one
@@ -4291,7 +4295,7 @@ function chkLeg(l) {   /* -> { p, why } */
   const c = legChance(l); return { p: c, why: isPre(g) ? "From our match model" : "From the score, the stats and the time left" };
 }
 function viewCheck() {
-  const { idx, loading } = playerIndex(), raw = S.chkText || "", r = raw.trim() ? parseBet(raw, idx) : { legs: [], missing: [], unread: [], dec: null };
+  const raw = S.chkText || "", { idx, loading } = playerIndexFor(raw), r = raw.trim() ? parseBet(raw, idx) : { legs: [], missing: [], unread: [], dec: null };
   const legs = [...r.legs, ...[...(r.missing || []), ...(r.unread || [])].map(label => ({ manual: true, label }))];
   const res = legs.map(l => ({ l, ...chkLeg(l) })), known = res.filter(x => x.p != null), p = known.length ? known.reduce((a, x) => a * x.p, 1) : null;
   const typed = parseOdds(S.chkOdds || "") || r.dec || null, fair = p ? 1 / p : null, edge = p && typed ? p * typed - 1 : null;
@@ -5108,7 +5112,7 @@ document.addEventListener("click", async e => {
   else if (d.untrack) { S.tracked = S.tracked.filter(t => t.id !== d.untrack); store.set("tracked", S.tracked); render(); }
   else if (d.impgo !== undefined) {
     if (S._saving) return;
-    const { idx, loading } = playerIndex(), raw = S.importText || "", r = parseBet(raw, idx);
+    const raw = S.importText || "", { idx, loading } = playerIndexFor(raw), r = parseBet(raw, idx);
     if (!raw.trim()) { toast("Paste a screenshot or type your bet first"); const t = $("#imptext"); if (t) t.focus(); return; }
     if (loading && (r.missing.length || !r.legs.length) && Date.now() - (S._impLoadAt || (S._impLoadAt = Date.now())) < 8000) { toast("Still looking up the players. Try again in a second"); return; }   /* never block for long, and never once every player is found */
     S._impLoadAt = 0;
@@ -5259,7 +5263,9 @@ const SB = "https://site.api.espn.com/apis/site/v2/sports";
 const FKEYS = [["wonCorners", "Corners"], ["yellowCards", "Yellow cards"], ["redCards", "Red cards"], ["possessionPct", "Possession %"], ["totalShots", "Shots"], ["shotsOnTarget", "Shots on target"], ["foulsCommitted", "Fouls"], ["offsides", "Offsides"], ["saves", "Saves"], ["accuratePasses", "Passes completed"]];
 const NKEYS = [["fieldGoalPct", "FG %"], ["threePointFieldGoalPct", "3PT %"], ["freeThrowPct", "FT %"], ["totalRebounds", "Rebounds"], ["assists", "Assists"], ["steals", "Steals"], ["blocks", "Blocks"], ["totalTurnovers", "Turnovers"], ["pointsInPaint", "Points in paint"], ["fastBreakPoints", "Fast break pts"], ["largestLead", "Largest lead"]];
 const num = x => { const v = parseFloat(String(x ?? "").replace(/[+%]/g, "")); return isNaN(v) ? 0 : v; };
-const getJ = async url => { const r = await fetch(url, { cache: "no-store" }); if (!r.ok) throw new Error(r.status); return r.json(); };
+/* every live request gives up after 6 s, so one stuck request can never freeze the scores */
+const getJ = async url => { const ac = new AbortController(), to = setTimeout(() => ac.abort(), 6000);
+  try { const r = await fetch(url, { cache: "no-store", signal: ac.signal }); if (!r.ok) throw new Error(r.status); return await r.json(); } finally { clearTimeout(to); } };
 function applySB(sp, e) {
   const g = findGame(sp, e.id); if (!g) return false;
   const c = e.competitions[0], H = c.competitors.find(x => x.homeAway === "home"), A = c.competitors.find(x => x.homeAway === "away");
@@ -5352,13 +5358,19 @@ async function loadDetail(key) {
 let ticking = false;
 for (const ev of ["input", "keydown", "focusin", "pointerdown"]) document.addEventListener(ev, () => { S._typedAt = Date.now(); }, true);
 async function liveTick() {
-  if (ticking || !S.data || (document.visibilityState === "hidden" && !(alertsOn() && (liveBetCount() || followActive())))) return; ticking = true;
+  if (ticking && Date.now() - (S._tickAt || 0) > 20e3) ticking = false;   /* watchdog: a round that never finished doesn't block the next */
+  if (ticking || !S.data || (document.visibilityState === "hidden" && !(alertsOn() && (liveBetCount() || followActive())))) return; ticking = true; S._tickAt = Date.now();
   try {
     const now = Date.now(), due = g => g.status.state === "in" || g._fin || (g.status.state === "pre" && +new Date(kick(g)) <= now + 60e3 && now - +new Date(kick(g)) < 4 * 3600e3);
-    const paths = new Set([...S.data.football.filter(due).map(g => "soccer/" + g.league), ...(extraGames().some(due) ? ["soccer/all"] : []), ...(S.data.nba.some(due) ? ["basketball/nba"] : [])]);
+    const paths = new Set([...S.data.football.filter(due).map(g => "soccer/" + g.league), ...(S.data.nba.some(due) ? ["basketball/nba"] : [])]);
     let changed = false, ok = 0, tried = paths.size;
     await Promise.all([...paths].map(async p => { try { const sb = await getJ(`${SB}/${p}/scoreboard`); ok++; for (const e of sb.events || []) changed = applySB(p.startsWith("basketball") ? "nba" : "football", e) || changed; } catch {} }));
-    const live = [...anyGames("football").filter(g => isLive(g) || g._fin).map(g => ["football", g]), ...S.data.nba.filter(g => isLive(g) || g._fin).map(g => ["nba", g])];
+    /* full game details are heavy: every round for games you're watching or have a bet on, once a minute for the rest (scores and clocks for all come from the small scoreboard above) */
+    const mine = new Set([...(S.bets || []).filter(b => b.result === "open").flatMap(b => b.legs || []), ...(S.tracked || []).flatMap(t => t.legs || []), ...(S.slip || [])].map(l => (l.sport || "") + ":" + l.gid));
+    for (const f of gFollows ? gFollows() : []) mine.add(String(f)); if (S.drawer) mine.add(S.drawer);
+    const want = (sp, g) => g._fin || mine.has(sp + ":" + g.id) || now - (g._sumAt || 0) > 60e3;
+    const live = [...S.data.football.filter(g => (isLive(g) || g._fin) && want("football", g)).map(g => ["football", g]), ...extraGames().filter(g => mine.has("football:" + g.id) && (isLive(g) || g._fin || due(g))).map(g => ["football", g]), ...S.data.nba.filter(g => (isLive(g) || g._fin) && want("nba", g)).map(g => ["nba", g])];
+    for (const [, g] of live) g._sumAt = now;
     await Promise.all(live.map(async ([sp, g]) => { try { const s = await getJ(`${SB}/${sp === "nba" ? "basketball/nba" : "soccer/" + g.league}/summary?event=${g.id}`); const wasFin = g._fin; applyHeader(sp, g, s); sp === "nba" ? applyNba(g, s) : applyFb(g, s); if (wasFin || g.status.state !== "post") g._fin = false; changed = true; } catch {} }));
     if (ok || !tried) { S.liveAt = new Date().toISOString(); S.liveFail = 0; } else S.liveFail = (S.liveFail || 0) + 1;
     const ae = document.activeElement, typing = ae && /^(INPUT|SELECT|TEXTAREA)$/.test(ae.tagName) && ae.type !== "checkbox" && Date.now() - (S._typedAt || 0) < (ae.tagName === "SELECT" ? 20e3 : 8e3);   /* only hold the redraw while someone is actually typing or choosing */
