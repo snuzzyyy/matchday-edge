@@ -1308,8 +1308,13 @@ const formPills = f => f ? `<span class="form" aria-label="Form ${esc(f)}">${[..
 /* track-only games (any other league or cup, from data.extra): found for bets, never listed in tips, fixtures or accas */
 const extraGames = () => (S.data && S.data.extra) || [];
 const anyGames = sport => sport === "nba" ? S.data.nba : [...S.data.football, ...extraGames()];
-const findGame = (sport, id) => anyGames(sport).find(g => g.id === id);
-const mkt = (g, k) => g.model.markets.find(m => m.k === k);
+/* instant lookups: an id index, rebuilt only when the game lists themselves are replaced */
+const IDX = new WeakMap(), MKC = new WeakMap();
+function gameIdx() { const D = S.data, X = IDX.get(D); if (X && X.f === D.football && X.n === D.nba && X.x === D.extra && X.lf === D.football.length && X.ln === D.nba.length) return X;
+  const fb = new Map(); for (const g of extraGames()) fb.set(String(g.id), g); for (const g of D.football) fb.set(String(g.id), g); const nb = new Map(D.nba.map(g => [String(g.id), g]));
+  const out = { f: D.football, n: D.nba, x: D.extra, lf: D.football.length, ln: D.nba.length, fb, nb }; IDX.set(D, out); return out; }
+const findGame = (sport, id) => { if (!S.data || id == null) return undefined; const X = gameIdx(); return (sport === "nba" ? X.nb : X.fb).get(String(id)); };
+const mkt = (g, k) => { const A = g.model.markets; let M = MKC.get(A); if (!M || M.n !== A.length) { M = new Map(A.map(m => [m.k, m])); M.n = A.length; MKC.set(A, M); } return M.get(k); };
 const vs = (sport, g) => sport === "nba" ? `${g.away.name} @ ${g.home.name}` : `${g.home.name} v ${g.away.name}`;
 const minute = g => { const n = parseInt(g.status.clock || g.status.detail); return isNaN(n) ? null : n; };
 
@@ -2745,7 +2750,23 @@ function matchLegsIn(text, single) {
     if (m) { legs.push({ sport: f.sp, gid: f.g.id, k: m.k, label: m.label, match: vs(f.sp, f.g), team: "", kick: kick(f.g) }); odds.push(oddsIn(sg)); } });
   return { legs, odds };
 }
+/* Sky's copied slip: "Boston Celtics / Win Match Including Overtime - Boston Celtics @ Charlotte Hornets / 1.14" -> "Boston Celtics @ Charlotte Hornets: Boston Celtics to win @ 1.14" */
+function skyText(text) {
+  const L = String(text).split("\n").map(x => x.trim()), out = []; let i = 0;
+  while (i < L.length) {
+    const sel = L[i], m = (L[i + 1] || "").match(/^(.+?)\s+[-–]\s+(.+?\s(?:@|v|vs)\s.+)$/i);
+    if (sel && m && !/\s(?:@|v|vs)\s/i.test(sel) && !/^\d/.test(sel)) {
+      const market = m[1], game = m[2], od = (L[i + 2] || "").match(/^(\d+(?:\.\d+)?|\d+\/\d+|evs|evens)$/i);
+      const bet = /\bwin\b|result|match odds|money ?line|match betting|to win/i.test(market) && !/\b(?:draw|both|over|under|handicap|score|scorer)\b/i.test(market) ? `${sel} to win` : `${sel} ${market}`;
+      out.push(`${game.replace(/\s@\s/, " v ")}: ${bet}${od ? " @ " + od[1] : ""}`); i += od ? 3 : 2; continue;   /* "@" would read as odds */
+    }
+    if (!/^\d+\s*-?\s*fold\b/i.test(L[i]) && !/^(?:winning|losing|open|settled|cash ?out.*)$/i.test(L[i])) out.push(L[i]); i++;   /* the "9 Fold @ 40.68" line is the total, read separately */
+  }
+  return out.join("\n");
+}
 function parseBet(text, idx) {
+  const fold = String(text).match(/\d+\s*-?\s*fold\b[^\n@]*@\s*(\d+(?:\.\d+)?|\d+\s*\/\s*\d+)/i) || String(text).match(/(?:total|acca|accumulator)\s*odds[^0-9\n]{0,6}(\d+(?:\.\d+)?|\d+\s*\/\s*\d+)/i);   /* Sky's "9 Fold @ 40.68": the slip's own total wins */
+  text = skyText(text);
   const legs = [], missing = [], unread = [], om = text.match(/@\s*([0-9]+(?:\.[0-9]+)?(?:\s*\/\s*[0-9]+)?|evs|evens)/i); let oddsFound = null;
   const LEG = l => l.match(/^(.*?)\s+(?:to\s+|-\s+|:\s*)(.+)$/i) || l.match(/^(.*?)\s+((?:over\s+)?\d.*)$/i) || l.match(/^(.*?)\s+((?:anytime|first|last)\s+(?:goal\s*)?scorer.*)$/i);
   // "A 20+ points & B 6+ assists" is two legs; "A & B to score 25+ each" shares one stat
@@ -2823,7 +2844,7 @@ function parseBet(text, idx) {
   }
   legs.unshift(...mLegs);
   const ats = (text.match(/@\s*([0-9]+(?:\.[0-9]+)?(?:\s*\/\s*[0-9]+)?|evs|evens)/gi) || []).map(x => parseOdds(x.replace(/^@\s*/, "").replace(/\s+/g, ""))).filter(Boolean);
-  const dec = ats.length >= 2 && ats.length === legs.length ? Math.round(ats.reduce((a, b) => a * b, 1) * 1000) / 1000 : om ? parseOdds(om[1]) : oddsFound;
+  const dec = fold ? parseOdds(fold[1].replace(/\s+/g, "")) : ats.length >= 2 && ats.length === legs.length ? Math.round(ats.reduce((a, b) => a * b, 1) * 1000) / 1000 : om ? parseOdds(om[1]) : oddsFound;
   return { legs, missing, unread, dec };
 }
 const halfDone = g => g.status.state === "post" || (+g.status.period || 1) >= 2 || /HT|Half/i.test(String(g.status.detail || ""));
@@ -4500,9 +4521,10 @@ document.addEventListener("click", async e => {
   else if (d.chalres) { const C = chalNow(); if (C.active) chalSettle(d.chalres, C.active.label, C.active.match, C.active.dec, C.id); }
   else if (d.savebet !== undefined) {
     if (!S.user) { S.slipOpen = false; location.hash = "account"; return; }
-    if (!S.slip.length) return;
+    if (!S.slip.length || S._saving) return;
     const c = slipCalc(), row = { label: S.slip.map(legText).join(" + "), match: [...new Set(S.slip.map(l => l.match))].join(", "), legs: S.slip, odds_dec: Math.round(c.dec * 1000) / 1000, stake: S.stake, sport: S.slip[0].sport, kickoff: S.slip.map(l => l.kick).sort()[0], ...(S.slipFree ? { free_stake: S.stake } : {}) };
-    const r = await insertBet(row);
+    S._saving = true; const lab = t.textContent; t.disabled = true; t.textContent = "Saving…";
+    let r; try { r = await insertBet(row); } finally { S._saving = false; t.disabled = false; t.textContent = lab; }
     if (r.error) toast("Couldn't save the bet."); else { S.bets.unshift(r.data); walletAdjust(-cashStake(r.data)); S.slipFree = false; toast(freeOf(r.data) ? "Saved to My Bets as a free bet 🎁" : "Saved to My Bets"); }
   }
 });
@@ -5000,6 +5022,7 @@ document.addEventListener("click", async e => {
   else if (d.impex) { S.importText = d.impex; const t = $("#imptext"); if (t) t.value = d.impex; S.impOddsTyped = false; impRefresh(); }
   else if (d.untrack) { S.tracked = S.tracked.filter(t => t.id !== d.untrack); store.set("tracked", S.tracked); render(); }
   else if (d.impgo !== undefined) {
+    if (S._saving) return;
     const { idx, loading } = playerIndex(), raw = S.importText || "", r = parseBet(raw, idx);
     if (!raw.trim()) { toast("Paste a screenshot or type your bet first"); const t = $("#imptext"); if (t) t.focus(); return; }
     if (loading && (r.missing.length || !r.legs.length) && Date.now() - (S._impLoadAt || (S._impLoadAt = Date.now())) < 8000) { toast("Still looking up the players. Try again in a second"); return; }   /* never block for long, and never once every player is found */
@@ -5013,6 +5036,7 @@ document.addEventListener("click", async e => {
     if (!S.user || !sb) { if (local()) done("Tracking your bet on this device. Sign in to keep it on all your devices"); else toast("Sign in to save a bet you mark yourself"); return; }
     const gs = [...new Set(r.legs.map(l => l.sport + ":" + l.gid))].map(k => { const [sp, id] = k.split(":"), g = findGame(sp, id); return g && [sp, g]; }).filter(Boolean);
     const row = { label: text, match: gs.map(([sp, g]) => vs(sp, g)).join(", "), legs: legs.map(l => l.manual ? l : { ...l, type: "prop" }), odds_dec: Math.round(Math.max(1.01, dec) * 1000) / 1000, stake, sport: (r.legs[0] || {}).sport || "football", kickoff: gs.map(([, g]) => kick(g)).sort()[0] || null, ...((document.getElementById("impfree") || {}).checked ? { free_stake: stake } : {}) };
+    S._saving = true; t.disabled = true; t.textContent = "Saving…"; try {
     if (S.impEdit) {   /* editing a saved bet: update it in place, and move the balance by the change in stake */
       const b = (S.bets || []).find(x => String(x.id) === String(S.impEdit)); if (!b) { S.impEdit = null; toast("Couldn't find that bet"); return; }
       const upd = { label: row.label, match: row.match, legs: row.legs, odds_dec: row.odds_dec, stake: row.stake, sport: row.sport, kickoff: row.kickoff, free_stake: row.free_stake || 0 }, before = cashStake(b);
@@ -5023,8 +5047,9 @@ document.addEventListener("click", async e => {
     }
     const res = await insertBet(row);
     if (res.error || !res.data) { if (local()) done("Couldn't reach your account, so it's tracking on this device for now"); else toast("Couldn't save. Check your connection and try again"); return; }
-    S.bets.unshift(res.data); walletAdjust(-cashStake(res.data)); loadSocial();
+    S.bets.unshift(res.data); walletAdjust(-cashStake(res.data)); if (SOCIAL_ON) loadSocial();
     done(!r.legs.length ? "Saved. Mark it won or lost in My Bets" : manual.length ? "Saved. Some legs track live, the rest you mark yourself" : !parseOdds(($("#impodds") || {}).value) && !r.dec ? `Saved at our estimated odds of ${odds(dec)}. Tap the bet to change them` : "Saved and tracking live");
+    } finally { S._saving = false; t.disabled = false; impRefresh(); }
   }
   else if (d.tipmode) { S.tipMode = d.tipmode; store.set("tipMode", d.tipmode); render(); }
   else if (d.chalwin) { S.chalWin = d.chalwin; S.chalSeed = 0; store.set("chalWin", d.chalwin); render(); }

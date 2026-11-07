@@ -411,6 +411,11 @@ No server of our own. ESPN is free, has no key and is about 1–3 minutes behind
 - Accas page: one `.acca-panel` card at the top (Pre-match / In-play / ⚽+🏀 multi-sport via `data-gomulti`, level, day chips on one swipeable line); Ready-made accas first (no second set of day chips); "Build your own" (pick best 3/5, same-game option, your acca, game list) below; themed accas folded in a `<details class="maths">`.
 - £1K: the "Step N · no bet picked yet" box is hidden when the picks are right below; The maths is folded.
 
+## Import + speed (Nov 7)
+- `skyText()` turns Sky's copied slip ("Selection / Market - A @ B / 1.14") into "A v B: Selection to win @ 1.14" (NBA "@" becomes "v" so it isn't read as odds); "N Fold @ 40.68" is taken as the slip total and dropped as a leg.
+- Save buttons (import and slip) lock with "Saving…" until the save finishes (`S._saving`), so repeated taps can't save the same bet many times.
+- `findGame` uses an id index and `mkt` a per-game Map (both WeakMap caches), as the extra games made the old scans slow.
+
 ## Ready-made cards (Nov 6)
 - `pLegs()` / `legIcon()`: each leg on a ready-made card is a row with an icon: ESPN headshot (combiner, team badge in the corner, falls back to the badge) for player bets, the team's badge for team bets, both badges for match bets.
 - Swap a leg: each leg on a ready-made card has a ↻ (`data-pswap`); game-page Low/Medium/High accas too (`data-gaswap`, `S.gaSwap`, same game only, odds recalculated). `S.pswap[swKey(id)][slot]` lists ruled-out bets; `applySwaps` picks the next best (`altLeg`: same game or another game, closest price, likelier first) for cards and for `presetLegs` when loading the slip. New leg flips in (`.pl-new`). Cards are `div role=button` now (no button-in-button).
