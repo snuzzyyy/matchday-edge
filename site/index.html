@@ -1811,7 +1811,7 @@ function applySwaps(id, raw) {
   for (const i of Object.keys(sw).map(Number).sort((a, b) => a - b)) { if (!out[i]) continue; const alt = altLeg(out[i], sw[i], out.filter((_, j) => j !== i)); if (alt) out[i] = alt; }
   return out;
 }
-const pLegs = (legs, id) => `<ul class="pl-legs">${legs.map((l, i) => `<li class="${S._swapAnim === swKey(id) + "|" + i ? "pl-new" : ""}">${legIcon(l)}<span class="pl-t"><b>${esc(legText(l))}</b><small>${legs.some(x => x.sport !== l.sport) ? (l.sport === "nba" ? "NBA · " : "Football · ") : ""}${esc(l.match || "")} · ${esc(whenLabel(l.kick))}</small></span>${id ? `<span class="pl-sw" role="button" tabindex="0" data-pswap="${id}|${i}" aria-label="Swap ${esc(legText(l))} for another bet" title="Not at your bookie? Swap it">${ROLL_SVG}</span>` : ""}</li>`).join("")}</ul>`;
+const pLegs = (legs, id) => `<ul class="pl-legs">${legs.map((l, i) => `<li class="${S._swapAnim === swKey(id) + "|" + i ? "pl-new" : ""}">${legIcon(l)}<span class="pl-t"><b>${esc(legText(l))}</b>${l.pid ? playerTag(l) : ""}<small>${legs.some(x => x.sport !== l.sport) ? (l.sport === "nba" ? "NBA · " : "Football · ") : ""}${esc(l.match || "")} · ${esc(whenLabel(l.kick))}</small></span>${id ? `<span class="pl-sw" role="button" tabindex="0" data-pswap="${id}|${i}" aria-label="Swap ${esc(legText(l))} for another bet" title="Not at your bookie? Swap it">${ROLL_SVG}</span>` : ""}</li>`).join("")}</ul>`;
 function presetCard(id, title, desc, raw0, extra) {
   const raw = applySwaps(id, raw0); if (raw.length < 2) return ""; const legs = asLegs(raw), c = slipCalc(legs);
   return `<div class="preset" role="button" tabindex="0" data-preset="${id}" data-ptitle="${esc(String(title).replace(/<[^>]+>/g, ""))}"><span class="pt">${title}</span><span class="pd">${desc}</span>${pLegs(legs, id)}<span class="po"><b>${odds(c.dec)}</b><span class="pill ${c.p > .3 ? "good" : "hot"}">${pct(c.p)} chance</span></span>${extra || ""}</div>`;
@@ -1920,9 +1920,19 @@ const bandNote = dec => { const r = RISK[S.accaRisk || "safe"]; if (dec >= r.lo 
 const accaSel = () => (S.accaSel = S.accaSel || { football: [], nba: [] })[S.sport];
 /* "Winners only": straight match winners (football home/away win, NBA moneyline) */
 const WIN_KEYS = new Set(["1", "2", "ML1", "ML2"]);
+/* is a player available? "out" (injured, suspended, not in the squad), "bench", "start", "exp" (expected to start) or null (no news yet) */
+function playerAvail(sport, g, q) {
+  const nm = norm(q.name || "");
+  if (sport === "nba") {
+    if ((g.injuries || []).some(i => i.side === q.side && norm(i.who || "") === nm && /out|doubtful|suspend/i.test(i.status || ""))) return "out";
+    const L = ((g.lu || {})[q.side] || []).find(p => norm(p.n) === nm); if (!L) return null;
+    return L.out ? "out" : L.pos ? (L.st === "Confirmed" ? "start" : "exp") : "bench"; }
+  const LU = (g.lineups || {})[q.side]; if (!LU || (LU.players || []).length < 11) return null;
+  const P = LU.players.find(p => String(p.id) === String(q.pid)); return !P ? "out" : P.starter ? "start" : "bench";
+}
 function legOptions(sport, g) {
   const r = RISK[S.accaRisk || "safe"];
-  return g.model.markets.filter(m => !SKIP.has(m.k) && m.p <= .96 && priceOf(m) >= 1.05 && (!S.winOnly || WIN_KEYS.has(m.k))).sort((a, b) => b.p - a.p).map(m => ({ m, ok: true }));
+  return g.model.markets.filter(m => !SKIP.has(m.k) && m.p <= .96 && priceOf(m) >= 1.05 && (!S.winOnly || WIN_KEYS.has(m.k)) && (!m.prop || !(a => a === "out" || (sport === "football" && a === "bench"))(playerAvail(sport, g, m.prop))))   /* never a player who isn't playing */.sort((a, b) => b.p - a.p).map(m => ({ m, ok: true }));
 }
 /* fix one game's bets as they are now (main + all extras, auto-picked ones included), after applying f to the key list */
 function pinGame(live, gid, f) {
@@ -2539,7 +2549,7 @@ function popularHTML(sport, g, compact) {
       const m = legOptions(sport, g).map(x => x.m).filter(m => !sw[i].includes(m.k) && !others.some(o => key(o) === m.k || conflicts(key(o), m.k))).sort((a, b) => (Math.abs(Math.log(priceOf(a) / (cur.dec || priceOf(a)))) - .6 * a.p) - (Math.abs(Math.log(priceOf(b) / (cur.dec || priceOf(b)))) - .6 * b.p))[0];
       if (m) legs[i] = { ...asLegs([{ sport, g, m }])[0], p: m.p }; }
     return { name: pk.name, gk, d: legs.reduce((a, l) => a * (l.dec || priceOf(mkt(g, l.k) || {})), 1), b: { p: legs.reduce((a, l) => a * l.p, 1), legs }, added: add }; };
-  const cards = picks.map(swapped).map(({ name, b, d, gk, added }) => `<div class="pop-card"><div class="pop-hd"><span class="tag evens">${name}</span><b>${odds(d)}</b></div><ul class="ga-sw">${b.legs.map((m, i) => `<li class="${gk && S._swapAnim === gk + "|" + i ? "pl-new" : ""}"><span>${esc(legText(m))} <small>${pct(m.p)}</small></span>${gk ? `<span class="pl-sw" role="button" tabindex="0" data-gaswap="${esc(gk)}|${i}|${esc(m.pid ? `P:${m.pid}:${m.stat}:${m.target}` : m.k)}" aria-label="Swap ${esc(legText(m))}" title="Not at your bookie? Swap it">${ROLL_SVG}</span>` : ""}</li>`).join("")}</ul>${gk ? `<div class="ga-addrow"><button class="ga-add" data-gaadd="${esc(gk)}">＋ Add a leg</button>${added ? `<button class="ga-add ghost" data-gaundo="${esc(gk)}">Undo</button>` : ""}</div>` : ""}<div class="pop-ft"><span>${pct(b.p)} chance${live ? " now" : ""}</span><button class="btn sm" data-gbb="${sport}|${g.id}|${b.legs.map(m => m.k).join(",")}|${live ? 1 : 0}|${esc(String(name).split(" ·")[0])}">Add to slip</button></div></div>`).join("");
+  const cards = picks.map(swapped).map(({ name, b, d, gk, added }) => `<div class="pop-card"><div class="pop-hd"><span class="tag evens">${name}</span><b>${odds(d)}</b></div><ul class="ga-sw">${b.legs.map((m, i) => `<li class="${gk && S._swapAnim === gk + "|" + i ? "pl-new" : ""}"><span>${esc(legText(m))} <small>${pct(m.p)}</small>${m.pid ? playerTag(m) : ""}</span>${gk ? `<span class="pl-sw" role="button" tabindex="0" data-gaswap="${esc(gk)}|${i}|${esc(m.pid ? `P:${m.pid}:${m.stat}:${m.target}` : m.k)}" aria-label="Swap ${esc(legText(m))}" title="Not at your bookie? Swap it">${ROLL_SVG}</span>` : ""}</li>`).join("")}</ul>${gk ? `<div class="ga-addrow"><button class="ga-add" data-gaadd="${esc(gk)}">＋ Add a leg</button>${added ? `<button class="ga-add ghost" data-gaundo="${esc(gk)}">Undo</button>` : ""}</div>` : ""}<div class="pop-ft"><span>${pct(b.p)} chance${live ? " now" : ""}</span><button class="btn sm" data-gbb="${sport}|${g.id}|${b.legs.map(m => m.k).join(",")}|${live ? 1 : 0}|${esc(String(name).split(" ·")[0])}">Add to slip</button></div></div>`).join("");
   const sBtn = m => live ? `<button class="odd addlive" data-liveleg="${sport}|${g.id}|${m.k}"><span class="pr">${odds(livePrice(m.p))}</span><span class="pp">${pct(m.p)}</span></button>` : oddBtn(sport, g, m.k);
   return `<section class="section"><h2>Ready-made accas${live ? asOf(g) : ""}</h2>${cards ? `<p class="sub" style="margin:-6px 0 8px">Low, medium and high odds bet builders for this game. Your bookie prices bet builders differently, so check theirs.</p><div class="pop-grid">${cards}</div>` : ""}
     ${sing.length && !(compact && cards) ? `<div class="pop-singles">${sing.map(m => `<div class="pop-s"><span>${esc(m.label)}</span>${sBtn(m)}</div>`).join("")}</div>` : ""}</section>`;
