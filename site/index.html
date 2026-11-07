@@ -452,6 +452,12 @@ a.prof-bdg{text-decoration:none}
 @media (min-width:600px){#main .trk{display:block;columns:2;column-gap:16px}#main .trk>*{break-inside:avoid;margin:0 0 14px;display:block}#main .trk>.trk-other{column-span:all}
   .g-cols:not(.one){display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);align-items:start;gap:22px}.drawer.full .dr-in{max-width:1380px}}
 @media (min-width:1500px){#main .trk{columns:3}}
+.fd-hero{background:linear-gradient(135deg,rgba(79,141,255,.16),rgba(255,122,47,.1)),var(--surface);border:1px solid var(--line);border-radius:18px;padding:18px;display:grid;gap:12px}.fd-hero.done{border-color:rgba(34,197,94,.55)}
+.fd-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}.fd-bal{font-family:var(--display);font-size:44px;font-weight:800;line-height:1.05}.fd-top small{color:var(--muted);font-size:12.5px}.fd-pl{display:grid;justify-items:end}.fd-pl b{font-family:var(--display);font-size:24px}.fd-pl small{font-size:12.5px;color:var(--muted)}
+.fd-bar{height:10px;border-radius:10px;background:var(--surface-3);overflow:hidden}.fd-bar i{display:block;height:100%;background:linear-gradient(90deg,var(--blue),var(--win));border-radius:10px}.fd-sub{font-size:13px;color:var(--fg-2)}
+.fd-form{display:grid;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px}.fd-list{display:grid;gap:10px}
+.fd-bet{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px;display:grid;gap:6px}.fd-bet.won{box-shadow:inset 3px 0 0 var(--win)}.fd-bet.lost{box-shadow:inset 3px 0 0 var(--loss)}
+.fd-bhd{display:flex;justify-content:space-between;gap:10px;align-items:baseline}.fd-bhd b{font-size:14.5px}.fd-res{font-size:12px;font-weight:800;white-space:nowrap;color:var(--fg-2)}.fd-res.won{color:var(--win)}.fd-res.lost{color:var(--loss)}.fd-meta{font-size:12.5px;color:var(--muted)}.fd-acts{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .lg-sub{padding:10px 14px 2px;font-size:11px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--blue-2);border-top:1px solid var(--line)}.lg-sub + .fx{border-top:0}
 .lg-hd.live-hd{color:var(--live)}
 .lg-hd.live-hd span{display:flex;align-items:center;gap:8px}
@@ -1236,7 +1242,7 @@ const store = { get(k, d) { try { const v = localStorage.getItem("mde:" + k); re
 
 const S = { comments: {}, data: null, logos: {}, sport: store.get("sport", "football"), fmt: store.get("fmt", "frac"), slip: store.get("slip", []),
             stake: store.get("stake", 5), slipTot: store.get("slipTot", null), chalOdds: store.get("chalOdds", "over"), chalWin: store.get("chalWin", "24h"), winOnly: store.get("winOnly", false), boxSide: {}, league: "all", win: "today", drawer: null, slipOpen: false };
-const VIEWS = [["check", "Bet checker", "Checker"], ["live", "Live", "Live"], ["fixtures", "Fixtures", "Games"], ["acca", "Accas", "Accas"], ["multi", "Multi-sport", "Multi"], ["bets", "Best Bets", "Tips"], ["mybets", "My Bets", "My Bets"], ["friends", "Social", "Social"], ["feed", "Feed", "Feed"], ["tables", "Tables", "Tables"], ["news", "News", "News"], ["challenge", "£1K Challenge", "£1K"]];
+const VIEWS = [["check", "Bet checker", "Checker"], ["live", "Live", "Live"], ["fixtures", "Fixtures", "Games"], ["acca", "Accas", "Accas"], ["multi", "Multi-sport", "Multi"], ["bets", "Best Bets", "Tips"], ["mybets", "My Bets", "My Bets"], ["friends", "Social", "Social"], ["feed", "Feed", "Feed"], ["funded", "Funded", "Funded"], ["tables", "Tables", "Tables"], ["news", "News", "News"], ["challenge", "£1K Challenge", "£1K"]];
 const TAB_ICONS = (() => { const svg = p => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`; return {
   live: svg('<circle cx="12" cy="12" r="2.2"/><path d="M7.8 7.8a6 6 0 000 8.4M16.2 7.8a6 6 0 010 8.4M5 5a10 10 0 000 14M19 5a10 10 0 010 14"/>'),
   fixtures: svg('<rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/>'),
@@ -1246,11 +1252,12 @@ const TAB_ICONS = (() => { const svg = p => `<svg viewBox="0 0 24 24" fill="none
   friends: svg('<circle cx="9" cy="8.5" r="3.3"/><path d="M3 19.5c.9-3.3 3.3-5 6-5s5.1 1.7 6 5"/><path d="M16 5.6a3.2 3.2 0 010 6M17.6 14.6c1.6.7 2.8 2.3 3.4 4.9"/>'),
   tables: svg('<rect x="3.5" y="4" width="17" height="16" rx="2.5"/><path d="M3.5 9.5h17M3.5 14.8h17M9 9.5V20"/>'),
   news: svg('<path d="M5 4.5h11.5V19a1.5 1.5 0 001.5 1.5H6.5A1.5 1.5 0 015 19z"/><path d="M16.5 8.5H19a1 1 0 011 1V19a1.5 1.5 0 01-1.5 1.5M8 8.5h5.5M8 12h5.5M8 15.5h3.5"/>'),
+  funded: svg('<path d="M12 3l7 3v5c0 4.4-3 8.3-7 10-4-1.7-7-5.6-7-10V6z"/><path d="M9 12l2 2 4-4"/>'),
   challenge: svg('<path d="M8 4h8v5a4 4 0 01-8 0z"/><path d="M8 6H5a2 2 0 002 4h1M16 6h3a2 2 0 01-2 4h-1M12 13v3.5M8.5 20h7M9.5 20l.5-3.5h4l.5 3.5"/>')
 }; })();
 /* Social is switched off for now (kept for a future update): set to true to bring back the tab, the page and the Friends link */
 const SOCIAL_ON = false;
-const NAV = [["live", "Live", ["live"], "live"], ["games", "Games", ["fixtures", "tables", "news"], "fixtures"], ["betsg", "Bets", ["bets", "acca", "check", "mybets"], "bets"], ["challenge", "£1K Challenge", ["challenge"], "challenge"], ["feedg", "Feed", ["feed"], "friends"], ...(SOCIAL_ON ? [["friends", "Social", ["friends"], "friends"]] : [])];
+const NAV = [["live", "Live", ["live"], "live"], ["games", "Games", ["fixtures", "tables", "news"], "fixtures"], ["betsg", "Bets", ["bets", "acca", "check", "mybets"], "bets"], ["challenge", "£1K Challenge", ["challenge"], "challenge"], ["fundedg", "Funded", ["funded"], "funded"], ["feedg", "Feed", ["feed"], "friends"], ...(SOCIAL_ON ? [["friends", "Social", ["friends"], "friends"]] : [])];
 const SUBNAME = { fixtures: "Fixtures", tables: "Tables", news: "News", bets: "Tips", acca: "Accas", check: "Checker", mybets: "My Bets" };
 const NAV_ALIAS = { multi: "acca", stats: "mybets" };   /* pages reached from inside another tab */
 const navOf = v => NAV.find(n => n[2].includes(NAV_ALIAS[v] || v));
@@ -3839,6 +3846,43 @@ function botPost(it) {
       <ul class="bot-legs">${L.map(l => `<li><span class="bot-ok">✓</span><span><b>${esc(String(legText(l) || "").replace(/ \(in-play\)$/, ""))}</b><small>${esc(l.match || l.team || "")}</small></span></li>`).join("")}</ul>
       <div class="bot-ft"><span>£10 returned <b class="pos">${money(10 * dec)}</b></span><span>Built by Accabox before kick-off · we had it at ${pct(+w.chance || 0)}</span></div></div></article>`;
 }
+/* ---------- Funded: a funded-trader evaluation (e.g. BetPro IQ). Singles only; start balance and profit target; saved with your £1K data so it's on every device ---------- */
+const FUNDED0 = () => ({ name: "BetPro IQ", start: 125, target: 40, bets: [], started: new Date().toISOString() });
+const fundedNow = () => ({ ...FUNDED0(), ...((S.chalAll || {}).funded || {}) });
+function fundedSave(F) { if (!S.user) { toast("Sign in to save your funded account"); return; } S.chalAll = { ...(S.chalAll || { v: 4, ladders: [] }), funded: F }; saveChalAll(); }
+const fPL = b => b.result === "won" ? b.stake * (b.dec - 1) : b.result === "lost" ? -b.stake : 0;
+function fundedStats(F) { const settled = F.bets.filter(b => b.result !== "open"), pl = settled.reduce((a, b) => a + fPL(b), 0), open = F.bets.filter(b => b.result === "open"), staked = open.reduce((a, b) => a + b.stake, 0);
+  const bal = F.start + pl, goal = F.start * (1 + F.target / 100), won = settled.filter(b => b.result === "won").length, dec = settled.filter(b => b.result !== "void").length;
+  return { bal, pl, goal, open, staked, avail: bal - staked, won, dec, pct: pl / F.start * 100, done: bal >= goal - 1e-9 }; }
+function fundedAuto(F) {   /* settle tracked singles by themselves */
+  let n = 0; for (const b of F.bets) { if (b.result !== "open" || !(b.legs || []).length) continue; const st = legInfo0(b.legs[0]).st;
+    if (st === "hit" || st === "miss" || st === "void") { b.result = st === "hit" ? "won" : st === "miss" ? "lost" : "void"; b.settledAt = new Date().toISOString(); n++; } }
+  if (n && S.chalLoaded) { fundedSave(F); toast(`Funded: ${n} bet${n > 1 ? "s" : ""} settled`); }
+}
+function viewFunded() {
+  if (!S.user) return `<div class="acca-panel"><b>Funded account</b><p class="risk-desc" style="margin:0">Track a funded-betting evaluation: balance, singles, and your profit target. <a href="#account">Sign in</a> to start.</p></div>`;
+  if (!S.chalLoaded) return `<div class="loadbox">Loading…</div>`;
+  const F = fundedNow(); if (!S._fundAutoAt || Date.now() - S._fundAutoAt > 5000) { S._fundAutoAt = Date.now(); setTimeout(() => fundedAuto(F), 0); }
+  const X = fundedStats(F), prog = Math.max(0, Math.min(1, X.pl / (X.goal - F.start))), sign = v => (v > 0 ? "+" : v < 0 ? "-" : "") + money(Math.abs(v));
+  const betRow = b => { const l = (b.legs || [])[0], info = l ? legInfo(l) : null;
+    return `<article class="fd-bet ${b.result}"><div class="fd-bhd"><b>${esc(b.text)}</b><span class="fd-res ${b.result}">${b.result === "open" ? "Open" : b.result === "won" ? `Won ${sign(fPL(b))}` : b.result === "lost" ? `Lost ${sign(fPL(b))}` : "Void"}</span></div>
+      <div class="fd-meta">${money(b.stake)} at ${odds(b.dec)} · returns ${money(b.stake * b.dec)}${b.result === "open" ? "" : ` · ${ago2(b.settledAt || b.at)}`}</div>${b.result === "open" && info ? `<div class="fd-leg">${info.html}</div>` : ""}
+      ${b.result === "open" ? `<div class="fd-acts"><button class="btn sm win" data-fres="${b.id}|won">Won</button><button class="btn sm lose" data-fres="${b.id}|lost">Lost</button><button class="btn sm ghost" data-fres="${b.id}|void">Void</button><button class="linkbtn" data-fdel="${b.id}">Delete</button></div>` : `<div class="fd-acts"><button class="linkbtn" data-fres="${b.id}|open">Reopen</button><button class="linkbtn" data-fdel="${b.id}">Delete</button></div>`}</article>`; };
+  const settled = F.bets.filter(b => b.result !== "open").sort((a, b) => String(b.settledAt || b.at).localeCompare(String(a.settledAt || a.at)));
+  return `<section class="fd-hero ${X.done ? "done" : ""}"><div class="fd-top"><div><span class="eyebrow">${esc(F.name)} · evaluation</span><div class="fd-bal">${money(X.bal)}</div><small>Started at ${money(F.start)} · target ${money(X.goal)} (+${F.target}%)</small></div>
+      <div class="fd-pl ${X.pl > 0 ? "pos" : X.pl < 0 ? "neg" : ""}"><b>${sign(X.pl)}</b><small>${X.pct >= 0 ? "+" : ""}${X.pct.toFixed(1)}%</small></div></div>
+    <div class="fd-bar"><i style="width:${prog * 100}%"></i></div>
+    <div class="fd-sub">${X.done ? "🏆 Target reached: you've passed the evaluation" : `${money(Math.max(0, X.goal - X.bal))} to go`} · ${X.dec ? `${X.won}/${X.dec} won` : "no settled bets yet"}${X.open.length ? ` · ${money(X.staked)} in ${X.open.length} open bet${X.open.length > 1 ? "s" : ""}` : ""}</div></section>
+  <section class="section"><h2>Add a bet</h2><div class="fd-form">
+    <div class="field"><label for="fdText">Bet <small style="color:var(--muted);font-weight:500">singles only, e.g. "Arsenal v Spurs: Arsenal to win" or "Haaland to score"</small></label><input id="fdText" autocomplete="off" placeholder="Leeds v Spurs: Over 2.5 goals"></div>
+    <div class="addrow"><div class="field" style="flex:1 1 90px"><label for="fdOdds">Odds</label><input id="fdOdds" placeholder="2.10 or 11/10" autocomplete="off"></div><div class="field" style="flex:1 1 90px"><label for="fdStake">Stake £</label><input id="fdStake" type="number" inputmode="decimal" step="0.5" min="0" value="${Math.max(1, Math.round(X.bal * .02 * 2) / 2)}"></div></div>
+    <button class="btn" data-fadd>Add bet</button><p class="note" style="margin:0">It tracks live and settles itself when it can match the game; otherwise mark it Won / Lost.</p></div></section>
+  ${X.open.length ? `<section class="section"><h2>Open bets</h2><div class="fd-list">${X.open.map(betRow).join("")}</div></section>` : ""}
+  <section class="section"><h2>History</h2>${settled.length ? `<div class="fd-list">${settled.map(betRow).join("")}</div>` : `<div class="empty">Settled bets show here.</div>`}</section>
+  <details class="section maths"><summary><h2 style="display:inline">Account settings</h2></summary><div class="fd-form" style="margin-top:10px">
+    <div class="addrow"><div class="field" style="flex:2 1 140px"><label for="fdName">Name</label><input id="fdName" value="${esc(F.name)}"></div><div class="field" style="flex:1 1 80px"><label for="fdStart">Start £</label><input id="fdStart" type="number" inputmode="decimal" value="${F.start}"></div><div class="field" style="flex:1 1 80px"><label for="fdTarget">Target %</label><input id="fdTarget" type="number" inputmode="decimal" value="${F.target}"></div></div>
+    <div class="addrow"><button class="btn ghost sm" data-fset>Save settings</button><button class="linkbtn" data-freset style="color:var(--loss)">Start a new evaluation</button></div></div></details>`;
+}
 /* the Feed tab: only Accabox posts. Its ready-made accas for the next games, then the ones that won */
 async function loadBotWins() {
   S.botWinsAt = Date.now(); if (!sb || !S.user) { S.botWins = []; render(); return; }
@@ -4985,7 +5029,7 @@ function render() {
   setTimeout(autoSettle, 0);
   const v = view();
   { const g = navOf(v); if (g && g[2].length > 1 && S.lastSub[g[0]] !== v) { S.lastSub[g[0]] = v; store.set("lastSub", S.lastSub); } }
-  const MAIN = $("#main"), html = iosTip() + subnav(v) + (v === "feed" ? viewFeed() : v === "friends" ? viewAccount("friends") : v === "account" ? viewAccount() : v === "perks" ? viewPerks() : v === "tweets" ? viewTweets() : v === "stats" ? viewStats() : v === "tables" ? viewTables() : v === "news" ? viewNews() : v === "fixtures" ? viewFixtures() : v === "bets" ? viewBets() : v === "mybets" ? viewMyBets() : v === "multi" ? viewMulti() : v === "acca" ? viewAcca() : v === "check" ? viewCheck() : v === "challenge" ? viewChallenge() : viewLive());
+  const MAIN = $("#main"), html = iosTip() + subnav(v) + (v === "funded" ? viewFunded() : v === "feed" ? viewFeed() : v === "friends" ? viewAccount("friends") : v === "account" ? viewAccount() : v === "perks" ? viewPerks() : v === "tweets" ? viewTweets() : v === "stats" ? viewStats() : v === "tables" ? viewTables() : v === "news" ? viewNews() : v === "fixtures" ? viewFixtures() : v === "bets" ? viewBets() : v === "mybets" ? viewMyBets() : v === "multi" ? viewMulti() : v === "acca" ? viewAcca() : v === "check" ? viewCheck() : v === "challenge" ? viewChallenge() : viewLive());
   if (MAIN._h !== html) {
     const sx = [...MAIN.querySelectorAll(".tw,.chips,.scroller")].map(e => e.scrollLeft), sy = [...MAIN.querySelectorAll(".tw-games")].map(e => e.scrollTop);
     const ae = document.activeElement, keep = ae && ae.id && MAIN.contains(ae) && /^(INPUT|TEXTAREA)$/.test(ae.tagName) ? { id: ae.id, a: ae.selectionStart, b: ae.selectionEnd } : null;
@@ -5188,6 +5232,16 @@ document.addEventListener("click", async e => {
   else if (d.gomulti !== undefined) { location.hash = "multi"; }
   else if (d.inbox !== undefined) { S._seenWas = store.get("notesSeen", 0); store.set("notesSeen", Date.now()); S.inboxOpen = true; inboxBadge(); render(); }
   else if (d.inboxclear !== undefined) { store.set("notes", []); inboxBadge(); render(); }
+  else if (d.fadd !== undefined) { const F = fundedNow(), txt = (($("#fdText") || {}).value || "").trim(), dec = parseOdds(($("#fdOdds") || {}).value || ""), stake = +(($("#fdStake") || {}).value) || 0;
+    if (!txt) { toast("Type the bet first"); return; } if (!dec) { toast("Add the odds, e.g. 2.10 or 11/10"); return; } if (!(stake > 0)) { toast("Add your stake"); return; }
+    const r = parseBet(txt, playerIndexFor(txt).idx); if (r.legs.length > 1) { toast("Funded accounts only allow singles: one selection per bet"); return; }
+    if (stake > fundedStats(F).avail + 1e-9) { toast(`You've only got ${money(fundedStats(F).avail)} available`); return; }
+    F.bets = [{ id: "f" + Date.now().toString(36), text: r.legs[0] ? (r.legs[0].pid ? legText(r.legs[0]) : `${r.legs[0].label} (${r.legs[0].match})`) : txt, legs: r.legs.slice(0, 1), dec: Math.round(dec * 1000) / 1000, stake, result: "open", at: new Date().toISOString() }, ...F.bets];
+    fundedSave(F); toast(r.legs.length ? "Added. It'll track and settle itself" : "Added. Mark it Won or Lost when it's done"); }
+  else if (d.fres) { const [id, res] = d.fres.split("|"), F = fundedNow(), b = F.bets.find(x => x.id === id); if (!b) return; b.result = res; b.settledAt = res === "open" ? null : new Date().toISOString(); fundedSave(F); }
+  else if (d.fdel) { const F = fundedNow(); F.bets = F.bets.filter(x => x.id !== d.fdel); fundedSave(F); toast("Bet deleted"); }
+  else if (d.fset !== undefined) { const F = fundedNow(); F.name = (($("#fdName") || {}).value || "").trim() || F.name; F.start = +(($("#fdStart") || {}).value) || F.start; F.target = +(($("#fdTarget") || {}).value) || F.target; fundedSave(F); toast("Saved"); }
+  else if (d.freset !== undefined) { const F = fundedNow(); F.past = [...(F.past || []), { ...F, past: undefined, ended: new Date().toISOString() }].slice(-10); F.bets = []; F.started = new Date().toISOString(); fundedSave(F); toast("New evaluation started"); }
   else if (d.feedtab) { S.feedTab = d.feedtab; render(); scrollTo({ top: 0 }); }
   else if (d.allbadges) { S.allBadges = d.allbadges; render(); }
   else if (d.mbtab) { S.mbTab = d.mbtab; render(); scrollTo({ top: 0 }); }

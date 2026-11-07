@@ -419,6 +419,9 @@ No server of our own. ESPN is free, has no key and is about 1–3 minutes behind
 - Save buttons (import and slip) lock with "Saving…" until the save finishes (`S._saving`), so repeated taps can't save the same bet many times.
 - `findGame` uses an id index and `mkt` a per-game Map (both WeakMap caches), as the extra games made the old scans slow.
 
+## Funded tab (Nov 7)
+- `#funded` (`viewFunded`), nav tab "Funded". A funded-betting evaluation (owner uses BetPro IQ): start £125, target +40% (£175), singles only (`parseBet` > 1 leg is refused), stake can't exceed available balance. Saved inside the £1K `challenges` row as `S.chalAll.funded` (`fundedSave` → `saveChalAll`), so it's on every device with no SQL. Bets track live via their leg and settle themselves (`fundedAuto`), else Won/Lost/Void buttons; settings (name, start, target %) and "Start a new evaluation" (old ones kept in `funded.past`).
+
 ## Fold / tablet layout (Nov 7)
 - @media (min-width:600px) (the unfolded Fold is ~690 CSS px): My Bets `.trk` becomes 2 columns (CSS columns, cards don't split), 3 from 1500px; game page `.g-cols` two columns from 700px (was 1100). Other grids (live cards, tips, presets, ready-mades) already auto-fill.
 
