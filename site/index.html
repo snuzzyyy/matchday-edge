@@ -3205,7 +3205,7 @@ function betCard(t) {
   const x = t.noX ? "" : t.saved ? `<button class="x" data-delbet="${t.saved}" aria-label="Delete bet">✕</button>` : `<button class="x" data-untrack="${t.id}" aria-label="Stop tracking">✕</button>`;
   const BC = !t.result || t.result === "open" ? betChance(t.legs) : null, showC = BC && !lost && !(hit && hit + voids === n) && BC.unknown < n;
   const chanceCell = showC ? `<span title="${BC.unknown ? `${BC.unknown} leg${BC.unknown > 1 ? "s" : ""} you mark yourself not counted` : ""}"><small>Chance</small><b style="color:${tierColor(BC.p)}">${BC.p > 0 && BC.p < .005 ? "<1%" : pct(BC.p)}</b></span>` : "", chanceBar = showC ? `<div class="meter bc-meter"><i style="width:${Math.max(2, BC.p * 100)}%"></i></div>` : "";
-  return `<article class="trk-card ${t.chal ? "chalcard" : ""}"><div class="trk-hd"><div>${t.tag ? `<a class="chaltag" href="#challenge" ${t.chal ? `data-chalsel="${t.chal}"` : ""}>🏆 ${esc(t.tag)} ›</a>` : ""}<b>${esc(title)}</b>${t.free ? FREE_TAG : ""}${srcTag(t.legs)}</div>${overall}${x}</div>${t.stake || t.dec || chanceCell ? `<div class="bc-money ${chanceCell ? "four" : ""}"><span><small>${t.free ? "Free stake" : "Stake"}</small><b>${t.stake ? money(+t.stake) : "–"}</b></span><span><small>Odds</small><b>${t.dec ? odds(t.dec) : "–"}</b></span><span><small>${t.result === "won" ? "Returned" : "Returns"}</small><b class="pos">${t.stake ? money(t.stake * (t.dec || 1) - (t.free || 0)) : "–"}</b></span>${chanceCell}</div>` : ""}${segs}<div class="bc-legs">${legGroups(t.legs, info)}</div>${t.bet ? `<div class="bc-foot">${editBtn(t.bet)}${freeBtn(t.bet)}</div>` : ""}</article>`;
+  return `<article class="trk-card ${t.chal ? "chalcard" : ""}"><div class="trk-hd"><div>${t.tag ? `<a class="chaltag" href="#challenge" ${t.chal ? `data-chalsel="${t.chal}"` : ""}>🏆 ${esc(t.tag)} ›</a>` : ""}<b>${esc(title)}</b>${t.free ? FREE_TAG : ""}${srcTag(t.legs)}</div>${overall}${x}</div>${t.stake || t.dec || chanceCell ? `<div class="bc-money ${chanceCell ? "four" : ""}"><span><small>${t.free ? "Free stake" : "Stake"}</small><b>${t.stake ? money(+t.stake) : "–"}</b></span><span><small>Odds</small><b>${t.dec ? odds(t.dec) : "–"}</b></span><span><small>${t.result === "won" ? "Returned" : "Returns"}</small><b class="pos">${t.stake ? money(t.stake * (t.dec || 1) - (t.free || 0)) : "–"}</b></span>${chanceCell}</div>` : ""}${segs}<div class="bc-legs">${legGroups(t.legs, info)}</div>${t.bet ? `<div class="bc-foot">${t.bet.result === "open" && t.bet.user_id === (S.user || {}).id && info.some(i => i.st === "void") ? `<button class="fb-btn" data-editbet="${t.bet.id}" style="border-color:rgba(250,204,21,.55);color:#facc15">⚠️ Void leg · update returns</button>` : editBtn(t.bet)}${freeBtn(t.bet)}</div>` : ""}</article>`;
 }
 function trackerHTML(bare, extra) {
   const all = [...(S.tracked || []), ...(extra || [])], sportOf = t => (t.legs[0] || {}).sport, T = bare ? all : all.filter(t => sportOf(t) === S.sport), other = all.length - T.length;
@@ -3308,6 +3308,7 @@ function importSheet() {
     ${S.impEdit ? "" : `<div class="imp-ex">Examples: <button class="linkbtn" data-impex="Nicolas Jackson 2+ shots on target @ 2.50">Jackson 2+ shots on target</button> · <button class="linkbtn" data-impex="Luka Doncic 8+ assists @ 1.90">Doncic 8+ assists</button> · <button class="linkbtn" data-impex="Haaland to score @ 1.80">Haaland to score</button></div>`}
     <div id="impdyn">${impDyn()}</div>
     <div class="addrow"><div class="field" style="flex:1 1 100px"><label for="impodds">Odds</label><input id="impodds" value="${esc(S.impOddsTyped && S.impOdds ? S.impOdds : r.dec ? odds(r.dec) : "")}" placeholder="3.00 or 2/1"></div><div class="field" style="flex:1 1 100px"><label for="impstake">Stake £</label><input id="impstake" type="number" inputmode="decimal" min="0" step="0.5" value="${esc(S.impStake != null ? S.impStake : S.stake)}"></div></div>
+    ${S.impEdit ? `<div class="field"><label for="impret">Returns £ <small style="font-weight:500;color:var(--muted)">optional: e.g. after a void leg, type what your bookie now pays and we'll work out the odds</small></label><input id="impret" type="number" inputmode="decimal" min="0" step="0.01" placeholder="e.g. 9.58"></div>` : ""}
     <label class="fb-check"><input type="checkbox" id="impfree" ${S.impFree ? "checked" : ""}><span>🎁 I used a free bet <small>Free stake isn't taken off your balance, and a win pays the winnings only</small></span></label>
     <button class="btn" data-impgo>${S.impEdit ? "Save changes" : S.user ? "Save and track" : "Track this bet"}</button></div>`;
 }
@@ -5096,7 +5097,8 @@ document.addEventListener("click", async e => {
     if (loading && (r.missing.length || !r.legs.length) && Date.now() - (S._impLoadAt || (S._impLoadAt = Date.now())) < 8000) { toast("Still looking up the players. Try again in a second"); return; }   /* never block for long, and never once every player is found */
     S._impLoadAt = 0;
     const manual = impManual(r, false).map(label => ({ manual: true, label })), est = impEst(r.legs);
-    const dec = parseOdds(($("#impodds") || {}).value) || r.dec || (manual.length ? null : est), stake = +(($("#impstake") || {}).value) || 0;
+    const stake = +(($("#impstake") || {}).value) || 0, retv = +(($("#impret") || {}).value) || 0;
+    const dec = retv > 0 && stake > 0 ? Math.round(retv / stake * 1000) / 1000 : parseOdds(($("#impodds") || {}).value) || r.dec || (manual.length ? null : est);
     if (!dec) { S.impShotMsg = "Add the odds from your bet slip (e.g. 9/2 or 5.5), then tap Save."; impRefresh(); const o = $("#impodds"); if (o) o.focus(); return; }
     const legs = [...r.legs, ...manual], text = (legs.map(l => l.manual ? l.label : l.pid ? legText(l) : `${l.label} (${l.match})`).join(" + ") || raw.trim()).slice(0, 200);
     const done = msg => { S.importOpen = false; S.importText = ""; S.impOdds = ""; S.impOddsTyped = false; S.impStake = null; S.impFree = false; S.impShotMsg = ""; S.impEdit = null; saveImpDraft(); if (location.hash !== "#mybets") location.hash = "mybets"; render(); toast(msg); };
@@ -5345,6 +5347,15 @@ async function reloadSnapshot() {
 let tickN = 0;
 setInterval(() => { tickN++; const hot = liveBetCount() || (S.drawer && (g => g && isLive(g))(findGame(...S.drawer.split(":")))); if (hot || tickN % 2 === 0) liveTick(); }, 5000);   /* every 5 s while you have a bet in play or a live game open, otherwise every 10 s */
 setInterval(reloadSnapshot, 10 * 60e3);
+async function fixManualLegs() {
+  if (!S.user || !sb || !S.data || S._fixing) return; S._fixing = true;
+  try { const { idx } = playerIndex();
+    for (const b of (S.bets || []).filter(b => b.result === "open" && b.user_id === S.user.id && (b.legs || []).some(l => l.manual && !l.fst))) {
+      let n = 0; const legs = b.legs.map(l => { if (!l.manual || l.fst) return l; const r = parseBet(String(l.label || ""), idx); if (r.legs.length === 1 && !r.missing.length && !r.unread.length) { n++; return { ...r.legs[0], type: "prop" }; } return l; });
+      if (!n) continue; const u = await sb.from("bets").update({ legs }).eq("id", b.id).eq("user_id", S.user.id); if (!u.error) { b.legs = legs; render(); toast(`Matched ${n} leg${n > 1 ? "s" : ""} you were marking yourself. Now tracking live`); } }
+  } finally { S._fixing = false; }
+}
+setInterval(fixManualLegs, 30e3); setTimeout(fixManualLegs, 8e3);
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") liveTick(); });
 // coming back to the app: pick up changes made elsewhere (Pro given in Supabase, bets settled overnight, balance)
 let acctAt = Date.now();

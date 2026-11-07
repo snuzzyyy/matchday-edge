@@ -413,6 +413,8 @@ No server of our own. ESPN is free, has no key and is about 1–3 minutes behind
 
 ## Import + speed (Nov 7)
 - `skyText()` turns Sky's copied slip ("Selection / Market - A @ B / 1.14") into "A v B: Selection to win @ 1.14" (NBA "@" becomes "v" so it isn't read as odds); "N Fold @ 40.68" is taken as the slip total and dropped as a leg.
+- `fixManualLegs()` (every 30 s): open bets with "you mark this one" legs are re-read with `parseBet`; legs that now match switch to tracking and the bet is updated.
+- Edit bet has a "Returns £" box (`#impret`): odds = returns ÷ stake (e.g. after a void leg). Bet cards with a void leg show "⚠️ Void leg · update returns".
 - Already tracked: saving a bet whose legs match an open saved or tracked bet first turns the button amber ("Already tracked · tap again to add it twice", `S._dupOk`); a second tap saves it.
 - Save buttons (import and slip) lock with "Saving…" until the save finishes (`S._saving`), so repeated taps can't save the same bet many times.
 - `findGame` uses an id index and `mkt` a per-game Map (both WeakMap caches), as the extra games made the old scans slow.
