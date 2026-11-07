@@ -2638,7 +2638,10 @@ function playerIndex() {
   const idx = [], pending = [];
   for (const sp of ["nba", "football"]) for (const g of games(sp).filter(soon)) for (const [t, side] of [[g.home, "h"], [g.away, "a"]]) {
     const url = sp === "nba" ? `${SB}/basketball/nba/teams/${t.id}/roster` : `${SB}/soccer/${g.league}/teams/${t.id}/roster`, f = feed(url, 6 * 3600e3);
-    if (!f.data) { if (f.loading) pending.push(url); continue; }
+    /* backup that needs no download: players already in the game's box score or line-ups */
+    const rank0 = isLive(g) ? 0 : isPre(g) ? 1 : 2, when0 = +new Date(kick(g)), have = (((sp === "nba" ? g.box : g.lineups) || {})[side] || {}).players || [];
+    for (const P of have) { const nm = P.n || P.name; if (nm && P.id) idx.push({ sport: sp, gid: g.id, side, pid: String(P.id), name: nm, team: t.name, n: norm(nm), rank: rank0, when: when0 }); }
+    if (!f.data) { if (f.loading && !have.length) pending.push(url); continue; }
     const list = (f.data.athletes || []).flatMap(a => a.items ? a.items : [a]);
     const rank = isLive(g) ? 0 : isPre(g) ? 1 : 2, when = +new Date(kick(g));
     for (const a of list) if (a.displayName) idx.push({ sport: sp, gid: g.id, side, pid: a.id, name: a.displayName, team: t.name, n: norm(a.displayName), rank, when });
