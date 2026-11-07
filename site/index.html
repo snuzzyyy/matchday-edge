@@ -3173,7 +3173,7 @@ function playerTag(l) {
   if (!l.pid || l.group) return ""; const g = findGame(l.sport, l.gid); if (!g || g.status.state === "post") return "";
   const tag = (cls, t) => `<span class="ptag ${cls}">${cls === "on" ? "<i></i>" : ""}${t}</span>`;
   if (l.sport === "nba") { const P = (((g.box || {})[l.side] || {}).players || []).find(p => String(p.id) === String(l.pid)); if (isPre(g)) { const Q = g.lu && (g.lu[l.side] || []).find(p => norm(p.n) === norm(l.name)); if (!g.lu) return ""; return !Q ? "" : Q.out ? tag("out", "Out") : Q.pos ? tag("start", Q.st === "Confirmed" ? "✓ Starting" : "Expected to start") : tag("bench", "Off the bench"); }
-    if (!P) return ""; return P.on ? tag("on", "On court") : P.dnp ? tag("out", "Not playing") : tag("bench", "On the bench"); }
+    if (!P) return ""; return P.on ? tag("on", "On court") : P.dnp && (g.status.state === "post" || !/coach/i.test(P.why || "")) ? tag("out", "Not playing") : tag("bench", "On the bench"); }   /* ESPN calls every unused sub "coach's decision" until he comes on */
   const LU = (g.lineups || {})[l.side];
   if (isPre(g) && !LU && +new Date(kick(g)) - Date.now() < 90 * 60e3) loadDetail("football:" + g.id);   /* line-ups come out about an hour before */
   if (!LU) return isPre(g) ? tag("wait", "Line-ups not out yet") : "";
