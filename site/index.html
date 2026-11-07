@@ -3290,11 +3290,17 @@ function importShot(f) {
   if (!S.importOpen) { if (!(S.importText || "").trim()) { S.impOddsTyped = false; S.impOdds = ""; S.impStake = null; } S.importOpen = true; saveImpDraft(); S.slipOpen = false; render(); }
   S.impShotMsg = ""; setTimeout(() => readShot(f), 30);
 }
+/* read a funded bets screenshot (picked, pasted or dropped on the Funded page) into the Funded import box */
+async function fundedShot(f) { S.fdTab = "bets"; S.fdPanel = "imp"; render(); toast("Reading your screenshot…");
+        try { const T = await loadTess(), [c1, c2] = await Promise.all([shotToCanvas(f, 3000), shotToCanvas(f, 3000, true)]), a = (await T.recognize(c1, "eng")).data.text || "", b = (await T.recognize(c2, "eng")).data.text || "";
+          const sc = t => { const P = fundedParse(t); return P.length * 10 + P.filter(x => x.stake && x.dec).length; }, best = sc(b) >= sc(a) ? b : a;   /* read it two ways, keep the one that finds more (complete) bets */
+          S.fdImp = ((S.fdImp || "") + "\n" + best).trim(); S.fdImpOpen = true; render(); toast(fundedParse(S.fdImp).length ? "Read it. Check the bets and tap Add" : "Couldn't read bets from that. Try a clearer screenshot"); } catch { toast("Couldn't read that screenshot"); } }
+const onFunded = () => (location.hash || "").replace("#", "").split("/")[0] === "funded";
 document.addEventListener("paste", e => { const f = shotFrom(e.clipboardData && e.clipboardData.items); if (!f) return;
-  const ae = document.activeElement; if (!S.importOpen && ae && /^(INPUT|TEXTAREA)$/.test(ae.tagName)) return;
-  e.preventDefault(); importShot(f); });
+  const ae = document.activeElement; if (!onFunded() && !S.importOpen && ae && /^(INPUT|TEXTAREA)$/.test(ae.tagName)) return;
+  e.preventDefault(); if (onFunded()) fundedShot(f); else importShot(f); });
 document.addEventListener("dragover", e => { if (e.dataTransfer && [...e.dataTransfer.types].includes("Files")) e.preventDefault(); });
-document.addEventListener("drop", e => { const f = shotFrom(e.dataTransfer && e.dataTransfer.files); if (!f) return; e.preventDefault(); importShot(f); });
+document.addEventListener("drop", e => { const f = shotFrom(e.dataTransfer && e.dataTransfer.files); if (!f) return; e.preventDefault(); if (onFunded()) fundedShot(f); else importShot(f); });
 async function readShot(file) {
   const box = $("#impdyn"); const say = m => { if (box) { box.innerHTML = `<div class="loadbox" style="padding:10px">${m}</div>`; box.dataset.h = ""; } };
   say("Reading your screenshot…");
@@ -3320,7 +3326,9 @@ async function readShot(file) {
     S.impOddsTyped = false; if (odv) { S.impOdds = odm[1]; S.impOddsTyped = true; const o = $("#impodds"); if (o) o.value = odm[1]; } S.impShotMsg = `Found ${lines.length} leg${lines.length > 1 ? "s" : ""}. Check them below, then tap Track.`; saveImpDraft(); impRefresh();
   } catch (e) { S.impShotMsg = "Couldn't read that screenshot. Check your connection and try again, or type the bet below."; impRefresh(); }
 }
-function impParse() { const txt = S.importText || "", { idx, loading } = playerIndexFor(txt); return { loading, r: txt.trim() ? parseBet(txt, idx) : { legs: [], missing: [], unread: [], dec: null } }; }
+/* a funded-account slip (Single / Basketball / … / Stake / Potential Returns) pasted into the normal import: send it to Funded instead */
+const looksFunded = t => /^\s*(single|double|treble|trixie|\d+\s*-?\s*folds?|acca\w*)\s*$/im.test(t) && /^\s*(potential returns|returns)\b/im.test(t) && /^\s*stake\b/im.test(t) && fundedParse(t).length > 0;
+function impParse() { if (looksFunded(S.importText || "")) return { loading: false, funded: true, r: { legs: [], missing: [], unread: [], dec: null } }; const txt = S.importText || "", { idx, loading } = playerIndexFor(txt); return { loading, r: txt.trim() ? parseBet(txt, idx) : { legs: [], missing: [], unread: [], dec: null } }; }
 /* what we'll save: legs we can track, plus anything we couldn't match as legs you mark yourself */
 const impManual = (r, loading) => loading ? [] : [...r.missing.map(n => `${n}`), ...(r.unread || [])];
 function impEst(legs) {   // the app's odds for these legs, when it has a price for every one
@@ -3328,7 +3336,8 @@ function impEst(legs) {   // the app's odds for these legs, when it has a price 
   return legs.length ? Math.round(d * 100) / 100 : null;
 }
 function impDyn() {
-  const { loading, r } = impParse();
+  const { loading, r, funded } = impParse();
+  if (funded) return `<div class="acca-panel" style="gap:8px"><b>This is a funded-account bet</b><p class="risk-desc" style="margin:0">It goes in the Funded section so it doesn't mix with your own bets and balance.</p><button class="btn" data-tofunded>Add it to Funded</button></div>`;
   return `${S.impShotMsg ? `<div class="note">${esc(S.impShotMsg)}</div>` : ""}${loading ? `<div class="loadbox" style="padding:10px">Looking up the players…</div>` : ""}
     ${r.legs.length || (!loading && (r.missing.length || (r.unread || []).length)) ? `<div class="imp-legs">${r.legs.map(l => { const g = findGame(l.sport, l.gid), when = g ? (isLive(g) ? "Live · " + clockLabel(l.sport, g) : g.status.state === "post" ? "Finished" : whenLabel(kick(g))) : ""; const now = l.pid && g && !isPre(g) ? legValue(l) : null, nowTxt = now && now.v != null ? ` · <span class="imp-now">${now.v} so far${now.v >= l.target ? " ✓" : ""}</span>` : "";
       return l.pid ? `<div class="imp-leg ok"><span>✓</span><div><b>${esc(l.name)}</b> · ${esc(l.group ? `${l.target}+ ${l.label}` : propText(l, " ").trim())}${nowTxt}<small>${esc(l.team)} · ${g ? esc(vs(l.sport, g)) + " · " + when : ""}</small>${now && now.parts ? `<div class="tl-pps">${now.parts.map(({ m, r: q }) => `<span class="tl-pp">${esc(shortName(m.name))} <b>${q.v == null ? 0 : q.v}</b></span>`).join("")}</div>` : ""}</div></div>` : `<div class="imp-leg ok"><span>✓</span><div><b>${esc(l.label)}</b><small>${g ? esc(vs(l.sport, g)) + " · " + when : ""}</small></div></div>`; }).join("")}${impManual(r, loading).map(n => `<div class="imp-leg man"><span>✋</span><div><b>${esc(n)}</b><small>Couldn't match this to a game, so it's saved as a leg you mark yourself. Check the spelling if it should track.</small></div></div>`).join("")}</div>` : ""}`;
@@ -3899,7 +3908,7 @@ function fundedParse(raw) {
     const at2 = after.join("\n"), stake = +((at2.match(/stake\s*£?\s*([\d.]+)/i) || [])[1] || 0), ret = +((at2.match(/(?:potential\s+)?returns?\s*£?\s*([\d.]+)/i) || [])[1] || 0);
     const oddsTxt = (after.find(x => /^(\d+\/\d+|\d+\.\d+|evs|evens)$/i.test(x)) || selOdds || ""), dec = stake && ret && /open|won/i.test(st) ? Math.round(ret / stake * 1000) / 1000 : parseOdds(oddsTxt);
     const when = (at2.match(/(\d{1,2} [A-Za-z]{3,9} \d{4},? \d{1,2}:\d{2})/) || [])[1];
-    const [home, away0] = game.split(/\s+vs?\.?\s+/i), away = String(away0 || "").replace(/\s+(?:\S{1,2}|[^\w\s]+|\d+\/\d+)$/, "").replace(/[^\w\s.'&-]+$/, "").trim();
+    const [home, away0] = game.split(/\s+vs?\.?\s+/i), away = String(away0 || "").replace(/\s+(?:\S{1,2}|[^\w\s]+|\d+\/\d+|\d+(?:\.\d+)?)$/, "").replace(/[^\w\s.'&-]+$/, "").trim();
     if (!sel) return;
     const nbaG = gamesInText(normT(`${home} v ${away}`)).some(f => f.sp === "nba"), mk = market.toLowerCase(), unit = nbaG ? "points" : "goals";
     /* only bets we can follow get a live leg: match winner, totals, full-game handicaps, player overs and unders */
@@ -3972,7 +3981,7 @@ function viewFunded() {
   ${S.fdPanel === "imp" ? `<div class="fd-form fd-card">
     <button type="button" class="shotbtn" data-fdshot><span>📷</span><span><b>Read a screenshot</b><small>Of your bets list. It stays on your device.</small></span></button>
     <div class="field"><label for="fdImp">Or paste your bets</label><textarea id="fdImp" rows="4" placeholder="Single · Basketball · Open · Denver Nuggets (-4) · …">${esc(S.fdImp || "")}</textarea></div>
-    ${(() => { const P = fundedParse(S.fdImp || ""); return P.length ? `<div class="fd-list">${P.map(b => `<div class="imp-leg ok"><span>${b.legs.length ? "✓" : "✋"}</span><div><b>${esc(b.text)}</b><small>${b.stake && b.dec ? `${money(b.stake)} at ${odds(b.dec)}` : `${b.dec ? odds(b.dec) + " · " : ""}<b style="color:var(--amber)">no stake yet</b>`} · ${b.result === "open" ? "open" : b.result}${b.legs.length ? " · tracks live" : " · result from BetPro"}</small></div></div>`).join("")}</div>${P.some(b => !b.stake) ? `<p class="note" style="margin:0">Bets with no stake look like a bet slip before placing. Place them, then import from BetPro's My Bets so the stakes come through.</p>` : ""}${P.filter(b => b.stake && b.dec).length ? `<button class="btn" data-fdimpgo>Add ${P.filter(b => b.stake && b.dec).length} bet${P.filter(b => b.stake && b.dec).length > 1 ? "s" : ""}</button>` : ""}` : (S.fdImp || "").trim() ? `<p class="note" style="margin:0">Couldn't read any bets from that yet. Make sure it includes the market line (… · Team A vs Team B), the odds and the stake.</p>` : ""; })()}
+    ${(() => { const P = fundedParse(S.fdImp || ""); return P.length ? `<div class="fd-list">${P.map(b => `<div class="imp-leg ok"><span>${b.legs.length ? "✓" : "✋"}</span><div><b>${esc(b.text)}</b><small>${b.stake && b.dec ? `${money(b.stake)} at ${odds(b.dec)}` : `${b.dec ? odds(b.dec) + " · " : ""}<b style="color:var(--amber)">no stake yet</b>`} · ${b.result === "open" ? "open" : b.result}${b.legs.length ? " · tracks live" : " · you mark the result"}</small></div></div>`).join("")}</div>${P.some(b => !b.stake) ? `<p class="note" style="margin:0">Bets with no stake look like a bet slip before placing. Place them, then import from BetPro's My Bets so the stakes come through.</p>` : ""}${P.filter(b => b.stake && b.dec).length ? `<button class="btn" data-fdimpgo>Add ${P.filter(b => b.stake && b.dec).length} bet${P.filter(b => b.stake && b.dec).length > 1 ? "s" : ""}</button>` : ""}` : (S.fdImp || "").trim() ? `<p class="note" style="margin:0">Couldn't read any bets from that yet. Make sure it includes the market line (… · Team A vs Team B), the odds and the stake.</p>` : ""; })()}
   </div>` : ""}
   ${S.fdPanel === "add" ? `<div class="fd-form fd-card" id="fdAdd">
     <div class="field"><label for="fdText">Bet <small style="color:var(--muted);font-weight:500">e.g. "Arsenal v Spurs: Arsenal to win", or several match winners for an acca or "Haaland to score"</small></label><input id="fdText" autocomplete="off" placeholder="Leeds v Spurs: Over 2.5 goals"></div>
@@ -5332,6 +5341,7 @@ document.addEventListener("click", async e => {
   else if (d.gomulti !== undefined) { location.hash = "multi"; }
   else if (d.inbox !== undefined) { S._seenWas = store.get("notesSeen", 0); store.set("notesSeen", Date.now()); S.inboxOpen = true; inboxBadge(); render(); }
   else if (d.inboxclear !== undefined) { store.set("notes", []); inboxBadge(); render(); }
+  else if (d.tofunded !== undefined) { S.fdImp = ((S.fdImp || "") + "\n" + (S.importText || "")).trim(); S.importText = ""; const t = $("#imptext"); if (t) t.value = ""; try { saveImpDraft(); } catch (e) {} S.fdTab = "bets"; S.fdPanel = "imp"; location.hash = "#funded"; render(); }
   else if (d.fdtab) { S.fdTab = d.fdtab; S.fpOpen = null; render(); }
   else if (d.fdpanel) { S.fdPanel = S.fdPanel === d.fdpanel ? null : d.fdpanel; render(); }
   else if (d.fptype) { S.fpType = d.fptype; S.fpOpen = null; S.fpSeed = 0; render(); }
@@ -5355,10 +5365,7 @@ document.addEventListener("click", async e => {
     for (const b of P) { if (!b.stake || !b.dec || have.has(key(b))) continue; F.bets.unshift({ id: "f" + Date.now().toString(36) + n, ...b, settledAt: b.result === "open" ? null : new Date().toISOString() }); n++; }
     S.fdImp = ""; S.fdImpOpen = false; S.fdPanel = null; fundedSave(F); toast(n ? `Added ${n} bet${n > 1 ? "s" : ""} to your funded account` : "Those bets are already in"); }
   else if (d.fdshot !== undefined) { let inp = document.getElementById("fdShotPick"); if (!inp) { inp = document.createElement("input"); inp.type = "file"; inp.accept = "image/*"; inp.id = "fdShotPick"; inp.style.display = "none"; document.body.appendChild(inp);
-      inp.addEventListener("change", async () => { const f = inp.files && inp.files[0]; inp.value = ""; if (!f) return; toast("Reading your screenshot…");
-        try { const T = await loadTess(), [c1, c2] = await Promise.all([shotToCanvas(f, 3000), shotToCanvas(f, 3000, true)]), a = (await T.recognize(c1, "eng")).data.text || "", b = (await T.recognize(c2, "eng")).data.text || "";
-          const sc = t => { const P = fundedParse(t); return P.length * 10 + P.filter(x => x.stake && x.dec).length; }, best = sc(b) >= sc(a) ? b : a;   /* read it two ways, keep the one that finds more (complete) bets */
-          S.fdImp = ((S.fdImp || "") + "\n" + best).trim(); S.fdImpOpen = true; render(); toast(fundedParse(S.fdImp).length ? "Read it. Check the bets and tap Add" : "Couldn't read bets from that. Try a clearer screenshot"); } catch { toast("Couldn't read that screenshot"); } }); }
+      inp.addEventListener("change", () => { const f = inp.files && inp.files[0]; inp.value = ""; if (f) fundedShot(f); }); }
     inp.click(); }
   else if (d.fadd !== undefined) { const F = fundedNow(), txt = (($("#fdText") || {}).value || "").trim(), dec = parseOdds(($("#fdOdds") || {}).value || ""), stake = +(($("#fdStake") || {}).value) || 0;
     if (!txt) { toast("Type the bet first"); return; } if (!dec) { toast("Add the odds, e.g. 2.10 or 11/10"); return; } if (!(stake > 0)) { toast("Add your stake"); return; }
