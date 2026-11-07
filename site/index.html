@@ -793,6 +793,7 @@ a.prof-bdg{text-decoration:none}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 .acca-ctrl{display:grid;gap:10px}
 .chip.win-only[aria-pressed=true]{background:rgba(250,204,21,.15);color:#facc15;border-color:rgba(250,204,21,.55);box-shadow:none}
+.ga-sw{list-style:none;padding:0;margin:0;display:grid;gap:6px}.ga-sw li{position:relative;display:grid;grid-template-columns:minmax(0,1fr) 30px;gap:8px;align-items:center}.ga-sw li>span:first-child::before{content:"• ";color:var(--muted)}
 .pl-legs li{position:relative}.pl-legs li:has(.pl-sw){grid-template-columns:34px minmax(0,1fr) 30px}.pl-sw{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;color:var(--fg-2);border:1px solid var(--line-2);background:var(--surface-2);cursor:pointer;transition:transform .2s,color .2s}.pl-sw svg{width:14px;height:14px}.pl-sw:hover{color:var(--tang);transform:rotate(-90deg)}
 .pl-new{animation:plSwap .75s cubic-bezier(.2,.8,.2,1)}.pl-new .pl-sw{color:var(--tang)}.pl-new::after{content:"";position:absolute;inset:-4px -6px;border-radius:12px;box-shadow:0 0 0 1.5px rgba(255,122,47,.7),0 0 18px rgba(255,122,47,.35);animation:plGlow 1s ease-out forwards;pointer-events:none}
 @keyframes plSwap{0%{opacity:0;transform:perspective(400px) rotateX(-85deg) translateY(-6px)}60%{opacity:1;transform:perspective(400px) rotateX(12deg)}100%{transform:none}}@keyframes plGlow{0%{opacity:1}100%{opacity:0}}
@@ -2520,7 +2521,13 @@ function popularHTML(sport, g, compact) {
   const keys = sport === "nba" ? ["ML1", "ML2", "SP1", "SP2", "TO", "TU"] : ["1", "X", "2", "O25", "U25", "BTTS"], sing = keys.map(k => opts.find(m => m.k === k)).filter(Boolean);
   if (live && !picks.length) return "";   /* in play with no sensible acca left: say nothing rather than show 50/1 singles */
   if (!picks.length && !sing.length) return "";
-  const cards = picks.map(({ name, b, d }) => `<div class="pop-card"><div class="pop-hd"><span class="tag evens">${name}</span><b>${odds(d)}</b></div><ul>${b.legs.map(m => `<li>${esc(legText(m))} <small>${pct(m.p)}</small></li>`).join("")}</ul><div class="pop-ft"><span>${pct(b.p)} chance${live ? " now" : ""}</span><button class="btn sm" data-gbb="${sport}|${g.id}|${b.legs.map(m => m.k).join(",")}|${live ? 1 : 0}|${esc(String(name).split(" ·")[0])}">Add to slip</button></div></div>`).join("");
+  /* pre-match: any leg can be swapped for the next best bet in this game (↻), and the odds update */
+  const swapped = pk => { if (live) return pk; const gk = `${sport}${g.id}|${pk.name}`, sw = (S.gaSwap || {})[gk]; if (!sw) return { ...pk, gk };
+    const legs = [...pk.b.legs]; for (const i of Object.keys(sw).map(Number)) { const cur = legs[i]; if (!cur) continue; const others = legs.filter((_, j) => j !== i), key = l => l.pid ? `P:${l.pid}:${l.stat}:${l.target}` : l.k;
+      const m = legOptions(sport, g).map(x => x.m).filter(m => !sw[i].includes(m.k) && !others.some(o => key(o) === m.k || conflicts(key(o), m.k))).sort((a, b) => (Math.abs(Math.log(priceOf(a) / (cur.dec || priceOf(a)))) - .6 * a.p) - (Math.abs(Math.log(priceOf(b) / (cur.dec || priceOf(b)))) - .6 * b.p))[0];
+      if (m) legs[i] = { ...asLegs([{ sport, g, m }])[0], p: m.p }; }
+    return { name: pk.name, gk, d: legs.reduce((a, l) => a * (l.dec || priceOf(mkt(g, l.k) || {})), 1), b: { p: legs.reduce((a, l) => a * l.p, 1), legs } }; };
+  const cards = picks.map(swapped).map(({ name, b, d, gk }) => `<div class="pop-card"><div class="pop-hd"><span class="tag evens">${name}</span><b>${odds(d)}</b></div><ul class="ga-sw">${b.legs.map((m, i) => `<li class="${gk && S._swapAnim === gk + "|" + i ? "pl-new" : ""}"><span>${esc(legText(m))} <small>${pct(m.p)}</small></span>${gk ? `<span class="pl-sw" role="button" tabindex="0" data-gaswap="${esc(gk)}|${i}|${esc(m.pid ? `P:${m.pid}:${m.stat}:${m.target}` : m.k)}" aria-label="Swap ${esc(legText(m))}" title="Not at your bookie? Swap it">${ROLL_SVG}</span>` : ""}</li>`).join("")}</ul><div class="pop-ft"><span>${pct(b.p)} chance${live ? " now" : ""}</span><button class="btn sm" data-gbb="${sport}|${g.id}|${b.legs.map(m => m.k).join(",")}|${live ? 1 : 0}|${esc(String(name).split(" ·")[0])}">Add to slip</button></div></div>`).join("");
   const sBtn = m => live ? `<button class="odd addlive" data-liveleg="${sport}|${g.id}|${m.k}"><span class="pr">${odds(livePrice(m.p))}</span><span class="pp">${pct(m.p)}</span></button>` : oddBtn(sport, g, m.k);
   return `<section class="section"><h2>Ready-made accas${live ? asOf(g) : ""}</h2>${cards ? `<p class="sub" style="margin:-6px 0 8px">Low, medium and high odds bet builders for this game. Your bookie prices bet builders differently, so check theirs.</p><div class="pop-grid">${cards}</div>` : ""}
     ${sing.length && !(compact && cards) ? `<div class="pop-singles">${sing.map(m => `<div class="pop-s"><span>${esc(m.label)}</span>${sBtn(m)}</div>`).join("")}</div>` : ""}</section>`;
@@ -4895,7 +4902,7 @@ function render() {
 }
 
 document.addEventListener("click", async e => {
-  const t = e.target.closest("[data-pswap],button,[data-close],[data-notifx],[data-preset]"); if (!t) return;
+  const t = e.target.closest("[data-pswap],[data-gaswap],button,[data-close],[data-notifx],[data-preset]"); if (!t) return;
   const d = t.dataset;
   if (d.sport) { S.sport = d.sport; S.league = "all"; S.newsFilter = "all"; store.set("sport", S.sport); render(); }
   else if (d.fmt) { S.fmt = d.fmt; store.set("fmt", S.fmt); render(); }
@@ -5072,6 +5079,8 @@ document.addEventListener("click", async e => {
   else if (d.gtab) { S.gtab = d.gtab; render(); const dr = $(".drawer"); if (dr) { const hero = dr.querySelector(".score-hero"), top = dr.querySelector(".gtop"); dr.scrollTo(0, Math.min(dr.scrollTop, hero ? hero.offsetTop + hero.offsetHeight - (top ? top.offsetHeight : 0) : 0)); } }
   else if (d.boxside) { const [gid, sd] = d.boxside.split("|"); S.boxSide[gid] = sd; render(); }
   else if (d.multiwin) { S.multiWin = d.multiwin; render(); }
+  else if (d.gaswap) { const parts = d.gaswap.split("|"), k = parts.pop(), i = +parts.pop(), gk = parts.join("|"); S.gaSwap = S.gaSwap || {}; const sw = (S.gaSwap[gk] = S.gaSwap[gk] || {}); sw[i] = [...(sw[i] || []), k];
+    S._swapAnim = gk + "|" + i; render(); setTimeout(() => { S._swapAnim = null; }, 900); }
   else if (d.pswap) { const [id, i] = [d.pswap.slice(0, d.pswap.lastIndexOf("|")), +d.pswap.slice(d.pswap.lastIndexOf("|") + 1)], k = swKey(id), cur = applySwaps(id, presetLegs0(id))[i]; if (!cur) return;
     S.pswap = S.pswap || {}; const sw = (S.pswap[k] = S.pswap[k] || {}); sw[i] = [...(sw[i] || []), sKey(cur)]; const nx = applySwaps(id, presetLegs0(id))[i];
     if (!nx || sKey(nx) === sKey(cur)) { sw[i].pop(); toast("No other good bet left for that spot"); return; }
