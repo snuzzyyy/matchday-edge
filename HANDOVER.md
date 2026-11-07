@@ -512,3 +512,4 @@ No server of our own. ESPN is free, has no key and is about 1–3 minutes behind
 - Funded "My bets" has Live / Upcoming / Settled tabs (`S.fdbTab`, same look as the Bets page); every bet, settled too, is a `betCard` (`fdCard`) with Won/Lost/Void or Reopen/Delete underneath.
 - Funded picker: Today & tonight (until 6am, default) / Next 24 hours switch (`S.fpDay`, `fpInWindow`). The stake drop-down opens as an overlay under its card so the grid never moves.
 - Bet cards (`legLine`) show the player photo (`legIcon`) next to player legs, on Bets and Funded. Ready-made acca grid: min 300px columns, `align-items:start`, odds row right under the legs (no stretched empty cards).
+- Bet slip legs have a ↻ swap (`data-slipswap`): uses `altLeg` (same game first, then a similar price elsewhere), remembers what was swapped out in `S.slipEx`.
