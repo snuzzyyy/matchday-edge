@@ -446,6 +446,8 @@ a.prof-bdg{text-decoration:none}
 .idle-line{display:flex;align-items:center;gap:8px;margin:0 0 6px;font-size:13.5px;color:var(--muted)}.idle-line .dot{background:var(--dim);animation:none}
 .btn.dup-warn{background:var(--amber);color:#1a1300}
 .ret-row{display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap}.ret-row label{font-size:12.5px;color:var(--fg-2);font-weight:700}.ret-row input{width:96px}
+.inbox-btn{position:relative;cursor:pointer;margin-right:6px}.inbox-n{position:absolute;top:-4px;right:-4px;min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:var(--live);color:#fff;font:800 10.5px/17px Figtree,sans-serif;text-align:center}
+.inbox-list{list-style:none;margin:0;padding:0;display:grid;gap:6px;max-height:60vh;overflow-y:auto}.inbox-list li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:baseline;padding:9px 11px;border-radius:10px;background:var(--surface);border:1px solid var(--line);font-size:13.5px}.inbox-list li.new{border-color:rgba(79,141,255,.55)}.inbox-list li.alert span{font-weight:700}.inbox-list time{font-size:11.5px;color:var(--muted);white-space:nowrap}
 .lg-sub{padding:10px 14px 2px;font-size:11px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--blue-2);border-top:1px solid var(--line)}.lg-sub + .fx{border-top:0}
 .lg-hd.live-hd{color:var(--live)}
 .lg-hd.live-hd span{display:flex;align-items:center;gap:8px}
@@ -1202,6 +1204,7 @@ button.setrow{width:100%;text-align:left;font:inherit;color:inherit;background:n
         <button id="sp-football" data-sport="football" aria-pressed="true" aria-label="Football"><img class="spi" src="img/icon-football.webp" data-plain="img/icon-football.webp" data-hw="img/halloween/icon-football.webp" alt=""><span class="sl">Football</span></button>
         <button id="sp-nba" data-sport="nba" aria-pressed="false" aria-label="NBA"><img class="spi" src="img/icon-basketball.webp" data-plain="img/icon-basketball.webp" data-hw="img/halloween/icon-basketball.webp" alt=""><span class="sl">NBA</span></button>
       </div>
+      <button class="acct-btn inbox-btn" id="inboxBtn" data-inbox aria-label="Notifications"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span class="inbox-n" id="inboxN" hidden></span></button>
       <a class="acct-btn" id="acctBtn" href="#account" aria-label="Your account"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg></a>
     </div>
     <nav class="tabs" id="tabs" aria-label="Sections"></nav>
@@ -1376,7 +1379,10 @@ function chartPoint(e) {
 }
 document.addEventListener("pointermove", chartPoint); document.addEventListener("touchstart", chartPoint, { passive: true });
 document.addEventListener("pointerleave", e => { const b = e.target.closest && e.target.closest(".pchart"); if (b) { b.querySelector(".pc-tip").hidden = true; b.querySelector(".pc-cross").style.display = "none"; } }, true);
-let toastT; function toast(msg) { const L = $("#layer"); let t = $(".toast"); if (!t) { t = document.createElement("div"); t.className = "toast"; document.body.appendChild(t); } t.textContent = msg; clearTimeout(toastT); toastT = setTimeout(() => t.remove(), 1400); }
+/* the notifications inbox: every message the app pops up, and bet alerts, kept with the time (last 40) */
+function logNote(msg, alert) { const L = store.get("notes", []); if (L[0] && L[0].m === msg && Date.now() - L[0].t < 5000) return; L.unshift({ m: String(msg), t: Date.now(), a: !!alert }); store.set("notes", L.slice(0, 40)); inboxBadge(); }
+function inboxBadge() { const n = store.get("notes", []).filter(x => x.t > store.get("notesSeen", 0)).length, b = document.getElementById("inboxN"); if (b) { b.hidden = !n; b.textContent = n > 9 ? "9+" : n; } }
+let toastT; function toast(msg, noLog) { if (!noLog) logNote(msg); const L = $("#layer"); let t = $(".toast"); if (!t) { t = document.createElement("div"); t.className = "toast"; document.body.appendChild(t); } t.textContent = msg; clearTimeout(toastT); toastT = setTimeout(() => t.remove(), 1400); }
 
 /* ---------- picks engine ---------- */
 /* UK-day windows: "today" runs until 6am tomorrow so late NBA tip-offs count as tonight */
@@ -4787,7 +4793,8 @@ async function askAlerts() {
   const r = await Notification.requestPermission(); if (r !== "granted") toast("Notifications are blocked. Allow them in your browser settings"); return r === "granted";
 }
 function sendAlert(title, body, tag) {
-  if (document.visibilityState === "visible") toast(`${title}${body ? " · " + body : ""}`);
+  logNote(`${title}${body ? " · " + body : ""}`, true);
+  if (document.visibilityState === "visible") toast(`${title}${body ? " · " + body : ""}`, true);
   if (!notifyAllowed() || (document.visibilityState === "visible" && !ALERT_APP())) return;
   try { if (ALERT_APP()) MDEApp.notify(title, body || "", tag || title);
     else if (swReg) swReg.showNotification(title, { body, tag, icon: "icon-192.png", badge: "icon-192.png" }).catch(() => {});
@@ -4993,6 +5000,10 @@ function render() {
   else L.innerHTML = "";
   if (S.injOpen) L.insertAdjacentHTML("beforeend", injuryCard(S.injOpen));
   if (S.mateOpen && S.user) L.insertAdjacentHTML("beforeend", mateSheet(S.mateOpen));
+  if (S.inboxOpen) { const N = store.get("notes", []), seen = S._seenWas || 0;
+    L.insertAdjacentHTML("beforeend", `<div class="scrim top" data-inboxx></div><div class="ijsheet inbox" role="dialog" aria-modal="true" aria-label="Notifications"><button class="close sm ij-x" data-inboxx aria-label="Close">✕</button>
+      <div><h2>Notifications</h2><p class="sub" style="margin:4px 0 0">Messages and bet alerts from the app, newest first.</p></div>
+      ${N.length ? `<ul class="inbox-list">${N.map(x => `<li class="${x.t > seen ? "new" : ""} ${x.a ? "alert" : ""}"><span>${x.a ? "🔔 " : ""}${esc(x.m)}</span><time>${ago2(new Date(x.t).toISOString())}</time></li>`).join("")}</ul><button class="linkbtn" data-inboxclear>Clear all</button>` : `<div class="empty">Nothing yet. Messages and bet alerts will show here.</div>`}</div>`); }
   if (S.botOpen) L.insertAdjacentHTML("beforeend", botSheet());
   if (S.shareOpen && S.user) L.insertAdjacentHTML("beforeend", shareSheet());
   if (S.betView && S.user) L.insertAdjacentHTML("beforeend", betViewSheet(S.betView));
@@ -5171,6 +5182,8 @@ document.addEventListener("click", async e => {
   else if (d.fxday) { S.fxDay = d.fxday; render(); }
   else if (d.winonly !== undefined) { S.winOnly = !S.winOnly; store.set("winOnly", S.winOnly); S._lvl = {}; render(); toast(S.winOnly ? "Outrights: ready-made accas use match winners only" : "Ready-made accas use every type of bet again"); }
   else if (d.gomulti !== undefined) { location.hash = "multi"; }
+  else if (d.inbox !== undefined) { S._seenWas = store.get("notesSeen", 0); store.set("notesSeen", Date.now()); S.inboxOpen = true; inboxBadge(); render(); }
+  else if (d.inboxclear !== undefined) { store.set("notes", []); inboxBadge(); render(); }
   else if (d.feedtab) { S.feedTab = d.feedtab; render(); scrollTo({ top: 0 }); }
   else if (d.allbadges) { S.allBadges = d.allbadges; render(); }
   else if (d.mbtab) { S.mbTab = d.mbtab; render(); scrollTo({ top: 0 }); }
@@ -5245,7 +5258,7 @@ document.addEventListener("input", e => {
   if (e.target.dataset && e.target.dataset.twedit != null) { const T = twState(), i = +e.target.dataset.twedit, n = twLen(e.target.value); T.custom[i] = e.target.value;
     const card = e.target.closest(".tw-card"), cnt = card && card.querySelector(".tw-count"), a = card && card.querySelector("a.btn"); if (cnt) { cnt.textContent = n + "/280"; cnt.className = "tw-count " + (n > 280 ? "over" : n > 260 ? "near" : ""); } if (a) a.href = "https://x.com/intent/post?text=" + encodeURIComponent(e.target.value); }
 });
-document.addEventListener("click", e => { if (e.target.closest("[data-injclose]")) { S.injOpen = null; render(); } if (e.target.closest("div[data-betviewx]")) { S.betView = null; render(); } if (e.target.closest("div[data-cashclose]")) { S.cashOpen = null; render(); } const shc = e.target.closest("[data-shareclose]"); if (shc && S.shareOpen) { if (shc.tagName === "A") setTimeout(() => { S.shareOpen = false; render(); }, 400); else { S.shareOpen = false; render(); } } if (e.target.closest("[data-importclose]")) { S.importOpen = false; if (S.impEdit) { S.impEdit = null; S.importText = ""; S.impOdds = ""; S.impOddsTyped = false; S.impStake = null; S.impFree = false; } saveImpDraft(); render(); } });
+document.addEventListener("click", e => { if (e.target.closest("[data-injclose]")) { S.injOpen = null; render(); } if (e.target.closest("div[data-betviewx]")) { S.betView = null; render(); } if (e.target.closest("div[data-cashclose]")) { S.cashOpen = null; render(); } const shc = e.target.closest("[data-shareclose]"); if (shc && S.shareOpen) { if (shc.tagName === "A") setTimeout(() => { S.shareOpen = false; render(); }, 400); else { S.shareOpen = false; render(); } } if (e.target.closest("[data-inboxx]")) { S.inboxOpen = false; render(); } if (e.target.closest("[data-importclose]")) { S.importOpen = false; if (S.impEdit) { S.impEdit = null; S.importText = ""; S.impOdds = ""; S.impOddsTyped = false; S.impStake = null; S.impFree = false; } saveImpDraft(); render(); } });
 document.addEventListener("input", e => {
   const id = e.target.id; if (!/^imp(text|odds|stake)$/.test(id)) return; if (id === "imptext") S._dupOk = null;
   if (id === "imptext") { S.importText = e.target.value; S.impShotMsg = ""; clearTimeout(S._impT); S._impT = setTimeout(impRefresh, 350); }
@@ -5445,7 +5458,7 @@ try { const v = JSON.parse(sessionStorage.getItem("mde:view") || "null"); if (v 
 try { const hd = window.claude?.hot?.data; if (hd && hd.t) restored = hd; } catch {}
 if (restored) { S.drawer = restored.drawer || null; S.slipOpen = !!restored.slipOpen; S.boxSide = restored.boxSide || {}; S.sport = restored.sport || S.sport; S.win = restored.win || S.win; S.league = restored.league || S.league; S.accaWin = restored.accaWin; }
 Promise.all([fetch("data.json").then(r => r.json()), fetch("logos.json").then(r => r.json()).catch(() => ({}))]).then(([d, l]) => {
-  S.data = d; S.logos = Object.assign(l, LOGO_FIX); if (!(d.leagues || []).some(x => x.id === "all")) (d.leagues = d.leagues || []).push({ id: "all", name: "Football", short: "FB" });
+  S.data = d; S.logos = Object.assign(l, LOGO_FIX); setTimeout(inboxBadge, 0); if (!(d.leagues || []).some(x => x.id === "all")) (d.leagues = d.leagues || []).push({ id: "all", name: "Football", short: "FB" });
   // drop slip legs whose game has started or vanished
   S.slip = S.slip.filter(x => { const g = findGame(x.sport, x.gid); return g && isPre(g); }); save();
   render();

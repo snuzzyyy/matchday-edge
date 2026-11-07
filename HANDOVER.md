@@ -419,6 +419,9 @@ No server of our own. ESPN is free, has no key and is about 1–3 minutes behind
 - Save buttons (import and slip) lock with "Saving…" until the save finishes (`S._saving`), so repeated taps can't save the same bet many times.
 - `findGame` uses an id index and `mkt` a per-game Map (both WeakMap caches), as the extra games made the old scans slow.
 
+## Notifications inbox (Nov 7)
+- 🔔 in the header (`#inboxBtn`, `data-inbox`) next to the account button: every `toast()` and `sendAlert()` is saved by `logNote()` (localStorage "notes", last 40; alerts marked 🔔). Red count = unseen since "notesSeen". The sheet lists them newest first with times; "Clear all". (Game-follow bells are a different thing: `bellBtn`.)
+
 ## Live speed (Nov 7)
 - `playerIndex(full)`: light by default (priced player bets, box scores, line-ups: no downloads). Squad lists (ESPN rosters, ~37 MB for all teams) only via `playerIndexFor(text)` when a typed name isn't found, or when reading a screenshot. Never call `playerIndex(true)` on page load.
 - `isOlder()` / `gameProg()`: applySB and applyHeader ignore a score/clock that is behind what the app already shows (the game-details copy can lag the scoreboard), so scores never jump backwards.
