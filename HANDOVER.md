@@ -419,6 +419,9 @@ No server of our own. ESPN is free, has no key and is about 1–3 minutes behind
 - Save buttons (import and slip) lock with "Saving…" until the save finishes (`S._saving`), so repeated taps can't save the same bet many times.
 - `findGame` uses an id index and `mkt` a per-game Map (both WeakMap caches), as the extra games made the old scans slow.
 
+## Fold / tablet layout (Nov 7)
+- @media (min-width:700px): My Bets `.trk` becomes 2 columns (CSS columns, cards don't split), 3 from 1500px; game page `.g-cols` two columns from 700px (was 1100). Other grids (live cards, tips, presets, ready-mades) already auto-fill.
+
 ## Notifications inbox (Nov 7)
 - 🔔 in the header (`#inboxBtn`, `data-inbox`) next to the account button: every `toast()` and `sendAlert()` is saved by `logNote()` (localStorage "notes", last 40; alerts marked 🔔). Red count = unseen since "notesSeen". The sheet lists them newest first with times; "Clear all". (Game-follow bells are a different thing: `bellBtn`.)
 
