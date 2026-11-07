@@ -499,3 +499,8 @@ No server of our own. ESPN is free, has no key and is about 1–3 minutes behind
 - Unchanged on purpose: the repo/URL `snuzzyyy.github.io/matchday-edge`, localStorage keys `mde:*`, the Android package `com.snuzzyyy.matchdayedge`, the user-agent token `MatchdayEdgeApp/1.x` (the site detects it), secrets `MDE_*`. Changing any of these breaks installs or saved data.
 - The release publishes both `Accabox.apk` (download page links here) and `MatchdayEdge.apk` (old links).
 - Splash (normal + Halloween), og.png and the download banners were re-lettered; originals are in `art/brand-originals/`.
+
+## Funded: winner accas + two tabs (Nov 2026)
+- The funder allows accas of **match winners only**. Picker has a Singles / Winner accas switch (`S.fpType`); `FA_BANDS` low 1.9–3.2, medium 3.2–6.5, high 6.5–18; `fundedAccas()` combines the best winner market per game (2–5 legs). Adding by hand allows several legs only if all are `WIN_KEYS`. `fundedAuto` settles multi-leg (any miss = lost, void legs drop out).
+- Funded page has two tabs under the balance card: Bet picker / My bets (`S.fdTab`). My bets = open bets, Import / Add by hand buttons (`S.fdPanel`), history, settings.
+- Don't show the funder's name anywhere (owner's request): default name is "Funded account" and `fundedNow` replaces any saved name containing "BetPro".

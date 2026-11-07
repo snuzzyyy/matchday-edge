@@ -453,6 +453,8 @@ a.prof-bdg{text-decoration:none}
   .g-cols:not(.one){display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);align-items:start;gap:22px}.drawer.full .dr-in{max-width:1380px}}
 @media (min-width:1500px){#main .trk{columns:3}}
 .fp-panel .seg3 button{font-size:13px;padding:9px 4px;white-space:nowrap}.fp-panel .seg3 button img,.fp-panel .seg3 button .spi{display:none}
+.fd-tabs{margin:14px 0 0}.fd-n{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 5px;margin-left:4px;border-radius:9px;background:var(--blue);color:#fff;font-size:11px}.fd-tools{display:flex;gap:8px;margin:16px 0 0;flex-wrap:wrap}.fd-tools .btn{flex:1 1 140px}.fd-card{margin-top:10px;padding:14px;background:var(--surface);border:1px solid var(--line);border-radius:14px}
+.fa-legs{display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:4px}.fa-legs>span{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;color:var(--fg-2)}.fa-legs .logo,.fa-legs .mono{width:16px!important;height:16px!important;font-size:7px}.fa-it{grid-template-columns:minmax(0,1fr) auto}
 .fp-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px;margin-top:10px;align-items:start}.fp-wrap.open{border-radius:12px;box-shadow:0 0 0 1.5px var(--blue)}.fp-wrap.open .fp-it{border-color:transparent;border-radius:12px 12px 0 0}
 .fp-drop{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;background:var(--surface-2);border-radius:0 0 12px 12px;padding:10px;animation:fpIn .18s ease-out}.fp-drop label{display:grid;gap:4px}.fp-drop label span{font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}.fp-drop input{width:100%;min-width:0}.fp-drop .btn{height:40px}
 @keyframes fpIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
@@ -3854,16 +3856,18 @@ function botPost(it) {
       <div class="bot-ft"><span>£10 returned <b class="pos">${money(10 * dec)}</b></span><span>Built by Accabox before kick-off · we had it at ${pct(+w.chance || 0)}</span></div></div></article>`;
 }
 /* ---------- Funded: a funded-trader evaluation (e.g. BetPro IQ). Singles only; start balance and profit target; saved with your £1K data so it's on every device ---------- */
-const FUNDED0 = () => ({ name: "BetPro IQ", start: 125, target: 40, bets: [], started: new Date().toISOString() });
-const fundedNow = () => ({ ...FUNDED0(), ...((S.chalAll || {}).funded || {}) });
+const FUNDED0 = () => ({ name: "Funded account", start: 125, target: 40, bets: [], started: new Date().toISOString() });
+const fundedNow = () => { const F = { ...FUNDED0(), ...((S.chalAll || {}).funded || {}) }; if (/betpro/i.test(F.name || "")) F.name = "Funded account"; return F; };
 function fundedSave(F) { if (!S.user) { toast("Sign in to save your funded account"); return; } S.chalAll = { ...(S.chalAll || { v: 4, ladders: [] }), funded: F }; saveChalAll(); }
 const fPL = b => b.result === "won" ? b.stake * (b.dec - 1) : b.result === "lost" ? -b.stake : 0;
 function fundedStats(F) { const settled = F.bets.filter(b => b.result !== "open"), pl = settled.reduce((a, b) => a + fPL(b), 0), open = F.bets.filter(b => b.result === "open"), staked = open.reduce((a, b) => a + b.stake, 0);
   const bal = F.start + pl, goal = F.start * (1 + F.target / 100), won = settled.filter(b => b.result === "won").length, dec = settled.filter(b => b.result !== "void").length;
   return { bal, pl, goal, open, staked, avail: bal - staked, won, dec, pct: pl / F.start * 100, done: bal >= goal - 1e-9 }; }
 function fundedAuto(F) {   /* settle tracked singles by themselves */
-  let n = 0; for (const b of F.bets) { if (b.result !== "open" || !(b.legs || []).length) continue; const st = legInfo0(b.legs[0]).st;
-    if (st === "hit" || st === "miss" || st === "void") { b.result = st === "hit" ? "won" : st === "miss" ? "lost" : "void"; b.settledAt = new Date().toISOString(); n++; } }
+  let n = 0; for (const b of F.bets) { if (b.result !== "open" || !(b.legs || []).length) continue; const sts = b.legs.map(l => legInfo0(l).st);
+    const res = sts.includes("miss") ? "lost" : sts.every(x => x === "void") ? "void" : sts.every(x => x === "hit" || x === "void") ? "won" : null;
+    if (res) { if (res === "won" && sts.includes("void")) { const vd = b.legs.reduce((a, l, i) => sts[i] === "void" ? a * (l.dec || 1) : a, 1); if (vd > 1) b.dec = Math.round(b.dec / vd * 1000) / 1000; }   /* a void leg drops out of the price */
+      b.result = res; b.settledAt = new Date().toISOString(); n++; } }
   if (n && S.chalLoaded) { fundedSave(F); toast(`Funded: ${n} bet${n > 1 ? "s" : ""} settled`); }
 }
 /* bet picker for the funded account: singles in the next 24 hours, by odds band, a mix of bet types, never an unavailable player */
@@ -3912,9 +3916,24 @@ function fundedParse(raw) {
   });
   return out;
 }
+/* winner accas for the funded account: match winners only (football home/away win, NBA moneyline), one per game */
+const FA_BANDS = { low: ["Low odds", 1.9, 3.2], medium: ["Medium odds", 3.2, 6.5], high: ["High odds", 6.5, 18] };
+function fundedAccas() {
+  const band = FA_BANDS[S.fpBand] || FA_BANDS.low, sps = S.fpSport === "football" ? ["football"] : S.fpSport === "nba" ? ["nba"] : ["football", "nba"], now = Date.now(), pool = [];
+  for (const sp of sps) for (const g of games(sp)) { const t = +new Date(kick(g)); if (!isPre(g) || t < now || t - now > 864e5) continue;
+    const ms = g.model.markets.filter(m => WIN_KEYS.has(m.k) && priceOf(m) >= 1.08).sort((a, b) => b.p - a.p); if (ms[0]) pool.push({ sp, g, m: ms[0], pr: priceOf(ms[0]) }); }
+  const rnd = chRand((S.fpSeed || 0) + 11), P = pool.map(c => ({ ...c, sc: c.m.p + (S.fpSeed ? rnd() * .25 : 0) })).sort((a, b) => b.sc - a.sc), out = [];
+  for (const n of [2, 3, 4, 5]) {   /* the likeliest legs that land the total in the band */
+    let best = null; for (let s0 = 0; s0 < Math.min(P.length, 12); s0++) { const legs = []; let d = 1;
+      for (const c of P.slice(s0)) { if (legs.length >= n) break; if (d * c.pr > band[2] && legs.length < n - 1) continue; legs.push(c); d *= c.pr; }
+      if (legs.length === n && d >= band[1] && d <= band[2]) { const p = legs.reduce((a, c) => a * c.m.p, 1); if (!best || p > best.p) best = { legs, d, p }; } }
+    if (best && !out.some(o => o.legs.map(c => c.g.id).join() === best.legs.map(c => c.g.id).join())) out.push({ n, ...best }); }
+  return out;
+}
 function fundedPickerHTML() {
+  if (S.fpType === "acca") return fundedAccaHTML();
   const P = fundedPicks(), seg = (attr, cur, opts) => `<div class="seg3 ${opts.length === 2 ? "two" : ""}" role="group">${opts.map(([k, l]) => `<button ${attr}="${k}" aria-pressed="${cur === k}">${l}</button>`).join("")}</div>`;
-  return `<section class="section"><h2>Bet picker</h2><div class="acca-panel fp-panel">${seg("data-fpband", S.fpBand || "low", Object.entries(FP_BANDS).map(([k, v]) => [k, v[0]]))}
+  return `<section class="section"><h2>Bet picker</h2><div class="acca-panel fp-panel">${seg("data-fptype", S.fpType || "single", [["single", "Singles"], ["acca", "Winner accas"]])}${seg("data-fpband", S.fpBand || "low", Object.entries(FP_BANDS).map(([k, v]) => [k, v[0]]))}
     <div class="ch-tools" style="margin:0">${seg("data-fpsport", S.fpSport || "both", [["football", "⚽ Football"], ["nba", "🏀 NBA"], ["both", "Both"]])}<button class="reroll" data-fpshuffle aria-label="Show different bets" title="Show different bets">${ROLL_SVG}</button></div>
     <p class="risk-desc" style="margin:0 4px">${(FP_BANDS[S.fpBand] || FP_BANDS.low)[0]}: singles from ${odds((FP_BANDS[S.fpBand] || FP_BANDS.low)[1])} to ${odds((FP_BANDS[S.fpBand] || FP_BANDS.low)[2])} in the next 24 hours. Tap one, type your stake, press Enter.</p></div>
     ${P.length ? `<div class="fp-list">${P.map(c => { const l = asLegs([{ sport: c.sp, g: c.g, m: c.m }])[0], key = `${c.sp}|${c.g.id}|${c.m.k}`, open = S.fpOpen === key, F = fundedNow(), X = fundedStats(F);
@@ -3922,35 +3941,47 @@ function fundedPickerHTML() {
         ${open ? `<div class="fp-drop"><label><span>Odds</span><input id="fpOdds" class="oddin" value="${esc(odds(c.pr))}" autocomplete="off" inputmode="decimal"></label><label><span>Stake £</span><input id="fpStake" class="oddin" inputmode="decimal" autocomplete="off" value="${Math.max(1, Math.round(X.bal * .02 * 2) / 2)}"></label><button class="btn sm" data-fpadd="${esc(key)}">Add</button></div>` : ""}</div>`; }).join("")}</div>`
       : `<div class="empty">No ${(FP_BANDS[S.fpBand] || FP_BANDS.low)[0].toLowerCase()} singles in the next 24 hours. Try another band or sport.</div>`}</section>`;
 }
+function fundedAccaHTML() {
+  const A = fundedAccas(), seg = (attr, cur, opts) => `<div class="seg3 ${opts.length === 2 ? "two" : ""}" role="group">${opts.map(([k, l]) => `<button ${attr}="${k}" aria-pressed="${cur === k}">${l}</button>`).join("")}</div>`, b = FA_BANDS[S.fpBand] || FA_BANDS.low, X = fundedStats(fundedNow());
+  return `<section class="section"><h2>Bet picker</h2><div class="acca-panel fp-panel">${seg("data-fptype", "acca", [["single", "Singles"], ["acca", "Winner accas"]])}${seg("data-fpband", S.fpBand || "low", Object.entries(FA_BANDS).map(([k, v]) => [k, v[0]]))}
+    <div class="ch-tools" style="margin:0">${seg("data-fpsport", S.fpSport || "both", [["football", "⚽ Football"], ["nba", "🏀 NBA"], ["both", "Both"]])}<button class="reroll" data-fpshuffle aria-label="Show different accas" title="Show different accas">${ROLL_SVG}</button></div>
+    <p class="risk-desc" style="margin:0 4px">${b[0]}: match-winner accas from ${odds(b[1])} to ${odds(b[2])} in the next 24 hours. Tap one, type your stake, press Enter.</p></div>
+    ${A.length ? `<div class="fp-list">${A.map(a => { const key = "acca|" + a.legs.map(c => `${c.sp}:${c.g.id}:${c.m.k}`).join(","), open = S.fpOpen === key;
+      return `<div class="fp-wrap ${open ? "open" : ""}"><button class="fp-it fa-it" data-fpick="${esc(key)}" aria-expanded="${open}"><span class="pl-t"><b>${a.n === 2 ? "Double" : a.n === 3 ? "Treble" : a.n + "-fold"}</b><span class="fa-legs">${a.legs.map(c => { const T = c.m.k === "1" || c.m.k === "ML1" ? c.g.home : c.g.away; return `<span>${logo(c.sp, T)}${esc(T.name)}</span>`; }).join("")}</span></span><span class="fp-o"><b>${odds(a.d)}</b><small style="color:${tierColor(a.p)}">${pct(a.p)}</small></span></button>
+        ${open ? `<div class="fp-drop"><label><span>Odds</span><input id="fpOdds" class="oddin" value="${esc(odds(a.d))}" autocomplete="off" inputmode="decimal"></label><label><span>Stake £</span><input id="fpStake" class="oddin" inputmode="decimal" autocomplete="off" value="${Math.max(1, Math.round(X.bal * .02 * 2) / 2)}"></label><button class="btn sm" data-fpadd="${esc(key)}">Add</button></div>` : ""}</div>`; }).join("")}</div>`
+      : `<div class="empty">No ${b[0].toLowerCase()} winner accas in the next 24 hours. Try another band or sport.</div>`}</section>`;
+}
 function viewFunded() {
   if (!S.user) return `<div class="acca-panel"><b>Funded account</b><p class="risk-desc" style="margin:0">Track a funded-betting evaluation: balance, singles, and your profit target. <a href="#account">Sign in</a> to start.</p></div>`;
   if (!S.chalLoaded) return `<div class="loadbox">Loading…</div>`;
   const F = fundedNow(); if (!S._fundAutoAt || Date.now() - S._fundAutoAt > 5000) { S._fundAutoAt = Date.now(); setTimeout(() => fundedAuto(F), 0); }
   const X = fundedStats(F), prog = Math.max(0, Math.min(1, X.pl / (X.goal - F.start))), sign = v => (v > 0 ? "+" : v < 0 ? "-" : "") + money(Math.abs(v));
-  const betRow = b => { const l = (b.legs || [])[0], info = l ? legInfo(l) : null;
+  const betRow = b => {
     return `<article class="fd-bet ${b.result}"><div class="fd-bhd"><b>${esc(b.text)}</b><span class="fd-res ${b.result}">${b.result === "open" ? "Open" : b.result === "won" ? `Won ${sign(fPL(b))}` : b.result === "lost" ? `Lost ${sign(fPL(b))}` : "Void"}</span></div>
-      <div class="fd-meta">${money(b.stake)} at ${odds(b.dec)} · returns ${money(b.stake * b.dec)}${b.result === "open" ? "" : ` · ${ago2(b.settledAt || b.at)}`}</div>${b.result === "open" && info ? `<div class="fd-leg">${info.html}</div>` : ""}
+      <div class="fd-meta">${money(b.stake)} at ${odds(b.dec)} · returns ${money(b.stake * b.dec)}${b.result === "open" ? "" : ` · ${ago2(b.settledAt || b.at)}`}</div>${b.result === "open" && (b.legs || []).length ? b.legs.map(l => `<div class="fd-leg">${legInfo(l).html}</div>`).join("") : ""}
       ${b.result === "open" ? `<div class="fd-acts"><button class="btn sm win" data-fres="${b.id}|won">Won</button><button class="btn sm lose" data-fres="${b.id}|lost">Lost</button><button class="btn sm ghost" data-fres="${b.id}|void">Void</button><button class="linkbtn" data-fdel="${b.id}">Delete</button></div>` : `<div class="fd-acts"><button class="linkbtn" data-fres="${b.id}|open">Reopen</button><button class="linkbtn" data-fdel="${b.id}">Delete</button></div>`}</article>`; };
   const settled = F.bets.filter(b => b.result !== "open").sort((a, b) => String(b.settledAt || b.at).localeCompare(String(a.settledAt || a.at)));
-  return `<section class="fd-hero ${X.done ? "done" : ""}"><div class="fd-top"><div><span class="eyebrow">${esc(F.name)} · evaluation</span><div class="fd-bal">${money(X.bal)}</div><small>Started at ${money(F.start)} · target ${money(X.goal)} (+${F.target}%)</small></div>
+  return `<section class="fd-hero ${X.done ? "done" : ""}"><div class="fd-top"><div><span class="eyebrow">${esc(F.name)}</span><div class="fd-bal">${money(X.bal)}</div><small>Started at ${money(F.start)} · target ${money(X.goal)} (+${F.target}%)</small></div>
       <div class="fd-pl ${X.pl > 0 ? "pos" : X.pl < 0 ? "neg" : ""}"><b>${sign(X.pl)}</b><small>${X.pct >= 0 ? "+" : ""}${X.pct.toFixed(1)}%</small></div></div>
     <div class="fd-bar"><i style="width:${prog * 100}%"></i></div>
     <div class="fd-sub">${X.done ? "🏆 Target reached: you've passed the evaluation" : `${money(Math.max(0, X.goal - X.bal))} to go`} · ${X.dec ? `${X.won}/${X.dec} won` : "no settled bets yet"}${X.open.length ? ` · ${money(X.staked)} in ${X.open.length} open bet${X.open.length > 1 ? "s" : ""}` : ""}</div></section>
-  ${fundedPickerHTML()}
-  <details class="section maths" ${S.fdImpOpen ? "open" : ""}><summary data-fdimpt><h2 style="display:inline;font-size:16px">📥 Import bets from BetPro</h2></summary><div class="fd-form" style="margin-top:10px">
-    <button type="button" class="shotbtn" data-fdshot><span>📷</span><span><b>Read a screenshot</b><small>Of your BetPro bets list. It stays on your device.</small></span></button>
+  <div class="seg fd-tabs" role="group" aria-label="Funded"><button data-fdtab="pick" aria-pressed="${S.fdTab !== "bets"}">Bet picker</button><button data-fdtab="bets" aria-pressed="${S.fdTab === "bets"}">My bets${X.open.length ? ` <span class="fd-n">${X.open.length}</span>` : ""}</button></div>
+  ${S.fdTab !== "bets" ? fundedPickerHTML() : `
+  ${X.open.length ? `<section class="section"><h2>Open bets</h2><div class="fd-list">${X.open.map(betRow).join("")}</div></section>` : `<div class="empty" style="margin-top:14px">No open bets. Pick one from the Bet picker, or add one below.</div>`}
+  <div class="fd-tools"><button class="btn ${S.fdPanel === "imp" ? "" : "ghost"} sm" data-fdpanel="imp">📥 Import bets</button><button class="btn ${S.fdPanel === "add" ? "" : "ghost"} sm" data-fdpanel="add">✍️ Add by hand</button></div>
+  ${S.fdPanel === "imp" ? `<div class="fd-form fd-card">
+    <button type="button" class="shotbtn" data-fdshot><span>📷</span><span><b>Read a screenshot</b><small>Of your bets list. It stays on your device.</small></span></button>
     <div class="field"><label for="fdImp">Or paste your bets</label><textarea id="fdImp" rows="4" placeholder="Single · Basketball · Open · Denver Nuggets (-4) · …">${esc(S.fdImp || "")}</textarea></div>
     ${(() => { const P = fundedParse(S.fdImp || ""); return P.length ? `<div class="fd-list">${P.map(b => `<div class="imp-leg ok"><span>${b.legs.length ? "✓" : "✋"}</span><div><b>${esc(b.text)}</b><small>${b.stake && b.dec ? `${money(b.stake)} at ${odds(b.dec)}` : `${b.dec ? odds(b.dec) + " · " : ""}<b style="color:var(--amber)">no stake yet</b>`} · ${b.result === "open" ? "open" : b.result}${b.legs.length ? " · tracks live" : " · result from BetPro"}</small></div></div>`).join("")}</div>${P.some(b => !b.stake) ? `<p class="note" style="margin:0">Bets with no stake look like a bet slip before placing. Place them, then import from BetPro's My Bets so the stakes come through.</p>` : ""}${P.filter(b => b.stake && b.dec).length ? `<button class="btn" data-fdimpgo>Add ${P.filter(b => b.stake && b.dec).length} bet${P.filter(b => b.stake && b.dec).length > 1 ? "s" : ""}</button>` : ""}` : (S.fdImp || "").trim() ? `<p class="note" style="margin:0">Couldn't read any bets from that yet. Make sure it includes the market line (… · Team A vs Team B), the odds and the stake.</p>` : ""; })()}
-  </div></details>
-  <details class="section maths" id="fdAdd"><summary><h2 style="display:inline;font-size:16px">Add a bet that isn't listed</h2></summary><div class="fd-form" style="margin-top:10px">
-    <div class="field"><label for="fdText">Bet <small style="color:var(--muted);font-weight:500">singles only, e.g. "Arsenal v Spurs: Arsenal to win" or "Haaland to score"</small></label><input id="fdText" autocomplete="off" placeholder="Leeds v Spurs: Over 2.5 goals"></div>
+  </div>` : ""}
+  ${S.fdPanel === "add" ? `<div class="fd-form fd-card" id="fdAdd">
+    <div class="field"><label for="fdText">Bet <small style="color:var(--muted);font-weight:500">e.g. "Arsenal v Spurs: Arsenal to win", or several match winners for an acca or "Haaland to score"</small></label><input id="fdText" autocomplete="off" placeholder="Leeds v Spurs: Over 2.5 goals"></div>
     <div class="addrow"><div class="field" style="flex:1 1 90px"><label for="fdOdds">Odds</label><input id="fdOdds" placeholder="2.10 or 11/10" autocomplete="off"></div><div class="field" style="flex:1 1 90px"><label for="fdStake">Stake £</label><input id="fdStake" type="number" inputmode="decimal" step="0.5" min="0" value="${Math.max(1, Math.round(X.bal * .02 * 2) / 2)}"></div></div>
-    <button class="btn" data-fadd>Add bet</button><p class="note" style="margin:0">It tracks live and settles itself when it can match the game; otherwise mark it Won / Lost.</p></div></details>
-  ${X.open.length ? `<section class="section"><h2>Open bets</h2><div class="fd-list">${X.open.map(betRow).join("")}</div></section>` : ""}
-  <section class="section"><h2>History</h2>${settled.length ? `<div class="fd-list">${settled.map(betRow).join("")}</div>` : `<div class="empty">Settled bets show here.</div>`}</section>
+    <button class="btn" data-fadd>Add bet</button><p class="note" style="margin:0">It tracks live and settles itself when it can match the game; otherwise mark it Won / Lost.</p></div>` : ""}
+  ${settled.length ? `<section class="section"><h2>History</h2><div class="fd-list">${settled.map(betRow).join("")}</div></section>` : ""}
   <details class="section maths"><summary><h2 style="display:inline">Account settings</h2></summary><div class="fd-form" style="margin-top:10px">
     <div class="addrow"><div class="field" style="flex:2 1 140px"><label for="fdName">Name</label><input id="fdName" value="${esc(F.name)}"></div><div class="field" style="flex:1 1 80px"><label for="fdStart">Start £</label><input id="fdStart" type="number" inputmode="decimal" value="${F.start}"></div><div class="field" style="flex:1 1 80px"><label for="fdTarget">Target %</label><input id="fdTarget" type="number" inputmode="decimal" value="${F.target}"></div></div>
-    <div class="addrow"><button class="btn ghost sm" data-fset>Save settings</button><button class="linkbtn" data-freset style="color:var(--loss)">Start a new evaluation</button></div></div></details>`;
+    <div class="addrow"><button class="btn ghost sm" data-fset>Save settings</button><button class="linkbtn" data-freset style="color:var(--loss)">Start a new evaluation</button></div></div></details>`}`;
 }
 /* the Feed tab: only Accabox posts. Its ready-made accas for the next games, then the ones that won */
 async function loadBotWins() {
@@ -5301,10 +5332,19 @@ document.addEventListener("click", async e => {
   else if (d.gomulti !== undefined) { location.hash = "multi"; }
   else if (d.inbox !== undefined) { S._seenWas = store.get("notesSeen", 0); store.set("notesSeen", Date.now()); S.inboxOpen = true; inboxBadge(); render(); }
   else if (d.inboxclear !== undefined) { store.set("notes", []); inboxBadge(); render(); }
+  else if (d.fdtab) { S.fdTab = d.fdtab; S.fpOpen = null; render(); }
+  else if (d.fdpanel) { S.fdPanel = S.fdPanel === d.fdpanel ? null : d.fdpanel; render(); }
+  else if (d.fptype) { S.fpType = d.fptype; S.fpOpen = null; S.fpSeed = 0; render(); }
   else if (d.fpband) { S.fpBand = d.fpband; S.fpSeed = 0; render(); }
   else if (d.fpsport) { S.fpSport = d.fpsport; S.fpSeed = 0; render(); }
   else if (d.fpshuffle !== undefined) { S.fpSeed = (S.fpSeed || 0) + 1; render(); const b = $("[data-fpshuffle] svg"); if (b) b.animate([{ transform: "rotate(0)" }, { transform: "rotate(-360deg)" }], { duration: 500, easing: "ease-out" }); }
   else if (d.fpick) { S.fpOpen = S.fpOpen === d.fpick ? null : d.fpick; render(); setTimeout(() => { const st = $("#fpStake"); if (st) { st.focus({ preventScroll: true }); st.select(); } }, 30); }
+  else if (d.fpadd && d.fpadd.startsWith("acca|")) { const parts = d.fpadd.slice(5).split(",").map(x => x.split(":")), F = fundedNow(), X = fundedStats(F);
+    const legs = parts.map(([sp, gid, k]) => { const g = findGame(sp, gid), m = g && mkt(g, k); return m ? asLegs([{ sport: sp, g, m }])[0] : null; }).filter(Boolean); if (legs.length < 2) return;
+    const dec = parseOdds(($("#fpOdds") || {}).value || "") || legs.reduce((a, l) => a * l.dec, 1), stake = +(($("#fpStake") || {}).value) || 0;
+    if (!(stake > 0)) { toast("Add your stake"); return; } if (stake > X.avail + 1e-9) { toast(`You've only got ${money(X.avail)} available`); return; }
+    F.bets = [{ id: "f" + Date.now().toString(36), text: `${legs.length}-fold: ${legs.map(l => l.label).join(", ")}`, legs, dec: Math.round(dec * 1000) / 1000, stake, result: "open", at: new Date().toISOString() }, ...F.bets];
+    S.fpOpen = null; fundedSave(F); toast(`Added acca: ${money(stake)} at ${odds(dec)}`); }
   else if (d.fpadd) { const [sp, gid, k] = d.fpadd.split("|"), g = findGame(sp, gid), m = g && mkt(g, k); if (!m) return; const F = fundedNow(), X = fundedStats(F);
     const dec = parseOdds(($("#fpOdds") || {}).value || "") || priceOf(m), stake = +(($("#fpStake") || {}).value) || 0;
     if (!(stake > 0)) { toast("Add your stake"); return; } if (stake > X.avail + 1e-9) { toast(`You've only got ${money(X.avail)} available`); return; }
@@ -5313,7 +5353,7 @@ document.addEventListener("click", async e => {
     S.fpOpen = null; fundedSave(F); toast(`Added: ${money(stake)} at ${odds(dec)}`); }
   else if (d.fdimpgo !== undefined) { const F = fundedNow(), P = fundedParse(S.fdImp || ""), key = b => [b.text, b.stake, b.at].join("|"), have = new Set(F.bets.map(key)); let n = 0;
     for (const b of P) { if (!b.stake || !b.dec || have.has(key(b))) continue; F.bets.unshift({ id: "f" + Date.now().toString(36) + n, ...b, settledAt: b.result === "open" ? null : new Date().toISOString() }); n++; }
-    S.fdImp = ""; S.fdImpOpen = false; fundedSave(F); toast(n ? `Added ${n} bet${n > 1 ? "s" : ""} to your funded account` : "Those bets are already in"); }
+    S.fdImp = ""; S.fdImpOpen = false; S.fdPanel = null; fundedSave(F); toast(n ? `Added ${n} bet${n > 1 ? "s" : ""} to your funded account` : "Those bets are already in"); }
   else if (d.fdshot !== undefined) { let inp = document.getElementById("fdShotPick"); if (!inp) { inp = document.createElement("input"); inp.type = "file"; inp.accept = "image/*"; inp.id = "fdShotPick"; inp.style.display = "none"; document.body.appendChild(inp);
       inp.addEventListener("change", async () => { const f = inp.files && inp.files[0]; inp.value = ""; if (!f) return; toast("Reading your screenshot…");
         try { const T = await loadTess(), [c1, c2] = await Promise.all([shotToCanvas(f, 3000), shotToCanvas(f, 3000, true)]), a = (await T.recognize(c1, "eng")).data.text || "", b = (await T.recognize(c2, "eng")).data.text || "";
@@ -5322,9 +5362,9 @@ document.addEventListener("click", async e => {
     inp.click(); }
   else if (d.fadd !== undefined) { const F = fundedNow(), txt = (($("#fdText") || {}).value || "").trim(), dec = parseOdds(($("#fdOdds") || {}).value || ""), stake = +(($("#fdStake") || {}).value) || 0;
     if (!txt) { toast("Type the bet first"); return; } if (!dec) { toast("Add the odds, e.g. 2.10 or 11/10"); return; } if (!(stake > 0)) { toast("Add your stake"); return; }
-    const r = parseBet(txt, playerIndexFor(txt).idx); if (r.legs.length > 1) { toast("Funded accounts only allow singles: one selection per bet"); return; }
+    const r = parseBet(txt, playerIndexFor(txt).idx); if (r.legs.length > 1 && !r.legs.every(l => WIN_KEYS.has(l.k))) { toast("Funded accas can only be match winners. Anything else has to be a single"); return; }
     if (stake > fundedStats(F).avail + 1e-9) { toast(`You've only got ${money(fundedStats(F).avail)} available`); return; }
-    F.bets = [{ id: "f" + Date.now().toString(36), text: r.legs[0] ? (r.legs[0].pid ? legText(r.legs[0]) : `${r.legs[0].label} (${r.legs[0].match})`) : txt, legs: r.legs.slice(0, 1), dec: Math.round(dec * 1000) / 1000, stake, result: "open", at: new Date().toISOString() }, ...F.bets];
+    F.bets = [{ id: "f" + Date.now().toString(36), text: r.legs.length > 1 ? `${r.legs.length}-fold: ${r.legs.map(l => l.label).join(", ")}` : r.legs[0] ? (r.legs[0].pid ? legText(r.legs[0]) : `${r.legs[0].label} (${r.legs[0].match})`) : txt, legs: r.legs, dec: Math.round(dec * 1000) / 1000, stake, result: "open", at: new Date().toISOString() }, ...F.bets];
     fundedSave(F); toast(r.legs.length ? "Added. It'll track and settle itself" : "Added. Mark it Won or Lost when it's done"); }
   else if (d.fres) { const [id, res] = d.fres.split("|"), F = fundedNow(), b = F.bets.find(x => x.id === id); if (!b) return; b.result = res; b.settledAt = res === "open" ? null : new Date().toISOString(); fundedSave(F); }
   else if (d.fdel) { const F = fundedNow(); F.bets = F.bets.filter(x => x.id !== d.fdel); fundedSave(F); toast("Bet deleted"); }
