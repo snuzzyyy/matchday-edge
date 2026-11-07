@@ -420,6 +420,7 @@ No server of our own. ESPN is free, has no key and is about 1–3 minutes behind
 - NBA `nbaTeamPts()`: "each team to score 55+ points in each half" → `T:hpts:each:55`; also `pts` (game), `h1pts`/`h2pts`, for each/home/away. Tracked from `g.home/away.lines` (quarters); settle.py uses summary header linescores.
 - Football `fbHalfGoals()`: "both teams to score in both halves" → `T:hgoals:each:1`; "X to score in both halves / 1st half / 2nd half" (`h1goals`/`h2goals`). Tracked from `g.events` goal minutes (≤45 = 1st half); settle.py uses keyEvents period numbers.
 - legChance returns null for these (no made-up chance).
+- Any Over/Under line (incl. Sky's "Over +208.5 Total Points"): `ouAny()` in marketIn → `OU:o|u:line:unit`, label "Over 208.5 points"; tracked and called from the score in legInfo0; settle.py handles `OU:` (goals/corners/cards) and NBA points by label. Team totals only when the team is named before "over" (not "A v B over …").
 
 ## Ready-made cards (Nov 6)
 - `pLegs()` / `legIcon()`: each leg on a ready-made card is a row with an icon: ESPN headshot (combiner, team badge in the corner, falls back to the badge) for player bets, the team's badge for team bets, both badges for match bets.
