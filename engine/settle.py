@@ -146,6 +146,22 @@ def leg_result(l):
                 return ("won" if val >= l["target"] else "lost"), val
         return None, None
     k, tot = str(l.get("k", "")), hs + as_
+    hc = re.match(r"^T:(h[12]|q[1-4])hc(3?):(home|away):([-+]?[\d.]+)$", k)
+    if hc:   # half / quarter handicap: that team's points (or goals) in that part plus the line, against the other team's; "3" = three-way (a tie loses), else a tie is void
+        part, three, who, line = hc.group(1), hc.group(2) == "3", hc.group(3), float(hc.group(4))
+        if sp == "nba":
+            comp = ((s.get("header") or {}).get("competitions") or [{}])[0]
+            ls = {c.get("homeAway"): [int(num(x.get("value", x.get("displayValue")))) for x in c.get("linescores", [])] for c in comp.get("competitors", [])}
+            if len(ls.get("home", [])) < 4 or len(ls.get("away", [])) < 4: return None, None
+            a0, a1 = (int(part[1]) - 1, int(part[1])) if part[0] == "q" else ((0, 2) if part == "h1" else (2, 4))
+            hv, av = sum(ls["home"][a0:a1]), sum(ls["away"][a0:a1])
+        else:
+            if part[0] == "q": return None, None
+            h = int(part[1]); ev = [e for e in (s.get("keyEvents") or []) if str((e.get("type") or {}).get("text", "")).startswith("Goal")]
+            cnt = lambda tid: sum(1 for e in ev if str((e.get("team") or {}).get("id")) == str(tid) and ((e.get("period") or {}).get("number") or 1) == h)
+            hv, av = cnt(g["home"]["id"]), cnt(g["away"]["id"])
+        mg = (hv if who == "home" else av) + line - (av if who == "home" else hv)
+        return ("won" if mg > 0 else "void" if mg == 0 and not three else "lost"), mg
     if k.startswith("T:") and sp == "nba":   # team points, full game or by half, from the quarter scores: T:hpts:each:55 = each team 55+ in each half
         _, stat, who, n = k.split(":"); n = int(n)
         comp = ((s.get("header") or {}).get("competitions") or [{}])[0]

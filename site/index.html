@@ -3029,6 +3029,18 @@ function legInfo0(l) {   // -> { html, st: "pre" | "live" | "hit" | "miss" | "vo
   if (!g) return { st: "pre", html: `<div class="tl-leg"><div class="tl-top"><b>${name}</b><span>${esc(l.match || "")}</span></div><div class="tl-num"><span>This game has dropped out of the feed</span><span></span></div></div>` };
   const H = g.home, A = g.away, Lt = l.sport === "nba" ? A : H, Rt = l.sport === "nba" ? H : A;
   if (isPre(g)) return { st: "pre", html: `<div class="tl-leg"><div class="tl-top"><b>${name}</b><span>${esc(vs(l.sport, g))}</span></div><div class="tl-num"><span>${tip} ${whenLabel(kick(g))}</span><span></span></div></div>` };
+  if (/^T:(h[12]|q[1-4])hc3?:/.test(l.k || "")) {   /* half or quarter handicap, e.g. T:h1hc3:away:-4 = away team -4 in the 1st half, T:q2hc:home:+1.5 (3 = three-way, a tie loses; otherwise a tie is void) */
+    const [, stat, who, n0] = l.k.split(":"), line = +n0, qtr = stat[0] === "q", half = +stat[1], three = /3$/.test(stat), post = g.status.state === "post", per = +g.status.period || 0, det = String(g.status.detail || "");
+    let hv = 0, av = 0, done, notYet;
+    if (l.sport === "nba") { const a0 = qtr ? half - 1 : half === 1 ? 0 : 2, a1 = qtr ? half : a0 + 2, q = T => (T.lines || []).map(Number), sm = x => x.slice(a0, a1).reduce((t, v) => t + (v || 0), 0); hv = sm(q(H)); av = sm(q(A));
+      done = per > a1 || post || (a1 === 2 && /half/i.test(det)); notYet = per <= a0 && !post; }
+    else { if (!g.events && !g._luDone) loadDetail(l.sport + ":" + l.gid); const ht = per >= 2 || /HT|half/i.test(det) || post, gl = (g.events || []).filter(e => /^Goal/i.test(e.type) && !/disallow|cancel/i.test(e.type) && ((parseInt(e.min) || 0) <= 45 ? 1 : 2) === half);
+      hv = gl.filter(e => e.side === "h").length; av = gl.filter(e => e.side === "a").length; done = half === 1 ? ht : post; notYet = half === 2 && !(per >= 2 || post); }
+    const per2 = qtr ? ["1st", "2nd", "3rd", "4th"][half - 1] + " quarter" : (half === 1 ? "1st" : "2nd") + " half", T = who === "home" ? H : A, O = who === "home" ? A : H, me = who === "home" ? hv : av, op = who === "home" ? av : hv, mg = me + line - op;
+    const st = notYet ? "live" : !done ? "live" : mg > 0 ? "hit" : mg === 0 && !three ? "void" : "miss", ln = (line > 0 ? "+" : "") + line;
+    const msg = notYet ? `${per2} not started` : `${esc(T.abbr || T.name)} ${me}–${op} ${esc(O.abbr || O.name)} in the ${per2} · with ${ln}: ${mg > 0 ? `ahead by ${mg}` : mg === 0 ? "level" : `behind by ${-mg}`}`;
+    return { st, html: `<div class="tl-leg ${st === "hit" ? "hit" : st === "miss" ? "miss" : st === "void" ? "void" : ""}"><div class="tl-top"><b>${name}</b><span>${esc(Lt.name)} ${esc(Lt.score)}–${esc(Rt.score)} ${esc(Rt.name)} · ${esc(clockLabel(l.sport, g))}</span></div><div class="tl-bar"><i style="width:${notYet ? 0 : Math.max(4, Math.min(100, 50 + mg * (l.sport === "nba" ? 5 : 25)))}%"></i></div><div class="tl-num"><span>${msg}</span><span>${st === "hit" ? "✓ Landed" : st === "miss" ? "✗ Missed" : st === "void" ? "Void · level" : ""}</span></div></div>` };
+  }
   if (/^T:/.test(l.k || "") && l.sport === "nba") {   // NBA team points from the quarter scores
     const [, stat, who, n0] = l.k.split(":"), n = +n0, post = g.status.state === "post", per = +g.status.period || 0, ht = per >= 3 || /half/i.test(String(g.status.detail || ""));
     const q = T => (T.lines && T.lines.length ? T.lines : []).map(Number), hq = q(H), aq = q(A), sum = (x, a, b) => x.slice(a, b).reduce((s, v) => s + (v || 0), 0);
@@ -3146,7 +3158,7 @@ function legChance(l) {
     const cur = legValue(l).v || 0; return paceChance(cur, l.target - cur, gameFrac(l.sport, g), lam0, l.stat);
   }
   if (/^T:/.test(l.k || "")) {
-    if (l.sport === "nba" || /goals$/.test(l.k.split(":")[1]) && l.k.split(":")[1] !== "goals") return null;   /* half-by-half team bets: tracked, no chance figure */
+    if (l.sport === "nba" || /hc3?$/.test(l.k.split(":")[1]) || /goals$/.test(l.k.split(":")[1]) && l.k.split(":")[1] !== "goals") return null;   /* half-by-half team bets: tracked, no chance figure */
     const [, stat, who, n0] = l.k.split(":"), n = +n0, v = teamStatVals(g, stat) || [0, 0], f = gameFrac(l.sport, g), M = g.model || {};
     const prior = stat === "cards" && M.cards ? [M.cards / 2, M.cards / 2] : stat === "corners" && M.corners ? [M.corners / 2, M.corners / 2] : stat === "goals" ? [M.xgH, M.xgA] : [null, null];
     const pt = i => paceChance(v[i], n - v[i], f, prior[i]); const a = who === "away" ? null : pt(0), b = who === "home" ? null : pt(1);
@@ -3873,7 +3885,12 @@ function fundedStats(F) { const settled = F.bets.filter(b => b.result !== "open"
   const bal = F.start + pl, goal = F.start * (1 + F.target / 100), won = settled.filter(b => b.result === "won").length, dec = settled.filter(b => b.result !== "void").length;
   return { bal, pl, goal, open, staked, avail: bal - staked, won, dec, pct: pl / F.start * 100, done: bal >= goal - 1e-9 }; }
 function fundedAuto(F) {   /* settle tracked singles by themselves */
-  let n = 0; for (const b of F.bets) { if (b.result !== "open" || !(b.legs || []).length) continue; const sts = b.legs.map(l => legInfo0(l).st);
+  let n = 0, rl = 0; for (const b of F.bets) if (b.result === "open" && !(b.legs || []).length && !b._rl) {   /* bets added before we could track their market: try again from the saved text */
+    const m = String(b.text || "").match(/^(.+?) · (.+) \((.+?) v (.+)\)$/); if (!m || !(S.data || {}).nba) continue; b._rl = 1;
+    const P = fundedParse(`Single\nOpen\n${m[1]}\n${m[2]} · ${m[3]} vs ${m[4]}\n${b.dec}\nStake\n£${b.stake}\nPotential Returns\n£${(b.stake * b.dec).toFixed(2)}`);
+    if (P.length === 1 && P[0].legs.length) { b.legs = P[0].legs; rl++; } }
+  if (rl && S.chalLoaded) fundedSave(F);
+  for (const b of F.bets) { if (b.result !== "open" || !(b.legs || []).length) continue; const sts = b.legs.map(l => legInfo0(l).st);
     const res = sts.includes("miss") ? "lost" : sts.every(x => x === "void") ? "void" : sts.every(x => x === "hit" || x === "void") ? "won" : null;
     if (res) { if (res === "won" && sts.includes("void")) { const vd = b.legs.reduce((a, l, i) => sts[i] === "void" ? a * (l.dec || 1) : a, 1); if (vd > 1) b.dec = Math.round(b.dec / vd * 1000) / 1000; }   /* a void leg drops out of the price */
       b.result = res; b.settledAt = new Date().toISOString(); n++; } }
@@ -3921,6 +3938,11 @@ function fundedParse(raw) {
       else if (/winner|money|match odds|to win|result|home away|1x2|home draw away/.test(mk)) q = /^draw$/i.test(sel) ? `${home} v ${away}: draw` : `${home} v ${away}: ${sel} to win`;
     }
     let legs = []; if (q) { const r = parseBet(q, playerIndex(false).idx); if (r.legs.length === 1 && !r.missing.length) legs = r.legs; }
+    const qm = mk.match(/(1st|2nd|3rd|4th|first|second|third|fourth)\s+quarter|quarter\s*([1-4])|\bq([1-4])\b/), qn = qm ? (qm[2] || qm[3] ? +(qm[2] || qm[3]) : { "1st": 1, first: 1, "2nd": 2, second: 2, "3rd": 3, third: 3, "4th": 4, fourth: 4 }[qm[1]]) : 0;
+    const hh = /handicap|spread/.test(mk) && !/corners?|cards?/.test(mk) && (qn ? "q" + qn : /1st half|first half/.test(mk) ? "h1" : /2nd half|second half/.test(mk) ? "h2" : ""), hs = sel.match(/^(.*?)\s*\(([+-]?[\d.]+)\)/);
+    if (hh && hs) { const r = parseBet(`${home} v ${away}: ${hs[1]} to win`, playerIndex(false).idx), w = r.legs.length === 1 && !r.missing.length ? r.legs[0] : null;
+      if (w && WIN_KEYS.has(w.k) && !/^(draw|tie|x)$/i.test(hs[1].trim())) { const side = w.k === "1" || w.k === "ML1" ? "home" : "away", ln = +hs[2], three = /draw/.test(mk);
+        legs = [{ ...w, k: `T:${hh}hc${three ? "3" : ""}:${side}:${ln}`, label: `${hs[1].trim()} ${ln > 0 ? "+" : ""}${ln} ${hh[0] === "q" ? ["1st", "2nd", "3rd", "4th"][+hh[1] - 1] + " quarter" : (hh === "h1" ? "1st" : "2nd") + " half"} handicap`, p: null }]; } }
     out.push({ text: `${sel}${market ? ` · ${market.replace(/\s*\(Ordinary Time\)/i, "")}` : ""} (${home} v ${away})`, legs, dec, stake, result: /won/i.test(st) ? "won" : /lost/i.test(st) ? "lost" : /void/i.test(st) ? "void" : "open", at: when ? new Date(when.replace(",", "")).toISOString() : new Date().toISOString(), src: "import" });
   });
   return out;
