@@ -1264,7 +1264,7 @@ const priceOf = m => m.dec || (m.prop ? livePrice(m.p) : m.fair);
 const isProp = m => /^P:/.test((m && m.k) || m || "");
 const propLeg = m => m && m.prop ? { pid: m.prop.pid, name: m.prop.name, side: m.prop.side, team: m.prop.team, stat: m.prop.stat, target: m.prop.target, label: m.prop.label } : {};
 const shortName = n => { const w = String(n || "").split(" "); return w.length > 1 ? w[0][0] + ". " + w.slice(1).join(" ") : n; };
-const propText = (l, nm) => (nm = nm || l.name, l.stat === "totalGoals" && +l.target === 1 && !l.half ? `${nm} to score` : l.stat === "cards" && +l.target === 1 && !l.half ? `${nm} to be carded` : `${nm} ${l.target}+ ${l.label}`);
+const propText = (l, nm) => (nm = nm || l.name, l.under ? `${nm} under ${l.line} ${l.label}` : l.stat === "totalGoals" && +l.target === 1 && !l.half ? `${nm} to score` : l.stat === "cards" && +l.target === 1 && !l.half ? `${nm} to be carded` : `${nm} ${l.target}+ ${l.label}`);
 const legText = l => l.pid ? (l.group ? `${l.name} ${l.target}+ ${l.label}` : propText(l)) : l.label;
 function optsHTML(list, sel, price, now) {
   const o = (m, txt) => `<option value="${m.k}" ${m.k === sel ? "selected" : ""}>${esc(txt)} · ${pct(m.p)}${now || ""} · ${odds(price(m))}</option>`;
@@ -2686,6 +2686,7 @@ function nbaTeamPts(t, g) {
   if (m) { const st = half(m[2] + " "), n = +m[1]; return { k: `T:${st}:each:${n}`, label: `Each team ${n}+ points${HW[st]}`, p: null, custom: true }; }
   for (const [T, side] of [[g.home, "home"], [g.away, "away"]]) for (const a of teamAliases(T)) {
     const r = t.match(new RegExp(` ${a.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} (?:to )?(?:score )?(\\d+)\\+ (?:points|pts)\\b(.*)$`)); if (!r) continue;
+    { const pre = t.slice(0, r.index).trim(), other = T === g.home ? g.away : g.home; if (pre && !teamAliases(other).some(x => pre.includes(x))) continue; }   /* "P.J. Washington 14+ points" is a player, not the Washington Wizards */
     if (/ (?:v|vs|@) $/.test(t.slice(0, r.index + 1)) || / over \d/.test(t) && !/ (?:to )?score | team total /.test(t) && !new RegExp(` ${a.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} over \\d`).test(t.replace(/ (?:v|vs|@) \S+(?: \S+)? over/, " x over"))) continue;   /* "Celtics v Hornets: Over 208.5 points" is the match total, not a Hornets total */
     const st = half(r[2] + " "), n = +r[1]; return { k: `T:${st}:${side}:${n}`, label: `${T.name} ${n}+ points${HW[st]}`, p: null, custom: true }; }
   return null;
@@ -2799,7 +2800,7 @@ function parseBet(text, idx) {
   const fold = String(text).match(/\d+\s*-?\s*fold\b[^\n@]*@\s*(\d+(?:\.\d+)?|\d+\s*\/\s*\d+)/i) || String(text).match(/(?:total|acca|accumulator)\s*odds[^0-9\n]{0,6}(\d+(?:\.\d+)?|\d+\s*\/\s*\d+)/i);   /* Sky's "9 Fold @ 40.68": the slip's own total wins */
   text = skyText(text);
   const legs = [], missing = [], unread = [], om = text.match(/@\s*([0-9]+(?:\.[0-9]+)?(?:\s*\/\s*[0-9]+)?|evs|evens)/i); let oddsFound = null;
-  const LEG = l => l.match(/^(.*?)\s+(?:to\s+|-\s+|:\s*)(.+)$/i) || l.match(/^(.*?)\s+((?:over\s+)?\d.*)$/i) || l.match(/^(.*?)\s+((?:anytime|first|last)\s+(?:goal\s*)?scorer.*)$/i);
+  const LEG = l => l.match(/^(.*?)\s+(?:to\s+|-\s+|:\s*)(.+)$/i) || l.match(/^(.*?)\s+((?:(?:over|under)\s*\+?\s*)?\d.*)$/i) || l.match(/^(.*?)\s+((?:anytime|first|last)\s+(?:goal\s*)?scorer.*)$/i);
   // "A 20+ points & B 6+ assists" is two legs; "A & B to score 25+ each" shares one stat
   const groups = [];
   // bookie slips often put the player on one line and "To Record 4+ Rebounds" on the next: join them back up
@@ -2868,6 +2869,9 @@ function parseBet(text, idx) {
         for (const pt of parts) { const e = PROPS[p.sport].find(([re]) => re.test(pt)); if (e && !found.some(f => f[1] === e[1])) found.push(e); }
         if (found.length > 1 && (/combin/i.test(rest) || (rest.match(/\d+(?:\.\d+)?\s*\+/g) || []).length <= 1) && st[1] !== "PRA" && st[1] !== "goalOrAssist") st = [null, "combo:" + found.map(f => f[1]).join(","), found.map(f => f[2]).join(" + ")];
       }
+      const und = rest.match(/\bunder\s*\+?\s*(\d+(?:\.\d+)?)/i);   /* "Luka Doncic under 35.5 points": 35 or fewer */
+      if (und) { const line = +und[1], half0 = p.sport === "football" && /\b(1st|first) half\b/i.test(rest) ? 1 : p.sport === "football" && /\b(2nd|second) half\b/i.test(rest) ? 2 : 0;
+        legs.push({ sport: p.sport, gid: p.gid, side: p.side, pid: p.pid, name: p.name, team: p.team, stat: st[1], label: st[2], under: true, line, max: Math.ceil(line) - 1, target: Math.ceil(line) - 1, ...(half0 ? { half: half0 } : {}) }); continue; }
       const target = tgt ? Math.ceil(+tgt) : ov ? Math.floor(+ov) + 1 : 1;
       const half = p.sport === "football" && /\b(1st|first) half\b/i.test(rest) ? 1 : p.sport === "football" && /\b(2nd|second) half\b/i.test(rest) ? 2 : 0;
       legs.push({ sport: p.sport, gid: p.gid, side: p.side, pid: p.pid, name: p.name, team: p.team, stat: st[1], label: st[2] + (half ? ` (${half === 1 ? "1st" : "2nd"} half)` : ""), target, ...(half ? { half } : {}) });
@@ -2962,6 +2966,11 @@ function legInfo0(l) {   // -> { html, st: "pre" | "live" | "hit" | "miss" | "vo
     const chips = r.parts.map(({ m, r: q }) => `<span class="tl-pp ${q.on && G0 && isLive(G0) ? "on" : ""}">${esc(shortName(m.name))} <b>${q.v == null ? (q.dnp ? "–" : "0") : q.v}</b></span>`).join("");
     return { st, html: `<div class="tl-leg ${done ? "hit" : post ? "miss" : ""}"><div class="tl-top"><b>${esc(surnames(l))}</b><span>${G0 ? esc(scoreLine(l.sport, G0)) + " · " + esc(clockLabel(l.sport, G0)) : "Game not found"}</span></div>
       <div class="tl-bar"><i style="width:${r.v == null ? 0 : Math.min(1, r.v / l.target) * 100}%"></i></div><div class="tl-num"><span>${r.v == null ? (G0 && isPre(G0) ? `Needs ${l.target}+ ${esc(l.label)}` : "Waiting for stats…") : `<b>${r.v}</b> / ${l.target} ${esc(l.label)}`}</span><span>${done ? "✓ Landed" : post ? "✗ Missed" : r.v != null ? `${l.target - r.v} to go` : ""}</span></div><div class="tl-pps">${chips}</div></div>` };
+  }
+  if (l.pid && l.under) {   /* player under: lost as soon as he goes over, landed at full time */
+    const r = legValue(l), post = g && g.status.state === "post", over = r.v != null && r.v > l.max, hit = post && r.v != null && !over, st = over ? "miss" : r.dnp ? "void" : hit ? "hit" : g && !isPre(g) ? "live" : "pre";
+    return { st, html: `<div class="tl-leg ${st === "hit" ? "hit" : st === "miss" ? "miss" : st === "void" ? "void" : ""}"><div class="tl-top"><b>${esc(l.name)}</b><span>${g ? esc(scoreLine(l.sport, g)) + " · " + esc(clockLabel(l.sport, g)) : "Game not found"}</span></div>
+      <div class="tl-bar"><i style="width:${r.v == null ? 0 : Math.min(1, r.v / (l.max + 1)) * 100}%"></i></div><div class="tl-num"><span>${r.v == null ? (g && isPre(g) ? `Under ${l.line} ${esc(l.label)}` : "Waiting for stats…") : `<b>${r.v}</b> so far · ${l.max} or fewer wins it`}</span><span>${st === "hit" ? "✓ Landed" : st === "miss" ? "✗ Lost" : st === "void" ? "Void · not playing" : r.v != null ? `${Math.max(0, l.max - r.v)} to spare` : ""}</span></div></div>` };
   }
   if (l.pid) {
     const r = legValue(l), done = r.v != null && r.v >= l.target, post = g && (l.half === 1 ? halfDone(g) && g._playsHalfDone : g.status.state === "post");
@@ -3080,6 +3089,7 @@ function paceChance(cur, need, f, lam0, stat) {
 }
 function legChance(l) {
   if (l.manual) return l.fst === "hit" ? 1 : l.fst === "miss" ? 0 : null;
+  if (l.pid && l.under) { const st = legInfo0(l).st; if (st === "hit" || st === "void") return 1; if (st === "miss") return 0; const o = legChance({ ...l, under: false, target: l.max + 1 }); return o == null ? null : 1 - o; }
   const st = legInfo0(l).st; if (st === "hit" || st === "void") return 1; if (st === "miss") return 0;
   const g = findGame(l.sport, l.gid); if (!g) return null;
   if (l.pid) {

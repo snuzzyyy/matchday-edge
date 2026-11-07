@@ -81,6 +81,9 @@ def final_state(sport, g):
 
 def leg_result(l):
     """'won' / 'lost' / None (not certain yet, or not something we can check)."""
+    if l.get("under") and l.get("pid"):   # player under, e.g. under 35.5 points: 35 or fewer wins (only called once the game is final)
+        r, v = leg_result({**l, "under": False, "target": int(l.get("max", 0)) + 1})
+        return (None if r is None else "lost" if r == "won" else "won"), v
     if l.get("group"):   # "A, B & C 7+ shots between them": the players' numbers add up
         tot = 0
         for m in l["group"]:
