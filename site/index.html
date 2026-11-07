@@ -444,6 +444,7 @@ a.prof-bdg{text-decoration:none}
 .lp-now{display:grid;grid-template-columns:auto minmax(0,1fr);gap:2px 10px;align-items:baseline;margin-top:10px;padding:10px 12px;border-radius:12px;background:var(--surface);border:1px solid var(--line)}.lp-now b{font-family:var(--display);font-size:18px;grid-row:span 2}.lp-now span{font-weight:700;font-size:14px}.lp-now small{color:var(--muted);font-size:12px}.lp-now.hot{border-color:rgba(239,68,68,.55)}.lp-now.hot small{color:#f87171;font-weight:700}
 .lp-mom{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:8px;align-items:center;margin-top:10px;font-size:12px;font-weight:700;color:var(--fg-2)}.lp-bar{height:6px;border-radius:6px;background:#ff8a3d;overflow:hidden}.lp-bar i{display:block;height:100%;background:#4f8dff}
 .idle-line{display:flex;align-items:center;gap:8px;margin:0 0 6px;font-size:13.5px;color:var(--muted)}.idle-line .dot{background:var(--dim);animation:none}
+.btn.dup-warn{background:var(--amber);color:#1a1300}
 .lg-sub{padding:10px 14px 2px;font-size:11px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--blue-2);border-top:1px solid var(--line)}.lg-sub + .fx{border-top:0}
 .lg-hd.live-hd{color:var(--live)}
 .lg-hd.live-hd span{display:flex;align-items:center;gap:8px}
@@ -3295,7 +3296,8 @@ function impRefresh() {
   const { r, loading } = impParse(), o = $("#impodds"), go = $("[data-impgo]");
   if (o && !S.impOddsTyped && document.activeElement !== o) o.value = r.dec ? odds(r.dec) : "";
   if (o) { const est = !r.dec && impEst(r.legs); o.placeholder = est ? `${odds(est)} (our estimate)` : "3.00 or 2/1"; }
-  if (go) go.textContent = S.impEdit ? "Save changes" : !r.legs.length && impManual(r, loading).length ? (S.user ? "Save it (you'll mark the result)" : "Sign in to save this bet") : S.user ? "Save and track" : "Track this bet";
+  if (go) go.classList.toggle("dup-warn", !!S._dupOk);
+  if (go) go.textContent = S._dupOk ? "Already tracked · tap again to add it twice" : S.impEdit ? "Save changes" : !r.legs.length && impManual(r, loading).length ? (S.user ? "Save it (you'll mark the result)" : "Sign in to save this bet") : S.user ? "Save and track" : "Track this bet";
 }
 function importSheet() {
   const { r } = impParse(), txt = S.importText || "";
@@ -4587,6 +4589,7 @@ document.addEventListener("click", async e => {
   else if (d.savebet !== undefined) {
     if (!S.user) { S.slipOpen = false; location.hash = "account"; return; }
     if (!S.slip.length || S._saving) return;
+    { const sig = legSig(S.slip); if (sig && (S.bets || []).some(b => b.result === "open" && legSig(b.legs) === sig) && S._dupOk !== sig) { S._dupOk = sig; t.textContent = "Already saved · tap again to add it twice"; toast("You've already saved this bet"); return; } S._dupOk = null; }
     const c = slipCalc(), row = { label: S.slip.map(legText).join(" + "), match: [...new Set(S.slip.map(l => l.match))].join(", "), legs: S.slip, odds_dec: Math.round(c.dec * 1000) / 1000, stake: S.stake, sport: S.slip[0].sport, kickoff: S.slip.map(l => l.kick).sort()[0], ...(S.slipFree ? { free_stake: S.stake } : {}) };
     S._saving = true; const lab = t.textContent; t.disabled = true; t.textContent = "Saving…";
     let r; try { r = await insertBet(row); } finally { S._saving = false; t.disabled = false; t.textContent = lab; }
@@ -5101,6 +5104,10 @@ document.addEventListener("click", async e => {
     if (!S.user || !sb) { if (local()) done("Tracking your bet on this device. Sign in to keep it on all your devices"); else toast("Sign in to save a bet you mark yourself"); return; }
     const gs = [...new Set(r.legs.map(l => l.sport + ":" + l.gid))].map(k => { const [sp, id] = k.split(":"), g = findGame(sp, id); return g && [sp, g]; }).filter(Boolean);
     const row = { label: text, match: gs.map(([sp, g]) => vs(sp, g)).join(", "), legs: legs.map(l => l.manual ? l : { ...l, type: "prop" }), odds_dec: Math.round(Math.max(1.01, dec) * 1000) / 1000, stake, sport: (r.legs[0] || {}).sport || "football", kickoff: gs.map(([, g]) => kick(g)).sort()[0] || null, ...((document.getElementById("impfree") || {}).checked ? { free_stake: stake } : {}) };
+    { /* already tracked? first tap warns, a second tap adds it again */
+      const sig = legSig(r.legs) || text, dup = !S.impEdit && ((S.bets || []).some(b => b.result === "open" && ((legSig(b.legs) || b.label) === sig)) || (S.tracked || []).some(x => (legSig(x.legs) || x.text) === sig));
+      if (dup && S._dupOk !== sig) { S._dupOk = sig; t.textContent = "Already tracked · tap again to add it twice"; t.classList.add("dup-warn"); toast("You've already tracked this bet"); return; }
+      S._dupOk = null; t.classList.remove("dup-warn"); }
     S._saving = true; t.disabled = true; t.textContent = "Saving…"; try {
     if (S.impEdit) {   /* editing a saved bet: update it in place, and move the balance by the change in stake */
       const b = (S.bets || []).find(x => String(x.id) === String(S.impEdit)); if (!b) { S.impEdit = null; toast("Couldn't find that bet"); return; }
@@ -5210,7 +5217,7 @@ document.addEventListener("input", e => {
 });
 document.addEventListener("click", e => { if (e.target.closest("[data-injclose]")) { S.injOpen = null; render(); } if (e.target.closest("div[data-betviewx]")) { S.betView = null; render(); } if (e.target.closest("div[data-cashclose]")) { S.cashOpen = null; render(); } const shc = e.target.closest("[data-shareclose]"); if (shc && S.shareOpen) { if (shc.tagName === "A") setTimeout(() => { S.shareOpen = false; render(); }, 400); else { S.shareOpen = false; render(); } } if (e.target.closest("[data-importclose]")) { S.importOpen = false; if (S.impEdit) { S.impEdit = null; S.importText = ""; S.impOdds = ""; S.impOddsTyped = false; S.impStake = null; S.impFree = false; } saveImpDraft(); render(); } });
 document.addEventListener("input", e => {
-  const id = e.target.id; if (!/^imp(text|odds|stake)$/.test(id)) return;
+  const id = e.target.id; if (!/^imp(text|odds|stake)$/.test(id)) return; if (id === "imptext") S._dupOk = null;
   if (id === "imptext") { S.importText = e.target.value; S.impShotMsg = ""; clearTimeout(S._impT); S._impT = setTimeout(impRefresh, 350); }
   if (id === "impodds") { S.impOdds = e.target.value; S.impOddsTyped = !!e.target.value.trim(); }
   if (e.target.dataset && e.target.dataset.twplayer !== undefined) { twState().player = e.target.value; twState().custom = {}; render(); }
