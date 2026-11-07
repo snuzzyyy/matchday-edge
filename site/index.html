@@ -3878,29 +3878,38 @@ function fundedPicks() {
 }
 /* BetPro-style bet list (pasted or read from a screenshot): "Single / Basketball / Open / Denver Nuggets (-4) / Home Draw Away with Handicap (4), 1st Half · Indiana Pacers vs Denver Nuggets / … / 10/11 / Stake £10.00 / Potential Returns £19.09 / 7 Nov 2026, 21:52" */
 function fundedParse(raw) {
-  const L = String(raw || "").split("\n").map(x => x.trim()).filter(Boolean), starts = L.map((x, i) => /^(single|double|treble|accumulator|acca)\b/i.test(x) ? i : -1).filter(i => i >= 0);
-  const blocks = starts.length ? starts.map((s0, k) => L.slice(s0, starts[k + 1] ?? L.length)) : [L], out = [];
-  for (const B of blocks) {
-    const txt = B.join("\n"), mi = B.findIndex(x => /\s[·•]\s|\s-\s.+\svs?\.?\s/.test(x) && /\svs?\.?\s/i.test(x)); if (mi < 1) continue;
-    const mline = B[mi], cut = mline.split(/\s[·•]\s|\s-\s(?=[^-]*\svs?\.?\s)/), market = cut.length > 1 ? cut.slice(0, -1).join(" · ") : "", game = cut[cut.length - 1];
-    const sel = B[mi - 1].replace(/^(open|won|lost|void)\s*/i, "").replace(/[^\w)]+$/, "").trim();
+  /* each bet is found by its game line ("Team A vs Team B"): either "Market · A vs B" with the selection above it (My Bets),
+     or a line of its own with the market above and the selection above that (bet slip) */
+  const L = String(raw || "").split("\n").map(x => x.trim()).filter(Boolean), isGame = x => /\svs?\.?\s/i.test(x) && !/^(stake|returns?|potential)/i.test(x);
+  const inl = x => /\s[·•]\s|\s-\s(?=[^-]*\svs?\.?\s)/.test(x), G = L.map((x, i) => isGame(x) ? i : -1).filter(i => i >= 0), out = [];
+  const selAt = gi => inl(L[gi]) ? gi - 1 : gi - 2;
+  G.forEach((gi, k) => {
+    const si = selAt(gi); if (si < 0) return;
+    const from = k ? Math.max(G[k - 1] + 1, si - 3) : Math.max(0, si - 3), to = k + 1 < G.length ? selAt(G[k + 1]) : L.length;
+    const B = L.slice(from, Math.max(gi + 1, to)), txt = B.join("\n"), after = L.slice(gi + 1, Math.max(gi + 1, to));
+    let market, game; if (inl(L[gi])) { const cut = L[gi].split(/\s[·•]\s|\s-\s(?=[^-]*\svs?\.?\s)/); market = cut.slice(0, -1).join(" · "); game = cut[cut.length - 1]; } else { game = L[gi]; market = L[gi - 1] || ""; }
+    const selOdds = (L[si].match(/\s(\d{1,3}\/\d{1,3}|\d+\.\d{2})(?=\s|$)/) || [])[1];   /* a slip puts the price on the selection's line: "Atlanta Hawks 4/11 ×" */
+    const sel = L[si].replace(/^(open|won|lost|void)\s*/i, "").replace(/\s(\d{1,3}\/\d{1,3}|\d+\.\d{2})(?=\s|$).*$/, "").replace(/(?:\s+(?:[a-z]{1,3}|I[sl1]|[x×~©®]))+$/, "").replace(/[^\w)]+$/, "").trim();   /* leftovers from the price and the ✕ */
     let st = (txt.match(/^(open|won|lost|void|cashed out)$/im) || [])[1];
-    if (!st) { const settledRet = txt.match(/^returns?\s*£?\s*([\d.]+)/im); st = settledRet ? (+settledRet[1] > 0 ? "won" : "lost") : "open"; }   /* "Returns £10.40" (not "Potential Returns") means it has settled */
-    const stake = +((txt.match(/stake\s*£?\s*([\d.]+)/i) || [])[1] || 0), ret = +((txt.match(/(?:potential\s+)?returns?\s*£?\s*([\d.]+)/i) || [])[1] || 0);
-    const oddsTxt = (B.slice(mi + 1).find(x => /^(\d+\/\d+|\d+\.\d+|evs|evens)$/i.test(x)) || ""), dec = stake && ret && /open|won/i.test(st) ? Math.round(ret / stake * 1000) / 1000 : parseOdds(oddsTxt);
-    const when = (txt.match(/(\d{1,2} [A-Za-z]{3,9} \d{4},? \d{1,2}:\d{2})/) || [])[1];
-    if (!sel || !(stake > 0) || !dec) continue;
-    const [home, away0] = game.split(/\s+vs?\.?\s+/i), away = String(away0 || "").replace(/\s+(?:\S{1,2}|[^\w\s]+|\d+\/\d+)$/, "").replace(/[^\w\s.'&-]+$/, "").trim();   /* screenshot leftovers after the team name */
-    /* only bets we can follow get a live leg: match winner, totals, full-game handicaps */
-    let q = null; const mk = market.toLowerCase();
-    if (!/half|quarter|1st|2nd|first|period|corners?|cards?|exact|correct/.test(mk)) {
-      if (/handicap|spread/.test(mk)) { const h = sel.match(/^(.*?)\s*\(([+-]?[\d.]+)\)/); if (h) q = `${home} v ${away}: ${h[1]} ${/^[+-]/.test(h[2]) ? h[2] : "+" + h[2]} handicap`; }
-      else if (/total|over|under|points|goals/.test(mk) || /^(over|under)/i.test(sel)) q = `${home} v ${away}: ${sel.replace(/\(([+-]?[\d.]+)\)/, "$1")} ${/goals/.test(mk) ? "goals" : /points/.test(mk) || /basket/i.test(txt) ? "points" : ""}`;
-      else if (/winner|money|match odds|to win|result|overtime|1x2|home draw away/.test(mk)) q = /^draw$/i.test(sel) ? `${home} v ${away}: draw` : `${home} v ${away}: ${sel} to win`;
+    if (!st) { const sr = after.join("\n").match(/^returns?\s*£?\s*([\d.]+)/im); st = sr ? (+sr[1] > 0 ? "won" : "lost") : "open"; }   /* "Returns £10.40" (not "Potential Returns") means it has settled */
+    const at2 = after.join("\n"), stake = +((at2.match(/stake\s*£?\s*([\d.]+)/i) || [])[1] || 0), ret = +((at2.match(/(?:potential\s+)?returns?\s*£?\s*([\d.]+)/i) || [])[1] || 0);
+    const oddsTxt = (after.find(x => /^(\d+\/\d+|\d+\.\d+|evs|evens)$/i.test(x)) || selOdds || ""), dec = stake && ret && /open|won/i.test(st) ? Math.round(ret / stake * 1000) / 1000 : parseOdds(oddsTxt);
+    const when = (at2.match(/(\d{1,2} [A-Za-z]{3,9} \d{4},? \d{1,2}:\d{2})/) || [])[1];
+    const [home, away0] = game.split(/\s+vs?\.?\s+/i), away = String(away0 || "").replace(/\s+(?:\S{1,2}|[^\w\s]+|\d+\/\d+)$/, "").replace(/[^\w\s.'&-]+$/, "").trim();
+    if (!sel) return;
+    const nbaG = gamesInText(normT(`${home} v ${away}`)).some(f => f.sp === "nba"), mk = market.toLowerCase(), unit = nbaG ? "points" : "goals";
+    /* only bets we can follow get a live leg: match winner, totals, full-game handicaps, player overs and unders */
+    let q = null;
+    if (!/half|quarter|1st|2nd|3rd|4th|first|period|corners?|cards?|exact|correct|margin|double double|triple double|overtime|odd|even/.test(mk)) {
+      const pp = market.match(/^(.+?)\s+((?:points|assists|rebounds|blocks|steals|threes|made threes|3-?pointers?)(?:\s+(?:and|&|\+)\s+(?:points|assists|rebounds))*)\s+over\s*[\/f]?\s*(?:under|funder|\/under)\s+([\d.]+)/i);
+      if (pp) { const sl = (sel.match(/(?:over|under)\s*\+?(\d+(?:\.\d)?)/i) || [])[1], line = !/\.5$/.test(pp[3]) && sl && /\.5$/.test(sl) ? +sl : +pp[3], under = /under/i.test(sel);   /* a screenshot can drop the ".5" from one copy of the number */ q = under ? `${pp[1]} under ${line} ${pp[2]}` : `${pp[1]} ${Math.floor(line) + 1}+ ${pp[2]}`; }
+      else if (/handicap|spread/.test(mk)) { const h = sel.match(/^(.*?)\s*\(([+-]?[\d.]+)\)/); if (h) q = `${home} v ${away}: ${h[1]} ${/^[+-]/.test(h[2]) ? h[2] : "+" + h[2]} handicap`; }
+      else if (/total|over|under/.test(mk) || /^(over|under)\b/i.test(sel)) { const t = sel.match(/(over|under)\s*\(?\+?([\d.]+)/i); if (t) q = `${home} v ${away}: ${t[1]} ${t[2]} ${unit}`; }
+      else if (/winner|money|match odds|to win|result|home away|1x2|home draw away/.test(mk)) q = /^draw$/i.test(sel) ? `${home} v ${away}: draw` : `${home} v ${away}: ${sel} to win`;
     }
-    let legs = []; if (q) { const r = parseBet(q, playerIndex(false).idx); if (r.legs.length === 1) legs = r.legs; }
+    let legs = []; if (q) { const r = parseBet(q, playerIndex(false).idx); if (r.legs.length === 1 && !r.missing.length) legs = r.legs; }
     out.push({ text: `${sel}${market ? ` · ${market.replace(/\s*\(Ordinary Time\)/i, "")}` : ""} (${home} v ${away})`, legs, dec, stake, result: /won/i.test(st) ? "won" : /lost/i.test(st) ? "lost" : /void/i.test(st) ? "void" : "open", at: when ? new Date(when.replace(",", "")).toISOString() : new Date().toISOString(), src: "import" });
-  }
+  });
   return out;
 }
 function fundedPickerHTML() {
@@ -3931,7 +3940,7 @@ function viewFunded() {
   <details class="section maths" ${S.fdImpOpen ? "open" : ""}><summary data-fdimpt><h2 style="display:inline;font-size:16px">📥 Import bets from BetPro</h2></summary><div class="fd-form" style="margin-top:10px">
     <button type="button" class="shotbtn" data-fdshot><span>📷</span><span><b>Read a screenshot</b><small>Of your BetPro bets list. It stays on your device.</small></span></button>
     <div class="field"><label for="fdImp">Or paste your bets</label><textarea id="fdImp" rows="4" placeholder="Single · Basketball · Open · Denver Nuggets (-4) · …">${esc(S.fdImp || "")}</textarea></div>
-    ${(() => { const P = fundedParse(S.fdImp || ""); return P.length ? `<div class="fd-list">${P.map(b => `<div class="imp-leg ok"><span>${b.legs.length ? "✓" : "✋"}</span><div><b>${esc(b.text)}</b><small>${money(b.stake)} at ${odds(b.dec)} · ${b.result === "open" ? "open" : b.result}${b.legs.length ? " · tracks live" : " · result from BetPro"}</small></div></div>`).join("")}</div><button class="btn" data-fdimpgo>Add ${P.length} bet${P.length > 1 ? "s" : ""}</button>` : (S.fdImp || "").trim() ? `<p class="note" style="margin:0">Couldn't read any bets from that yet. Make sure it includes the market line (… · Team A vs Team B), the odds and the stake.</p>` : ""; })()}
+    ${(() => { const P = fundedParse(S.fdImp || ""); return P.length ? `<div class="fd-list">${P.map(b => `<div class="imp-leg ok"><span>${b.legs.length ? "✓" : "✋"}</span><div><b>${esc(b.text)}</b><small>${b.stake && b.dec ? `${money(b.stake)} at ${odds(b.dec)}` : `${b.dec ? odds(b.dec) + " · " : ""}<b style="color:var(--amber)">no stake yet</b>`} · ${b.result === "open" ? "open" : b.result}${b.legs.length ? " · tracks live" : " · result from BetPro"}</small></div></div>`).join("")}</div>${P.some(b => !b.stake) ? `<p class="note" style="margin:0">Bets with no stake look like a bet slip before placing. Place them, then import from BetPro's My Bets so the stakes come through.</p>` : ""}${P.filter(b => b.stake && b.dec).length ? `<button class="btn" data-fdimpgo>Add ${P.filter(b => b.stake && b.dec).length} bet${P.filter(b => b.stake && b.dec).length > 1 ? "s" : ""}</button>` : ""}` : (S.fdImp || "").trim() ? `<p class="note" style="margin:0">Couldn't read any bets from that yet. Make sure it includes the market line (… · Team A vs Team B), the odds and the stake.</p>` : ""; })()}
   </div></details>
   <details class="section maths" id="fdAdd"><summary><h2 style="display:inline;font-size:16px">Add a bet that isn't listed</h2></summary><div class="fd-form" style="margin-top:10px">
     <div class="field"><label for="fdText">Bet <small style="color:var(--muted);font-weight:500">singles only, e.g. "Arsenal v Spurs: Arsenal to win" or "Haaland to score"</small></label><input id="fdText" autocomplete="off" placeholder="Leeds v Spurs: Over 2.5 goals"></div>
@@ -5303,12 +5312,12 @@ document.addEventListener("click", async e => {
     F.bets = [{ id: "f" + Date.now().toString(36), text: m.prop ? legText(leg) : `${m.label} (${vs(sp, g)})`, legs: [leg], dec: Math.round(dec * 1000) / 1000, stake, result: "open", at: new Date().toISOString() }, ...F.bets];
     S.fpOpen = null; fundedSave(F); toast(`Added: ${money(stake)} at ${odds(dec)}`); }
   else if (d.fdimpgo !== undefined) { const F = fundedNow(), P = fundedParse(S.fdImp || ""), key = b => [b.text, b.stake, b.at].join("|"), have = new Set(F.bets.map(key)); let n = 0;
-    for (const b of P) { if (have.has(key(b))) continue; F.bets.unshift({ id: "f" + Date.now().toString(36) + n, ...b, settledAt: b.result === "open" ? null : new Date().toISOString() }); n++; }
+    for (const b of P) { if (!b.stake || !b.dec || have.has(key(b))) continue; F.bets.unshift({ id: "f" + Date.now().toString(36) + n, ...b, settledAt: b.result === "open" ? null : new Date().toISOString() }); n++; }
     S.fdImp = ""; S.fdImpOpen = false; fundedSave(F); toast(n ? `Added ${n} bet${n > 1 ? "s" : ""} to your funded account` : "Those bets are already in"); }
   else if (d.fdshot !== undefined) { let inp = document.getElementById("fdShotPick"); if (!inp) { inp = document.createElement("input"); inp.type = "file"; inp.accept = "image/*"; inp.id = "fdShotPick"; inp.style.display = "none"; document.body.appendChild(inp);
       inp.addEventListener("change", async () => { const f = inp.files && inp.files[0]; inp.value = ""; if (!f) return; toast("Reading your screenshot…");
         try { const T = await loadTess(), [c1, c2] = await Promise.all([shotToCanvas(f, 3000), shotToCanvas(f, 3000, true)]), a = (await T.recognize(c1, "eng")).data.text || "", b = (await T.recognize(c2, "eng")).data.text || "";
-          const best = fundedParse(b).length >= fundedParse(a).length ? b : a;   /* read it two ways, keep the one that finds more bets */
+          const sc = t => { const P = fundedParse(t); return P.length * 10 + P.filter(x => x.stake && x.dec).length; }, best = sc(b) >= sc(a) ? b : a;   /* read it two ways, keep the one that finds more (complete) bets */
           S.fdImp = ((S.fdImp || "") + "\n" + best).trim(); S.fdImpOpen = true; render(); toast(fundedParse(S.fdImp).length ? "Read it. Check the bets and tap Add" : "Couldn't read bets from that. Try a clearer screenshot"); } catch { toast("Couldn't read that screenshot"); } }); }
     inp.click(); }
   else if (d.fadd !== undefined) { const F = fundedNow(), txt = (($("#fdText") || {}).value || "").trim(), dec = parseOdds(($("#fdOdds") || {}).value || ""), stake = +(($("#fdStake") || {}).value) || 0;
