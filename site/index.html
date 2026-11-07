@@ -452,6 +452,7 @@ a.prof-bdg{text-decoration:none}
 @media (min-width:600px){#main .trk{display:block;columns:2;column-gap:16px}#main .trk>*{break-inside:avoid;margin:0 0 14px;display:block}#main .trk>.trk-other{column-span:all}
   .g-cols:not(.one){display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);align-items:start;gap:22px}.drawer.full .dr-in{max-width:1380px}}
 @media (min-width:1500px){#main .trk{columns:3}}
+.fp-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px;margin-top:10px}.fp-it{display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:10px;align-items:center;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px;color:inherit;font:inherit;cursor:pointer}.fp-it:hover{border-color:var(--blue)}.fp-o{display:grid;justify-items:end}.fp-o b{font-family:var(--display);font-size:20px}.fp-o small{font-size:11.5px;font-weight:700}
 .fd-hero{background:linear-gradient(135deg,rgba(79,141,255,.16),rgba(255,122,47,.1)),var(--surface);border:1px solid var(--line);border-radius:18px;padding:18px;display:grid;gap:12px}.fd-hero.done{border-color:rgba(34,197,94,.55)}
 .fd-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}.fd-bal{font-family:var(--display);font-size:44px;font-weight:800;line-height:1.05}.fd-top small{color:var(--muted);font-size:12.5px}.fd-pl{display:grid;justify-items:end}.fd-pl b{font-family:var(--display);font-size:24px}.fd-pl small{font-size:12.5px;color:var(--muted)}
 .fd-bar{height:10px;border-radius:10px;background:var(--surface-3);overflow:hidden}.fd-bar i{display:block;height:100%;background:linear-gradient(90deg,var(--blue),var(--win));border-radius:10px}.fd-sub{font-size:13px;color:var(--fg-2)}
@@ -3859,6 +3860,25 @@ function fundedAuto(F) {   /* settle tracked singles by themselves */
     if (st === "hit" || st === "miss" || st === "void") { b.result = st === "hit" ? "won" : st === "miss" ? "lost" : "void"; b.settledAt = new Date().toISOString(); n++; } }
   if (n && S.chalLoaded) { fundedSave(F); toast(`Funded: ${n} bet${n > 1 ? "s" : ""} settled`); }
 }
+/* bet picker for the funded account: singles in the next 24 hours, by odds band, a mix of bet types, never an unavailable player */
+const FP_BANDS = { low: ["Low odds", 1.25, 1.7], medium: ["Medium odds", 1.7, 2.6], high: ["High odds", 2.6, 6] };
+function fundedPicks() {
+  const band = FP_BANDS[S.fpBand] || FP_BANDS.low, sps = S.fpSport === "football" ? ["football"] : S.fpSport === "nba" ? ["nba"] : ["football", "nba"], now = Date.now(), pool = [];
+  for (const sp of sps) for (const g of games(sp)) { const t = +new Date(kick(g)); if (!isPre(g) || t < now || t - now > 864e5) continue;
+    for (const { m } of legOptions(sp, g)) { const pr = priceOf(m); if (pr >= band[1] && pr < band[2]) pool.push({ sp, g, m, pr }); } }
+  const seed = S.fpSeed || 0, rnd = chRand(seed + 7), score = c => c.m.p * c.pr + (seed ? rnd() * .3 : 0);   /* best expected return first; a refresh shuffles */
+  const out = []; for (const c of pool.sort((a, b) => score(b) - score(a))) { if (out.length >= 8) break; if (out.some(o => o.g.id === c.g.id) || out.filter(o => chKind(o.m) === chKind(c.m)).length >= 2) continue; out.push(c); }
+  return out;
+}
+function fundedPickerHTML() {
+  const P = fundedPicks(), seg = (attr, cur, opts) => `<div class="seg3 ${opts.length === 2 ? "two" : ""}" role="group">${opts.map(([k, l]) => `<button ${attr}="${k}" aria-pressed="${cur === k}">${l}</button>`).join("")}</div>`;
+  return `<section class="section"><h2>Bet picker</h2><div class="acca-panel">${seg("data-fpband", S.fpBand || "low", Object.entries(FP_BANDS).map(([k, v]) => [k, v[0]]))}
+    <div class="ch-tools" style="margin:0">${seg("data-fpsport", S.fpSport || "both", [["football", "⚽ Football"], ["nba", "🏀 NBA"], ["both", "Both"]])}<button class="reroll" data-fpshuffle aria-label="Show different bets" title="Show different bets">${ROLL_SVG}</button></div>
+    <p class="risk-desc" style="margin:0 4px">${(FP_BANDS[S.fpBand] || FP_BANDS.low)[0]}: singles from ${odds((FP_BANDS[S.fpBand] || FP_BANDS.low)[1])} to ${odds((FP_BANDS[S.fpBand] || FP_BANDS.low)[2])} in the next 24 hours. Tap one to fill in the bet below.</p></div>
+    ${P.length ? `<div class="fp-list">${P.map(c => { const l = asLegs([{ sport: c.sp, g: c.g, m: c.m }])[0];
+      return `<button class="fp-it" data-fpick="${c.sp}|${c.g.id}|${esc(c.m.k)}">${legIcon(l)}<span class="pl-t"><b>${esc(c.m.label)}</b><small>${esc(vs(c.sp, c.g))} · ${esc(twTime(kick(c.g)))}</small>${l.pid ? playerTag(l) : ""}</span><span class="fp-o"><b>${odds(c.pr)}</b><small style="color:${tierColor(c.m.p)}">${pct(c.m.p)}</small></span></button>`; }).join("")}</div>`
+      : `<div class="empty">No ${(FP_BANDS[S.fpBand] || FP_BANDS.low)[0].toLowerCase()} singles in the next 24 hours. Try another band or sport.</div>`}</section>`;
+}
 function viewFunded() {
   if (!S.user) return `<div class="acca-panel"><b>Funded account</b><p class="risk-desc" style="margin:0">Track a funded-betting evaluation: balance, singles, and your profit target. <a href="#account">Sign in</a> to start.</p></div>`;
   if (!S.chalLoaded) return `<div class="loadbox">Loading…</div>`;
@@ -3873,7 +3893,8 @@ function viewFunded() {
       <div class="fd-pl ${X.pl > 0 ? "pos" : X.pl < 0 ? "neg" : ""}"><b>${sign(X.pl)}</b><small>${X.pct >= 0 ? "+" : ""}${X.pct.toFixed(1)}%</small></div></div>
     <div class="fd-bar"><i style="width:${prog * 100}%"></i></div>
     <div class="fd-sub">${X.done ? "🏆 Target reached: you've passed the evaluation" : `${money(Math.max(0, X.goal - X.bal))} to go`} · ${X.dec ? `${X.won}/${X.dec} won` : "no settled bets yet"}${X.open.length ? ` · ${money(X.staked)} in ${X.open.length} open bet${X.open.length > 1 ? "s" : ""}` : ""}</div></section>
-  <section class="section"><h2>Add a bet</h2><div class="fd-form">
+  ${fundedPickerHTML()}
+  <section class="section" id="fdAdd"><h2>Add a bet</h2><div class="fd-form">
     <div class="field"><label for="fdText">Bet <small style="color:var(--muted);font-weight:500">singles only, e.g. "Arsenal v Spurs: Arsenal to win" or "Haaland to score"</small></label><input id="fdText" autocomplete="off" placeholder="Leeds v Spurs: Over 2.5 goals"></div>
     <div class="addrow"><div class="field" style="flex:1 1 90px"><label for="fdOdds">Odds</label><input id="fdOdds" placeholder="2.10 or 11/10" autocomplete="off"></div><div class="field" style="flex:1 1 90px"><label for="fdStake">Stake £</label><input id="fdStake" type="number" inputmode="decimal" step="0.5" min="0" value="${Math.max(1, Math.round(X.bal * .02 * 2) / 2)}"></div></div>
     <button class="btn" data-fadd>Add bet</button><p class="note" style="margin:0">It tracks live and settles itself when it can match the game; otherwise mark it Won / Lost.</p></div></section>
@@ -5232,6 +5253,12 @@ document.addEventListener("click", async e => {
   else if (d.gomulti !== undefined) { location.hash = "multi"; }
   else if (d.inbox !== undefined) { S._seenWas = store.get("notesSeen", 0); store.set("notesSeen", Date.now()); S.inboxOpen = true; inboxBadge(); render(); }
   else if (d.inboxclear !== undefined) { store.set("notes", []); inboxBadge(); render(); }
+  else if (d.fpband) { S.fpBand = d.fpband; S.fpSeed = 0; render(); }
+  else if (d.fpsport) { S.fpSport = d.fpsport; S.fpSeed = 0; render(); }
+  else if (d.fpshuffle !== undefined) { S.fpSeed = (S.fpSeed || 0) + 1; render(); const b = $("[data-fpshuffle] svg"); if (b) b.animate([{ transform: "rotate(0)" }, { transform: "rotate(-360deg)" }], { duration: 500, easing: "ease-out" }); }
+  else if (d.fpick) { const [sp, gid, k] = d.fpick.split("|"), g = findGame(sp, gid), m = g && mkt(g, k); if (!m) return;
+    const tI = $("#fdText"), oI = $("#fdOdds"); if (tI) tI.value = m.prop ? legText(asLegs([{ sport: sp, g, m }])[0]) : `${vs(sp, g).replace(" @ ", " v ")}: ${m.label}`; if (oI) oI.value = odds(priceOf(m));
+    const f = $("#fdAdd"); if (f) f.scrollIntoView({ behavior: "smooth", block: "start" }); const st = $("#fdStake"); if (st) setTimeout(() => st.focus({ preventScroll: true }), 400); toast("Filled in. Check the odds at your bookie, set your stake, then Add bet"); }
   else if (d.fadd !== undefined) { const F = fundedNow(), txt = (($("#fdText") || {}).value || "").trim(), dec = parseOdds(($("#fdOdds") || {}).value || ""), stake = +(($("#fdStake") || {}).value) || 0;
     if (!txt) { toast("Type the bet first"); return; } if (!dec) { toast("Add the odds, e.g. 2.10 or 11/10"); return; } if (!(stake > 0)) { toast("Add your stake"); return; }
     const r = parseBet(txt, playerIndexFor(txt).idx); if (r.legs.length > 1) { toast("Funded accounts only allow singles: one selection per bet"); return; }
