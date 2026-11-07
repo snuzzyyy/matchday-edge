@@ -143,6 +143,21 @@ def leg_result(l):
                 return ("won" if val >= l["target"] else "lost"), val
         return None, None
     k, tot = str(l.get("k", "")), hs + as_
+    if k.startswith("T:") and sp == "nba":   # team points, full game or by half, from the quarter scores: T:hpts:each:55 = each team 55+ in each half
+        _, stat, who, n = k.split(":"); n = int(n)
+        comp = ((s.get("header") or {}).get("competitions") or [{}])[0]
+        ls = {c.get("homeAway"): [int(num(x.get("value", x.get("displayValue")))) for x in c.get("linescores", [])] for c in comp.get("competitors", [])}
+        if len(ls.get("home", [])) < 4 or len(ls.get("away", [])) < 4: return None, None
+        part = lambda q: [sum(q)] if stat == "pts" else [sum(q[0:2])] if stat == "h1pts" else [sum(q[2:4])] if stat == "h2pts" else [sum(q[0:2]), sum(q[2:4])]
+        vals = (part(ls["home"]) if who != "away" else []) + (part(ls["away"]) if who != "home" else [])
+        return ("won" if min(vals) >= n else "lost"), min(vals)
+    if k.startswith("T:") and sp == "football" and k.split(":")[1] in ("hgoals", "h1goals", "h2goals"):   # goals by half, from the goal events
+        _, stat, who, n = k.split(":"); n = int(n or 1)
+        ev = [e for e in (s.get("keyEvents") or []) if str((e.get("type") or {}).get("text", "")).startswith("Goal")]
+        cnt = lambda tid, h: sum(1 for e in ev if str((e.get("team") or {}).get("id")) == str(tid) and ((e.get("period") or {}).get("number") or 1) == h)
+        halves = [1, 2] if stat == "hgoals" else [1] if stat == "h1goals" else [2]
+        vals = [cnt(g[side]["id"], h) for side in ("home", "away") if who in ("each", side) for h in halves]
+        return ("won" if min(vals) >= n else "lost"), min(vals)
     if k.startswith("T:") and sp == "football":   # team stat bets, e.g. 2+ cards for each team
         _, stat, who, n = k.split(":"); n = int(n)
         if stat == "goals": v = (hs, as_)

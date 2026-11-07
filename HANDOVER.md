@@ -416,6 +416,11 @@ No server of our own. ESPN is free, has no key and is about 1–3 minutes behind
 - Save buttons (import and slip) lock with "Saving…" until the save finishes (`S._saving`), so repeated taps can't save the same bet many times.
 - `findGame` uses an id index and `mkt` a per-game Map (both WeakMap caches), as the extra games made the old scans slow.
 
+## Half-by-half team bets (Nov 7)
+- NBA `nbaTeamPts()`: "each team to score 55+ points in each half" → `T:hpts:each:55`; also `pts` (game), `h1pts`/`h2pts`, for each/home/away. Tracked from `g.home/away.lines` (quarters); settle.py uses summary header linescores.
+- Football `fbHalfGoals()`: "both teams to score in both halves" → `T:hgoals:each:1`; "X to score in both halves / 1st half / 2nd half" (`h1goals`/`h2goals`). Tracked from `g.events` goal minutes (≤45 = 1st half); settle.py uses keyEvents period numbers.
+- legChance returns null for these (no made-up chance).
+
 ## Ready-made cards (Nov 6)
 - `pLegs()` / `legIcon()`: each leg on a ready-made card is a row with an icon: ESPN headshot (combiner, team badge in the corner, falls back to the badge) for player bets, the team's badge for team bets, both badges for match bets.
 - Swap a leg: each leg on a ready-made card has a ↻ (`data-pswap`); game-page Low/Medium/High accas too (`data-gaswap`, `S.gaSwap`, same game only, odds recalculated). `S.pswap[swKey(id)][slot]` lists ruled-out bets; `applySwaps` picks the next best (`altLeg`: same game or another game, closest price, likelier first) for cards and for `presetLegs` when loading the slip. New leg flips in (`.pl-new`). Cards are `div role=button` now (no button-in-button).

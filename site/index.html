@@ -2674,8 +2674,32 @@ function gamesInText(txt) {
   return found.filter((f, i) => !found.slice(0, i).some(o => o.start === f.start || (f.start < o.end && f.end > o.start)));
 }
 // turn bookie wording into our market names, then pick the longest of our markets that matches
+/* NBA team points: "each team to score 55+ points in each half", "Celtics 110+ points", "Hornets to score 55+ points in the 1st half" */
+function nbaTeamPts(t, g) {
+  t = t.replace(/ (\d+) or more /g, " $1+ ").replace(/ over (\d+)(?:\.5)? (points|pts) /g, (m, n, u) => ` ${+n + 1}+ ${u} `);
+  const half = s => / (?:1st|first) half /.test(s) ? "h1pts" : / (?:2nd|second) half /.test(s) ? "h2pts" : / each half | both halves /.test(s) ? "hpts" : "pts";
+  const HW = { pts: "", h1pts: " in the 1st half", h2pts: " in the 2nd half", hpts: " in each half" };
+  let m = t.match(/ (?:each|both) teams? (?:to )?(?:score )?(\d+)\+? (?:points|pts)\b(.*)$/);
+  if (m) { const st = half(m[2] + " "), n = +m[1]; return { k: `T:${st}:each:${n}`, label: `Each team ${n}+ points${HW[st]}`, p: null, custom: true }; }
+  for (const [T, side] of [[g.home, "home"], [g.away, "away"]]) for (const a of teamAliases(T)) {
+    const r = t.match(new RegExp(` ${a.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} (?:to )?(?:score )?(\\d+)\\+ (?:points|pts)\\b(.*)$`)); if (!r) continue;
+    const st = half(r[2] + " "), n = +r[1]; return { k: `T:${st}:${side}:${n}`, label: `${T.name} ${n}+ points${HW[st]}`, p: null, custom: true }; }
+  return null;
+}
+/* football by half: "both teams to score in both halves", "Arsenal to score in both halves", "Spurs to score in the 2nd half" */
+function fbHalfGoals(t, g) {
+  const hw = s => / (?:both|each) halves? | each half | in both halves /.test(s) ? "hgoals" : / (?:1st|first) half /.test(s) ? "h1goals" : / (?:2nd|second) half /.test(s) ? "h2goals" : null;
+  const HW = { hgoals: " in both halves", h1goals: " in the 1st half", h2goals: " in the 2nd half" };
+  let m = t.match(/ (?:both teams to score|btts|each team to score)( .*)$/); if (m && hw(m[1] + " ")) { const st = hw(m[1] + " "); return { k: `T:${st}:each:1`, label: `Both teams to score${HW[st]}`, p: null, custom: true }; }
+  for (const [T, side] of [[g.home, "home"], [g.away, "away"]]) for (const a of teamAliases(T)) {
+    const r = t.match(new RegExp(` ${a.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} (?:to )?score( .*)$`)); if (!r || !hw(r[1] + " ")) continue;
+    const st = hw(r[1] + " "); return { k: `T:${st}:${side}:1`, label: `${T.name} to score${HW[st]}`, p: null, custom: true }; }
+  return null;
+}
 function marketIn(seg, sp, g) {
   let t = " " + normT(seg) + " ";
+  if (sp === "football") { const hg = fbHalfGoals(t, g); if (hg) return hg; }
+  if (sp === "nba") { const tp = nbaTeamPts(t, g); if (tp) return tp; }
   const H = teamAliases(g.home), A = teamAliases(g.away), hn = normT(g.home.name), an = normT(g.away.name), extra = [];
   const cnt = al => Math.max(0, ...al.map(a => t.split(" " + a + " ").length - 1)), has = al => cnt(al) > 0;
   // which team the wording is about: "<team> to win" first, else the team named more often (the game header names both once)
@@ -2943,6 +2967,26 @@ function legInfo0(l) {   // -> { html, st: "pre" | "live" | "hit" | "miss" | "vo
   if (!g) return { st: "pre", html: `<div class="tl-leg"><div class="tl-top"><b>${name}</b><span>${esc(l.match || "")}</span></div><div class="tl-num"><span>This game has dropped out of the feed</span><span></span></div></div>` };
   const H = g.home, A = g.away, Lt = l.sport === "nba" ? A : H, Rt = l.sport === "nba" ? H : A;
   if (isPre(g)) return { st: "pre", html: `<div class="tl-leg"><div class="tl-top"><b>${name}</b><span>${esc(vs(l.sport, g))}</span></div><div class="tl-num"><span>${tip} ${whenLabel(kick(g))}</span><span></span></div></div>` };
+  if (/^T:/.test(l.k || "") && l.sport === "nba") {   // NBA team points from the quarter scores
+    const [, stat, who, n0] = l.k.split(":"), n = +n0, post = g.status.state === "post", per = +g.status.period || 0, ht = per >= 3 || /half/i.test(String(g.status.detail || ""));
+    const q = T => (T.lines && T.lines.length ? T.lines : []).map(Number), hq = q(H), aq = q(A), sum = (x, a, b) => x.slice(a, b).reduce((s, v) => s + (v || 0), 0);
+    const parts = []; for (const [T, Q, side] of [[H, hq, "home"], [A, aq, "away"]]) { if (who !== "each" && who !== side) continue;
+      if (stat === "pts") parts.push({ T, lab: "Game", v: +T.score || sum(Q, 0, 9), done: post });
+      if (stat === "h1pts" || stat === "hpts") parts.push({ T, lab: "1st half", v: sum(Q, 0, 2), done: ht });
+      if (stat === "h2pts" || stat === "hpts") parts.push({ T, lab: "2nd half", v: sum(Q, 2, 4), done: per > 4 || post }); }
+    const hit = parts.every(x => x.v >= n), miss = parts.some(x => x.done && x.v < n), bar = parts.reduce((a, x) => a + Math.min(1, x.v / n), 0) / Math.max(1, parts.length);
+    const left = parts.filter(x => x.v < n && !x.done).length;
+    return { st: hit ? "hit" : miss ? "miss" : "live", html: `<div class="tl-leg ${hit ? "hit" : miss ? "miss" : ""}"><div class="tl-top"><b>${name}</b><span>${esc(Lt.name)} ${esc(Lt.score)}–${esc(Rt.score)} ${esc(Rt.name)} · ${esc(clockLabel(l.sport, g))}</span></div><div class="tl-bar"><i style="width:${bar * 100}%"></i></div><div class="tl-num"><span>${parts.map(x => `${esc(x.T.abbr || x.T.name)} ${x.lab === "Game" ? "" : x.lab + " "}<b>${x.v}</b>/${n}${x.v >= n ? " ✓" : x.done ? " ✗" : ""}`).join(" · ")}</span><span>${hit ? "✓ Landed" : miss ? "✗ Lost" : `${left} to go`}</span></div></div>` };
+  }
+  if (/^T:[a-z0-9]*:/.test(l.k || "") && /^(hgoals|h1goals|h2goals)$/.test(l.k.split(":")[1])) {   // football goals by half, from the goal times
+    const [, stat, who, n0] = l.k.split(":"), n = +n0 || 1, post = g.status.state === "post", ht = (+g.status.period || 1) >= 2 || /HT|half/i.test(String(g.status.detail || ""));
+    if (!g.events && !g._luDone) loadDetail(l.sport + ":" + l.gid);
+    const goals = (g.events || []).filter(e => /^Goal/i.test(e.type) && !/disallow|cancel/i.test(e.type)), halfOf = e => (parseInt(e.min) || 0) <= 45 ? 1 : 2;
+    const parts = []; for (const [T, sd, side] of [[H, "h", "home"], [A, "a", "away"]]) { if (who !== "each" && who !== side) continue;
+      for (const h of stat === "hgoals" ? [1, 2] : stat === "h1goals" ? [1] : [2]) parts.push({ T, h, v: goals.filter(e => e.side === sd && halfOf(e) === h).length, done: h === 1 ? ht : post }); }
+    const hit = parts.every(x => x.v >= n), miss = parts.some(x => x.done && x.v < n), left = parts.filter(x => x.v < n && !x.done).length;
+    return { st: hit ? "hit" : miss ? "miss" : "live", html: `<div class="tl-leg ${hit ? "hit" : miss ? "miss" : ""}"><div class="tl-top"><b>${name}</b><span>${esc(Lt.name)} ${esc(Lt.score)}–${esc(Rt.score)} ${esc(Rt.name)} · ${esc(clockLabel(l.sport, g))}</span></div><div class="tl-bar"><i style="width:${parts.filter(x => x.v >= n).length / Math.max(1, parts.length) * 100}%"></i></div><div class="tl-num"><span>${parts.map(x => `${esc(x.T.name)} ${x.h === 1 ? "1st" : "2nd"} half ${x.v >= n ? "✓" : x.done ? "✗" : "…"}`).join(" · ")}</span><span>${hit ? "✓ Landed" : miss ? "✗ Lost" : `${left} to go`}</span></div></div>` };
+  }
   if (/^T:/.test(l.k || "")) {   // team stat bet, e.g. 2+ cards for each team
     const [, stat, who, n0] = l.k.split(":"), n = +n0, v = teamStatVals(g, stat), post = g.status.state === "post";
     if (!v && !g._luDone) loadDetail(l.sport + ":" + l.gid);
@@ -3037,6 +3081,7 @@ function legChance(l) {
     const cur = legValue(l).v || 0; return paceChance(cur, l.target - cur, gameFrac(l.sport, g), lam0, l.stat);
   }
   if (/^T:/.test(l.k || "")) {
+    if (l.sport === "nba" || /goals$/.test(l.k.split(":")[1]) && l.k.split(":")[1] !== "goals") return null;   /* half-by-half team bets: tracked, no chance figure */
     const [, stat, who, n0] = l.k.split(":"), n = +n0, v = teamStatVals(g, stat) || [0, 0], f = gameFrac(l.sport, g), M = g.model || {};
     const prior = stat === "cards" && M.cards ? [M.cards / 2, M.cards / 2] : stat === "corners" && M.corners ? [M.corners / 2, M.corners / 2] : stat === "goals" ? [M.xgH, M.xgA] : [null, null];
     const pt = i => paceChance(v[i], n - v[i], f, prior[i]); const a = who === "away" ? null : pt(0), b = who === "home" ? null : pt(1);
