@@ -3272,11 +3272,13 @@ function saveImpDraft() { store.set("impDraft", S.importOpen ? { text: S.importT
 // read a bet slip screenshot on the phone (no upload), then turn it into lines the bet reader understands
 let tessP = null;
 const loadTess = () => tessP || (tessP = new Promise((ok, no) => { const sc = document.createElement("script"); sc.src = "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"; sc.onload = () => ok(window.Tesseract); sc.onerror = () => { tessP = null; no(new Error("load")); }; document.head.appendChild(sc); }));
-async function shotToCanvas(file) {
-  const bmp = await createImageBitmap(file), sc = Math.min(2, 1400 / bmp.width), c = document.createElement("canvas"); c.width = Math.round(bmp.width * sc); c.height = Math.round(bmp.height * sc);
+async function shotToCanvas(file, maxW = 1400, crisp = false) {
+  const bmp = await createImageBitmap(file), sc = Math.min(2, maxW / bmp.width), c = document.createElement("canvas"); c.width = Math.round(bmp.width * sc); c.height = Math.round(bmp.height * sc);
   const x = c.getContext("2d"); x.drawImage(bmp, 0, 0, c.width, c.height);
   const d = x.getImageData(0, 0, c.width, c.height), px = d.data; let sum = 0; for (let i = 0; i < px.length; i += 4) sum += px[i] * .3 + px[i + 1] * .59 + px[i + 2] * .11;
-  const dark = sum / (px.length / 4) < 110; for (let i = 0; i < px.length; i += 4) { let v = px[i] * .3 + px[i + 1] * .59 + px[i + 2] * .11; if (dark) v = 255 - v; px[i] = px[i + 1] = px[i + 2] = v; }
+  const dark = sum / (px.length / 4) < 110; for (let i = 0; i < px.length; i += 4) { let v = px[i] * .3 + px[i + 1] * .59 + px[i + 2] * .11; if (dark) v = 255 - v;
+    if (crisp && dark) v = Math.max(px[i], px[i + 1], px[i + 2]) > 95 ? 0 : 255;   /* dark app with grey panels and coloured text: any bright pixel is text */
+    px[i] = px[i + 1] = px[i + 2] = v; }
   x.putImageData(d, 0, 0); return c;
 }
 const PC_PASTE = !!(window.matchMedia && matchMedia("(pointer:fine)").matches);
@@ -3874,6 +3876,33 @@ function fundedPicks() {
   const out = []; for (const c of pool.sort((a, b) => score(b) - score(a))) { if (out.length >= 8) break; if (out.some(o => o.g.id === c.g.id) || out.filter(o => chKind(o.m) === chKind(c.m)).length >= 2) continue; out.push(c); }
   return out;
 }
+/* BetPro-style bet list (pasted or read from a screenshot): "Single / Basketball / Open / Denver Nuggets (-4) / Home Draw Away with Handicap (4), 1st Half · Indiana Pacers vs Denver Nuggets / … / 10/11 / Stake £10.00 / Potential Returns £19.09 / 7 Nov 2026, 21:52" */
+function fundedParse(raw) {
+  const L = String(raw || "").split("\n").map(x => x.trim()).filter(Boolean), starts = L.map((x, i) => /^(single|double|treble|accumulator|acca)\b/i.test(x) ? i : -1).filter(i => i >= 0);
+  const blocks = starts.length ? starts.map((s0, k) => L.slice(s0, starts[k + 1] ?? L.length)) : [L], out = [];
+  for (const B of blocks) {
+    const txt = B.join("\n"), mi = B.findIndex(x => /\s[·•]\s|\s-\s.+\svs?\.?\s/.test(x) && /\svs?\.?\s/i.test(x)); if (mi < 1) continue;
+    const mline = B[mi], cut = mline.split(/\s[·•]\s|\s-\s(?=[^-]*\svs?\.?\s)/), market = cut.length > 1 ? cut.slice(0, -1).join(" · ") : "", game = cut[cut.length - 1];
+    const sel = B[mi - 1].replace(/^(open|won|lost|void)\s*/i, "").replace(/[^\w)]+$/, "").trim();
+    let st = (txt.match(/^(open|won|lost|void|cashed out)$/im) || [])[1];
+    if (!st) { const settledRet = txt.match(/^returns?\s*£?\s*([\d.]+)/im); st = settledRet ? (+settledRet[1] > 0 ? "won" : "lost") : "open"; }   /* "Returns £10.40" (not "Potential Returns") means it has settled */
+    const stake = +((txt.match(/stake\s*£?\s*([\d.]+)/i) || [])[1] || 0), ret = +((txt.match(/(?:potential\s+)?returns?\s*£?\s*([\d.]+)/i) || [])[1] || 0);
+    const oddsTxt = (B.slice(mi + 1).find(x => /^(\d+\/\d+|\d+\.\d+|evs|evens)$/i.test(x)) || ""), dec = stake && ret && /open|won/i.test(st) ? Math.round(ret / stake * 1000) / 1000 : parseOdds(oddsTxt);
+    const when = (txt.match(/(\d{1,2} [A-Za-z]{3,9} \d{4},? \d{1,2}:\d{2})/) || [])[1];
+    if (!sel || !(stake > 0) || !dec) continue;
+    const [home, away0] = game.split(/\s+vs?\.?\s+/i), away = String(away0 || "").replace(/\s+(?:\S{1,2}|[^\w\s]+|\d+\/\d+)$/, "").replace(/[^\w\s.'&-]+$/, "").trim();   /* screenshot leftovers after the team name */
+    /* only bets we can follow get a live leg: match winner, totals, full-game handicaps */
+    let q = null; const mk = market.toLowerCase();
+    if (!/half|quarter|1st|2nd|first|period|corners?|cards?|exact|correct/.test(mk)) {
+      if (/handicap|spread/.test(mk)) { const h = sel.match(/^(.*?)\s*\(([+-]?[\d.]+)\)/); if (h) q = `${home} v ${away}: ${h[1]} ${/^[+-]/.test(h[2]) ? h[2] : "+" + h[2]} handicap`; }
+      else if (/total|over|under|points|goals/.test(mk) || /^(over|under)/i.test(sel)) q = `${home} v ${away}: ${sel.replace(/\(([+-]?[\d.]+)\)/, "$1")} ${/goals/.test(mk) ? "goals" : /points/.test(mk) || /basket/i.test(txt) ? "points" : ""}`;
+      else if (/winner|money|match odds|to win|result|overtime|1x2|home draw away/.test(mk)) q = /^draw$/i.test(sel) ? `${home} v ${away}: draw` : `${home} v ${away}: ${sel} to win`;
+    }
+    let legs = []; if (q) { const r = parseBet(q, playerIndex(false).idx); if (r.legs.length === 1) legs = r.legs; }
+    out.push({ text: `${sel}${market ? ` · ${market.replace(/\s*\(Ordinary Time\)/i, "")}` : ""} (${home} v ${away})`, legs, dec, stake, result: /won/i.test(st) ? "won" : /lost/i.test(st) ? "lost" : /void/i.test(st) ? "void" : "open", at: when ? new Date(when.replace(",", "")).toISOString() : new Date().toISOString(), src: "import" });
+  }
+  return out;
+}
 function fundedPickerHTML() {
   const P = fundedPicks(), seg = (attr, cur, opts) => `<div class="seg3 ${opts.length === 2 ? "two" : ""}" role="group">${opts.map(([k, l]) => `<button ${attr}="${k}" aria-pressed="${cur === k}">${l}</button>`).join("")}</div>`;
   return `<section class="section"><h2>Bet picker</h2><div class="acca-panel fp-panel">${seg("data-fpband", S.fpBand || "low", Object.entries(FP_BANDS).map(([k, v]) => [k, v[0]]))}
@@ -3899,6 +3928,11 @@ function viewFunded() {
     <div class="fd-bar"><i style="width:${prog * 100}%"></i></div>
     <div class="fd-sub">${X.done ? "🏆 Target reached: you've passed the evaluation" : `${money(Math.max(0, X.goal - X.bal))} to go`} · ${X.dec ? `${X.won}/${X.dec} won` : "no settled bets yet"}${X.open.length ? ` · ${money(X.staked)} in ${X.open.length} open bet${X.open.length > 1 ? "s" : ""}` : ""}</div></section>
   ${fundedPickerHTML()}
+  <details class="section maths" ${S.fdImpOpen ? "open" : ""}><summary data-fdimpt><h2 style="display:inline;font-size:16px">📥 Import bets from BetPro</h2></summary><div class="fd-form" style="margin-top:10px">
+    <button type="button" class="shotbtn" data-fdshot><span>📷</span><span><b>Read a screenshot</b><small>Of your BetPro bets list. It stays on your device.</small></span></button>
+    <div class="field"><label for="fdImp">Or paste your bets</label><textarea id="fdImp" rows="4" placeholder="Single · Basketball · Open · Denver Nuggets (-4) · …">${esc(S.fdImp || "")}</textarea></div>
+    ${(() => { const P = fundedParse(S.fdImp || ""); return P.length ? `<div class="fd-list">${P.map(b => `<div class="imp-leg ok"><span>${b.legs.length ? "✓" : "✋"}</span><div><b>${esc(b.text)}</b><small>${money(b.stake)} at ${odds(b.dec)} · ${b.result === "open" ? "open" : b.result}${b.legs.length ? " · tracks live" : " · result from BetPro"}</small></div></div>`).join("")}</div><button class="btn" data-fdimpgo>Add ${P.length} bet${P.length > 1 ? "s" : ""}</button>` : (S.fdImp || "").trim() ? `<p class="note" style="margin:0">Couldn't read any bets from that yet. Make sure it includes the market line (… · Team A vs Team B), the odds and the stake.</p>` : ""; })()}
+  </div></details>
   <details class="section maths" id="fdAdd"><summary><h2 style="display:inline;font-size:16px">Add a bet that isn't listed</h2></summary><div class="fd-form" style="margin-top:10px">
     <div class="field"><label for="fdText">Bet <small style="color:var(--muted);font-weight:500">singles only, e.g. "Arsenal v Spurs: Arsenal to win" or "Haaland to score"</small></label><input id="fdText" autocomplete="off" placeholder="Leeds v Spurs: Over 2.5 goals"></div>
     <div class="addrow"><div class="field" style="flex:1 1 90px"><label for="fdOdds">Odds</label><input id="fdOdds" placeholder="2.10 or 11/10" autocomplete="off"></div><div class="field" style="flex:1 1 90px"><label for="fdStake">Stake £</label><input id="fdStake" type="number" inputmode="decimal" step="0.5" min="0" value="${Math.max(1, Math.round(X.bal * .02 * 2) / 2)}"></div></div>
@@ -5268,6 +5302,15 @@ document.addEventListener("click", async e => {
     const leg = asLegs([{ sport: sp, g, m }])[0];
     F.bets = [{ id: "f" + Date.now().toString(36), text: m.prop ? legText(leg) : `${m.label} (${vs(sp, g)})`, legs: [leg], dec: Math.round(dec * 1000) / 1000, stake, result: "open", at: new Date().toISOString() }, ...F.bets];
     S.fpOpen = null; fundedSave(F); toast(`Added: ${money(stake)} at ${odds(dec)}`); }
+  else if (d.fdimpgo !== undefined) { const F = fundedNow(), P = fundedParse(S.fdImp || ""), key = b => [b.text, b.stake, b.at].join("|"), have = new Set(F.bets.map(key)); let n = 0;
+    for (const b of P) { if (have.has(key(b))) continue; F.bets.unshift({ id: "f" + Date.now().toString(36) + n, ...b, settledAt: b.result === "open" ? null : new Date().toISOString() }); n++; }
+    S.fdImp = ""; S.fdImpOpen = false; fundedSave(F); toast(n ? `Added ${n} bet${n > 1 ? "s" : ""} to your funded account` : "Those bets are already in"); }
+  else if (d.fdshot !== undefined) { let inp = document.getElementById("fdShotPick"); if (!inp) { inp = document.createElement("input"); inp.type = "file"; inp.accept = "image/*"; inp.id = "fdShotPick"; inp.style.display = "none"; document.body.appendChild(inp);
+      inp.addEventListener("change", async () => { const f = inp.files && inp.files[0]; inp.value = ""; if (!f) return; toast("Reading your screenshot…");
+        try { const T = await loadTess(), [c1, c2] = await Promise.all([shotToCanvas(f, 3000), shotToCanvas(f, 3000, true)]), a = (await T.recognize(c1, "eng")).data.text || "", b = (await T.recognize(c2, "eng")).data.text || "";
+          const best = fundedParse(b).length >= fundedParse(a).length ? b : a;   /* read it two ways, keep the one that finds more bets */
+          S.fdImp = ((S.fdImp || "") + "\n" + best).trim(); S.fdImpOpen = true; render(); toast(fundedParse(S.fdImp).length ? "Read it. Check the bets and tap Add" : "Couldn't read bets from that. Try a clearer screenshot"); } catch { toast("Couldn't read that screenshot"); } }); }
+    inp.click(); }
   else if (d.fadd !== undefined) { const F = fundedNow(), txt = (($("#fdText") || {}).value || "").trim(), dec = parseOdds(($("#fdOdds") || {}).value || ""), stake = +(($("#fdStake") || {}).value) || 0;
     if (!txt) { toast("Type the bet first"); return; } if (!dec) { toast("Add the odds, e.g. 2.10 or 11/10"); return; } if (!(stake > 0)) { toast("Add your stake"); return; }
     const r = parseBet(txt, playerIndexFor(txt).idx); if (r.legs.length > 1) { toast("Funded accounts only allow singles: one selection per bet"); return; }
@@ -5341,6 +5384,7 @@ document.addEventListener("change", e => { const t = e.target;
     else { const C = JSON.parse(JSON.stringify(C0)), diff = Math.round((v - (+C.bank || 0)) * 100) / 100;
       if (diff) { if (diff < 0) C.taken = Math.round(((+C.taken || 0) - diff) * 100) / 100; else C.added = Math.round(((+C.added || 0) + diff) * 100) / 100; C.bank = v; saveChal(C); walletAdjust(-diff); toast(`Stake set to ${money(v)}. Returns ${money(v * C.active.dec)}`); } } }
   if (t.dataset && t.dataset.chalodds !== undefined && S.user) { const o = parseOdds(t.value); if (!o) { toast("Use odds like 5/2, EVS or 3.5"); $("#main")._h = null; render(); } else { const C = JSON.parse(JSON.stringify(chalNow())); if (C.active) { C.active.custom = true; C.active.dec = Math.round(o * 1000) / 1000; saveChal(C); } } } if (t.dataset && t.dataset.accaalt) { const gid = t.dataset.accaalt; if ((S._accaLegs || []).some(x => x.g.id === gid)) pinGame(false, gid, ks => [t.value, ...ks.slice(1)]); else { S.accaPick = S.accaPick || {}; S.accaPick[gid] = t.value; } render(); } });
+document.addEventListener("input", e => { if (e.target.id === "fdImp") { S.fdImp = e.target.value; S.fdImpOpen = true; clearTimeout(S._fdT); S._fdT = setTimeout(render, 350); } });
 document.addEventListener("keydown", e => { const t = e.target; if (e.key === "Enter" && t.dataset && t.dataset.legodds) t.blur();
   if (e.key === "Enter" && (t.id === "fpOdds" || t.id === "fpStake")) { e.preventDefault(); const b = t.closest(".fp-drop") && t.closest(".fp-drop").querySelector("[data-fpadd]"); if (b) b.click(); }
   if (e.key === "Enter" && /^fd(Text|Odds|Stake)$/.test(t.id)) { e.preventDefault(); const b = $("[data-fadd]"); if (b) b.click(); } });
