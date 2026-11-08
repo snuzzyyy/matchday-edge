@@ -525,3 +525,4 @@ No server of our own. ESPN is free, has no key and is about 1–3 minutes behind
 - Combined player bets (PRA, points + assists, any `combo:`) show one line per stat under the main bar (`cbRows`, `.pr-rows`, kept by `legLine`).
 - Funded cards have Edit (odds / stake / returns, Enter saves). Changing only the returns works the odds out from it (to match the bookie to the penny).
 - Sky "Super Sub" (football player legs): `parseBet` strips the phrase and sets `l.ss`; `legValue` adds the replacement's numbers once he's subbed off (`subFor` from ESPN `subbedOutFor`); card tag "⇄ Super Sub: <name>"; settle.py does the same.
+- Ready-made accas: category chips (Accas / Same game / Themed, `S.pcat`); on phones (≤600px) each category is a sideways swipe row (`.pscroll`, scroll-snap, scroll kept across redraws). "Build your own" has its own Safest/Balanced/Bigger odds switch (`.byo-risk`), same `data-accarisk`.
