@@ -4014,6 +4014,7 @@ function fundedParse(raw) {
       if (pp) { const sl = (sel.match(/(?:over|under)\s*\+?(\d+(?:\.\d)?)/i) || [])[1], line = !/\.5$/.test(pp[3]) && sl && /\.5$/.test(sl) ? +sl : +pp[3], under = /under/i.test(sel);   /* a screenshot can drop the ".5" from one copy of the number */ q = under ? `${pp[1]} under ${line} ${pp[2]}` : `${pp[1]} ${Math.floor(line) + 1}+ ${pp[2]}`; }
       else if (/handicap|spread/.test(mk)) { const h = sel.match(/^(.*?)\s*\(([+-]?[\d.]+)\)/); if (h) q = `${home} v ${away}: ${h[1]} ${/^[+-]/.test(h[2]) ? h[2] : "+" + h[2]} handicap`; }
       else if (/total|over|under/.test(mk) || /^(over|under)\b/i.test(sel)) { const t = sel.match(/(over|under)\s*\(?\+?([\d.]+)/i); if (t) q = `${home} v ${away}: ${t[1]} ${t[2]} ${unit}`; }
+      else if (/both teams to score|btts/.test(mk)) q = /^no$/i.test(sel.trim()) ? `${home} v ${away}: both teams not to score` : `${home} v ${away}: both teams to score`;
       else if (/winner|money|match odds|to win|result|home away|1x2|home draw away/.test(mk)) q = /^draw$/i.test(sel) ? `${home} v ${away}: draw` : `${home} v ${away}: ${sel} to win`;
     }
     let legs = []; if (q) { const r = parseBet(q, playerIndex(false).idx); if (r.legs.length === 1 && !r.missing.length) legs = r.legs; }
@@ -4024,6 +4025,14 @@ function fundedParse(raw) {
         legs = [{ ...w, k: `T:${hh}hc${three ? "3" : ""}:${side}:${ln}`, label: `${hs[1].trim()} ${ln > 0 ? "+" : ""}${ln} ${hh[0] === "q" ? ["1st", "2nd", "3rd", "4th"][+hh[1] - 1] + " quarter" : (hh === "h1" ? "1st" : "2nd") + " half"} handicap`, p: null }]; } }
     out.push({ text: `${sel}${market ? ` · ${market.replace(/\s*\(Ordinary Time\)/i, "")}` : ""} (${home} v ${away})`, legs, dec, stake, result: /won/i.test(st) ? "won" : /lost/i.test(st) ? "lost" : /void/i.test(st) ? "void" : "open", at: when ? new Date(when.replace(",", "")).toISOString() : new Date().toISOString(), src: "import" });
   });
+  /* an accumulator (one stake for several selections): put them together as one bet */
+  if (out.length > 1 && /^\s*(accumulator|acca|double|treble|trixie|\d+\s*-?\s*folds?)\s*$/im.test(String(raw || ""))) {
+    const withStake = out.filter(b => b.stake), stake = withStake.length ? withStake[withStake.length - 1].stake : 0, ret = (String(raw).match(/(?:potential\s+)?returns?\s*:?\s*£?\s*([\d,]+(?:\.\d+)?)/i) || [])[1], tot = (String(raw).match(/1 bet\s*[×x]\s*£?[\d.]+\s*\n\s*(\d+(?:\.\d+)?)/i) || [])[1];
+    const dec = stake && ret ? Math.round(+ret.replace(/,/g, "") / stake * 1000) / 1000 : tot ? +tot : out.reduce((a, b) => a * (b.legs.length ? b.legs[0].dec || 1 : 1), 1);
+    const legs = out.every(b => b.legs.length) ? out.flatMap(b => b.legs) : [];
+    const res = out.some(b => b.result === "lost") ? "lost" : out.every(b => b.result === "won") ? "won" : "open";
+    return [{ text: `${out.length}-fold: ${out.map(b => b.text).join(" + ")}`, legs, dec, stake, result: res, at: out[0].at, src: "import" }];
+  }
   return out;
 }
 /* winner accas for the funded account: match winners only (football home/away win, NBA moneyline), one per game */
