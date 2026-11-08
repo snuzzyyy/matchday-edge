@@ -1301,7 +1301,7 @@ const isProp = m => /^P:/.test((m && m.k) || m || "");
 const propLeg = m => m && m.prop ? { pid: m.prop.pid, name: m.prop.name, side: m.prop.side, team: m.prop.team, stat: m.prop.stat, target: m.prop.target, label: m.prop.label } : {};
 const shortName = n => { const w = String(n || "").split(" "); return w.length > 1 ? w[0][0] + ". " + w.slice(1).join(" ") : n; };
 const propText = (l, nm) => (nm = nm || l.name, l.under ? `${nm} under ${l.line} ${l.label}` : l.stat === "totalGoals" && +l.target === 1 && !l.half ? `${nm} to score` : l.stat === "cards" && +l.target === 1 && !l.half ? `${nm} to be carded` : `${nm} ${l.target}+ ${l.label}`);
-const legText = l => l.pid ? (l.group ? `${l.name} ${l.target}+ ${l.label}` : propText(l)) : l.label;
+const legText = l => l.pid ? (l.group ? `${l.name} ${l.target}+ ${l.label}` : propText(l)) + (l.ss ? " (Super Sub)" : "") : l.label;
 function optsHTML(list, sel, price, now) {
   const o = (m, txt) => `<option value="${m.k}" ${m.k === sel ? "selected" : ""}>${esc(txt)} · ${pct(m.p)}${now || ""} · ${odds(price(m))}</option>`;
   const main = list.filter(m => !isProp(m)), props = list.filter(isProp); if (!props.length) return main.map(m => o(m, m.label)).join("");
@@ -2867,6 +2867,7 @@ function skyText(text) {
   return out.join("\n");
 }
 function parseBet(text, idx) {
+  const superSub = /super\s*-?\s*sub/i.test(String(text)); text = String(text).replace(/\s*[-–·(,]?\s*super\s*-?\s*sub\b\)?/gi, "");   /* Sky "Super Sub": remember it, then read the bet without it */
   const fold = String(text).match(/\d+\s*-?\s*fold\b[^\n@]*@\s*(\d+(?:\.\d+)?|\d+\s*\/\s*\d+)/i) || String(text).match(/(?:total|acca|accumulator)\s*odds[^0-9\n]{0,6}(\d+(?:\.\d+)?|\d+\s*\/\s*\d+)/i);   /* Sky's "9 Fold @ 40.68": the slip's own total wins */
   text = skyText(text);
   const legs = [], missing = [], unread = [], om = text.match(/@\s*([0-9]+(?:\.[0-9]+)?(?:\s*\/\s*[0-9]+)?|evs|evens)/i); let oddsFound = null;
@@ -2950,6 +2951,7 @@ function parseBet(text, idx) {
   legs.unshift(...mLegs);
   const ats = (text.match(/@\s*([0-9]+(?:\.[0-9]+)?(?:\s*\/\s*[0-9]+)?|evs|evens)/gi) || []).map(x => parseOdds(x.replace(/^@\s*/, "").replace(/\s+/g, ""))).filter(Boolean);
   const dec = fold ? parseOdds(fold[1].replace(/\s+/g, "")) : ats.length >= 2 && ats.length === legs.length ? Math.round(ats.reduce((a, b) => a * b, 1) * 1000) / 1000 : om ? parseOdds(om[1]) : oddsFound;
+  if (superSub) for (const l of legs) if (l.pid && l.sport === "football") l.ss = true;   /* Sky "Super Sub": the replacement's stats count once he's subbed off */
   return { legs, missing, unread, dec };
 }
 const halfDone = g => g.status.state === "post" || (+g.status.period || 1) >= 2 || /HT|Half/i.test(String(g.status.detail || ""));
@@ -2994,6 +2996,8 @@ function legValue(l) {
   if (l.half || /^headed/.test(l.stat)) { if (!g.plays && !isPre(g)) loadDetail("football:" + l.gid); if (l.half === 2 && !halfDone(g)) return { v: 0, g, on: onPitch(P), dnp: false }; return { v: g.plays ? halfStat(g, l) : null, g, on: onPitch(P), dnp: !P.starter && !P.subIn && (l.half === 1 ? halfDone(g) : g.status.state === "post") }; }
   const v0 = l.stat === "cards" ? (P.s.yellowCards || 0) + (P.s.redCards || 0) : l.stat === "foulInvolvements" ? (P.s.foulsCommitted || 0) + (P.s.foulsSuffered || 0) : l.stat === "goalOrAssist" ? Math.max(P.s.totalGoals || 0, g.plays ? halfStat(g, { ...l, stat: "totalGoals", half: 0 }) : 0) + Math.max(P.s.goalAssists || 0, g.plays ? halfStat(g, { ...l, stat: "goalAssists", half: 0 }) : 0) : (P.s[l.stat] || 0);
   const v = g.plays && /^(shotsOnTarget|totalShots|totalGoals|goalAssists|foulsSuffered|foulsCommitted|foulInvolvements|cards)$/.test(l.stat) ? Math.max(v0, halfStat(g, { ...l, half: 0 })) : v0;   /* the commentary is often ahead of ESPN's player totals */
+  /* Super Sub: once he's subbed off, his replacement's numbers count too (how Sky settles it) */
+  if (l.ss && P.subOut && P.subFor) { const R = legValue({ ...l, pid: P.subFor, ss: false }); if (R.v != null) return { v: v + R.v, g, on: !!R.on, dnp: false, ssBy: (LU.players.find(p => String(p.id) === String(P.subFor)) || {}).n || "", ssOwn: v, ssSub: R.v }; }
   return { v, g, on: onPitch(P), dnp: !P.starter && !P.subIn && g.status.state === "post" };
 }
 /* bets tracked on this phone only: hidden when the same bet is saved (matched by its legs, not just its name) */
@@ -3264,7 +3268,9 @@ function playerTag(l) {
   if (!LU) return isPre(g) ? tag("wait", "Line-ups not out yet") : "";
   const P = LU.players.find(p => String(p.id) === String(l.pid));
   if (isPre(g)) return P ? (P.starter ? tag("start", "✓ Starting") : tag("bench", "On the bench")) : LU.players.length >= 11 ? tag("out", "Not in squad") : "";
-  if (!P) return ""; if (P.rc && P.rc.length) return tag("out", "Sent off"); if (P.subOut) return tag("off", "Subbed off"); return onPitch(P) ? tag("on", "On pitch") : tag("bench", "On the bench");
+  if (!P) return ""; if (P.rc && P.rc.length) return tag("out", "Sent off");
+  if (P.subOut && l.ss && P.subFor) { const R = LU.players.find(p => String(p.id) === String(P.subFor)); return tag(R && onPitch(R) ? "on" : "start", `⇄ Super Sub: ${esc(R ? R.short || R.n : "replacement")}`); }
+  if (P.subOut) return tag("off", "Subbed off"); return onPitch(P) ? tag("on", "On pitch") : tag("bench", "On the bench");
 }
 /* plain English for the bets with jargon in the name */
 function betHint(l) {
@@ -5710,7 +5716,7 @@ function parseLineups(g, s) {
       const clk = x => (x.clock || {}).displayValue || "";
       const sub = plays.find(x => x.substitution);
       return { id: A.id, n: A.displayName, short: A.shortName || A.displayName, no: p.jersey || "", pos: ((p.position || {}).abbreviation || "").replace(/^SUB$/, ""),
-               starter: !!p.starter, subIn: !!p.subbedIn, subOut: !!p.subbedOut, subMin: sub ? clk(sub) : "", place: +p.formationPlace || 99,
+               starter: !!p.starter, subIn: !!p.subbedIn, subOut: !!p.subbedOut, subFor: ((p.subbedOutFor || {}).athlete || {}).id || null, subMin: sub ? clk(sub) : "", place: +p.formationPlace || 99,
                yc: plays.filter(x => x.yellowCard).map(clk), rc: plays.filter(x => x.redCard).map(clk), goals: plays.filter(x => x.didScore && !x.ownGoal).map(clk), s: st };
     });
     if (players.length) out[side] = { formation: t.formation || "", players };

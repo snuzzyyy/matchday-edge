@@ -84,6 +84,17 @@ def leg_result(l):
     if l.get("under") and l.get("pid"):   # player under, e.g. under 35.5 points: 35 or fewer wins (only called once the game is final)
         r, v = leg_result({**l, "under": False, "target": int(l.get("max", 0)) + 1})
         return (None if r is None else "lost" if r == "won" else "won"), v
+    if l.get("ss") and l.get("pid") and l.get("sport") == "football":   # Sky "Super Sub": if he was subbed off, his replacement's numbers count too
+        r, v = leg_result({**l, "ss": False})
+        if r is None or v is None: return r, v
+        g = GAMES.get(("football", str(l.get("gid")))); st = g and final_state("football", g); sub = None
+        for t in ((st[0] if st else {}) or {}).get("rosters", []):
+            for p in t.get("roster", []):
+                if str((p.get("athlete") or {}).get("id")) == str(l["pid"]) and p.get("subbedOut"): sub = ((p.get("subbedOutFor") or {}).get("athlete") or {}).get("id")
+        if not sub: return r, v
+        r2, v2 = leg_result({**l, "ss": False, "pid": sub})
+        if v2 is None: return r, v
+        return ("won" if v + v2 >= l["target"] else "lost"), v + v2
     if l.get("group"):   # "A, B & C 7+ shots between them": the players' numbers add up
         tot = 0
         for m in l["group"]:
