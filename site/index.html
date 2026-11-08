@@ -780,7 +780,7 @@ a.prof-bdg{text-decoration:none}
 .leg2 .lm{font-size:12.5px;color:var(--muted);margin-top:2px}
 .leg2 .lcap{font-size:11.5px;color:var(--muted);margin-top:4px}
 .leg2 .rs{color:var(--blue-2);font-size:11.5px;font-weight:700;text-decoration:underline;padding:0}
-.leg2 .oddin{width:78px;font-size:19px;padding:6px 8px}.sl-new{animation:plSwap .75s cubic-bezier(.2,.8,.2,1);background:rgba(255,122,47,.08)}.sl-tools{display:flex;align-items:center;gap:4px}.leg2 .sl-roll{width:30px;height:30px;box-shadow:none}.leg2 .sl-roll svg{width:14px;height:14px}.slip-tot{display:grid;gap:3px;justify-items:start}.slip-tot .oddin{width:92px;font-size:20px;text-align:left;padding:4px 8px}.slip-tot .rs{font-size:11px}.acc-odds{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--bg-2);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:2px 0 10px}.acc-odds label{display:grid;gap:2px;font-size:13px}.acc-odds small{color:var(--muted);font-size:11.5px;line-height:1.35}.acc-odds .oddin{width:92px;flex:none;font-size:20px;padding:6px 8px}
+.leg2 .oddin{width:78px;font-size:19px;padding:6px 8px}.sl-tag{display:flex;align-items:center;gap:8px;margin-top:4px;flex-wrap:wrap}.sl-warn{font-size:11.5px;font-weight:700;color:var(--loss)}.sl-new{animation:plSwap .75s cubic-bezier(.2,.8,.2,1);background:rgba(255,122,47,.08)}.sl-tools{display:flex;align-items:center;gap:4px}.leg2 .sl-roll{width:30px;height:30px;box-shadow:none}.leg2 .sl-roll svg{width:14px;height:14px}.slip-tot{display:grid;gap:3px;justify-items:start}.slip-tot .oddin{width:92px;font-size:20px;text-align:left;padding:4px 8px}.slip-tot .rs{font-size:11px}.acc-odds{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--bg-2);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:2px 0 10px}.acc-odds label{display:grid;gap:2px;font-size:13px}.acc-odds small{color:var(--muted);font-size:11.5px;line-height:1.35}.acc-odds .oddin{width:92px;flex:none;font-size:20px;padding:6px 8px}
 .oddhint2{margin:0;padding:10px 14px;font-size:12px;color:var(--muted)}
 .sum3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .sum3 div{display:grid;gap:1px}
@@ -2125,7 +2125,7 @@ function slipHTML(mode = "rail") {
   }
   const c = slipCalc(), ret = S.stake * c.dec - (S.slipFree ? +S.stake : 0), type = n === 1 ? "Single" : n === 2 ? "Double" : n === 3 ? "Treble" : n + "-fold";
   const legs = S.slip.map(l => `<div class="leg2 ${S._slipAnim === l.id ? "sl-new" : ""}">
-      <div class="lg-main"><div class="ls">${esc(legText(l))}</div><div class="lm">${esc(l.match)} · ${whenLabel(l.kick)} · <b style="color:${tierColor(l.p)}">${pct(l.p)}</b>${l.custom ? ` · <span style="color:var(--tang-2)">your price</span> <button class="rs" data-legreset="${esc(l.id)}">reset</button>` : l.est ? " · est." : ""}</div></div>
+      <div class="lg-main"><div class="ls">${esc(legText(l))}</div>${l.pid ? (t => t ? `<div class="sl-tag">${t}${/ptag out/.test(t) ? `<span class="sl-warn">Tap ↻ to swap it</span>` : ""}</div>` : "")(playerTag(l)) : ""}<div class="lm">${esc(l.match)} · ${whenLabel(l.kick)} · <b style="color:${tierColor(l.p)}">${pct(l.p)}</b>${l.custom ? ` · <span style="color:var(--tang-2)">your price</span> <button class="rs" data-legreset="${esc(l.id)}">reset</button>` : l.est ? " · est." : ""}</div></div>
       <input class="oddin ${l.custom ? "mine" : ""}" data-legodds="${esc(l.id)}" value="${esc(l.custom && l.typed ? l.typed : odds(l.dec))}" autocomplete="off" spellcheck="false" aria-label="Odds for ${esc(legText(l))}. Type your bookie's price">
       <span class="sl-tools">${l.gid && !l.manual ? `<button class="reroll sl-roll" data-slipswap="${esc(l.id)}" aria-label="Swap ${esc(legText(l))} for another bet" title="Not at your bookie? Swap it">${ROLL_SVG}</button>` : ""}<button class="x" data-rm="${esc(l.id)}" aria-label="Remove ${esc(legText(l))}">✕</button></span></div>`).join("");
   const stakes = [1, 5, 10, 20].map(v => `<button class="qs" data-qstake="${v}" aria-pressed="${+S.stake === v}">£${v}</button>`).join("");
@@ -3210,7 +3210,7 @@ function nbaLineups(g, a, h) {
 function playerTag(l) {
   if (!l.pid || l.group) return ""; const g = findGame(l.sport, l.gid); if (!g || g.status.state === "post") return "";
   const tag = (cls, t) => `<span class="ptag ${cls}">${cls === "on" ? "<i></i>" : ""}${t}</span>`;
-  if (l.sport === "nba") { const P = (((g.box || {})[l.side] || {}).players || []).find(p => String(p.id) === String(l.pid)); if (isPre(g)) { const Q = g.lu && (g.lu[l.side] || []).find(p => norm(p.n) === norm(l.name)); if (!g.lu) return ""; return !Q ? "" : Q.out ? tag("out", "Out") : Q.pos ? tag("start", Q.st === "Confirmed" ? "✓ Starting" : "Expected to start") : tag("bench", "Off the bench"); }
+  if (l.sport === "nba") { const P = (((g.box || {})[l.side] || {}).players || []).find(p => String(p.id) === String(l.pid)); if (isPre(g)) { const inj = (g.injuries || []).find(i => i.side === l.side && norm(i.who || "") === norm(l.name || "")); if (inj && /out|suspend/i.test(inj.status || "")) return tag("out", "Out tonight"); if (inj && /doubtful/i.test(inj.status || "")) return tag("out", "Doubtful"); const Q = g.lu && (g.lu[l.side] || []).find(p => norm(p.n) === norm(l.name)); if (!g.lu) return ""; return !Q ? "" : Q.out ? tag("out", "Out") : Q.pos ? tag("start", Q.st === "Confirmed" ? "✓ Starting" : "Expected to start") : tag("bench", "Off the bench"); }
     if (!P) return ""; return P.on ? tag("on", "On court") : P.dnp && (g.status.state === "post" || !/coach/i.test(P.why || "")) ? tag("out", "Not playing") : tag("bench", "On the bench"); }   /* ESPN calls every unused sub "coach's decision" until he comes on */
   const LU = (g.lineups || {})[l.side];
   if (isPre(g) && !LU && +new Date(kick(g)) - Date.now() < 90 * 60e3) loadDetail("football:" + g.id);   /* line-ups come out about an hour before */
@@ -5465,7 +5465,8 @@ document.addEventListener("click", async e => {
     S._swapAnim = gk + "|" + i; render(); setTimeout(() => { S._swapAnim = null; }, 900); }
   else if (d.slipswap) {   /* swap one slip leg for a similar bet (the same game first, then another game at a similar price) */
     const i = S.slip.findIndex(l => l.id === d.slipswap); if (i < 0) return; const asCur = l => { const g = l.gid && findGame(l.sport, l.gid), m = g && (l.pid ? !l.group && mkt(g, `P:${l.pid}:${l.stat}:${l.target}`) : mkt(g, l.k)); return m ? { sport: l.sport, g, m } : null; };
-    const cur = asCur(S.slip[i]); if (!cur) { toast("Can't find another bet for that one"); return; }
+    const L0 = S.slip[i], g0 = L0.gid && findGame(L0.sport, L0.gid), cur = asCur(L0) || (g0 ? { sport: L0.sport, g: g0, m: { k: L0.pid ? `P:${L0.pid}:${L0.stat}:${L0.target}` : L0.k, p: L0.p || .5, dec: L0.dec || 1.5, label: L0.label } } : null);   /* a bet with no price now (e.g. the player is out): swap to one at a similar price */
+    if (!cur) { toast("Can't find another bet for that one"); return; }
     S.slipEx = S.slipEx || {}; const ex = (S.slipEx[d.slipswap] = S.slipEx[d.slipswap] || []); ex.push(sKey(cur));
     const others = S.slip.filter((_, j) => j !== i).map(asCur).filter(Boolean), nx = altLeg(cur, ex, others);
     if (!nx) { toast("No other good bet left for that spot"); return; }
