@@ -3020,7 +3020,7 @@ function clockLabel(sport, g) {
     if (!moving) { k.run = false; k.disp = secs; k.dispAt = now; }   /* clock went up: a correction from the feed, take it */
     else { if (!k.run || c > secs + 1.5 || c < secs - 6) { k.disp = secs; } else k.disp = c; k.dispAt = now; k.run = true; } }
   else if (k.st !== g.status) { k.st = g.status; if (now - k.rawAt > 16e3 && k.run) { k.run = false; k.disp = secs; k.dispAt = now; } }   /* the same clock for 16s+ across fresh updates: play has stopped */
-  const v = cur(), out = `${q} · ${v >= 60 ? `${Math.floor(v / 60)}:${String(Math.floor(v % 60)).padStart(2, "0")}` : v >= 10 || k.run ? `${Math.floor(v)}s` : `${Math.round(v * 10) / 10}s`} left`;
+  const v = cur(), w = Math.ceil(v - 1e-6), out = `${q} · ${w >= 60 ? `${Math.floor(w / 60)}:${String(w % 60).padStart(2, "0")}` : v >= 10 ? `${w}s` : `${(Math.floor(v * 10) / 10).toFixed(1)}s`} left`;   /* whole seconds round up like a game clock; tenths in the last 10 */
   k.shown = out; return out;
 }
 const CLK = new Map();
@@ -3028,7 +3028,7 @@ const CLK = new Map();
 setInterval(() => { if (document.hidden || !S.data) return; const rep = [];
   for (const g of S.data.nba || []) { if (!isLive(g)) continue; const k = CLK.get(g.id); if (!k || !k.run || !k.shown) continue; const old = k.shown, nw = clockLabel("nba", g); if (nw !== old) rep.push([old, nw]); }
   if (!rep.length) return; const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT); let n;
-  while ((n = w.nextNode())) { let t = n.nodeValue; if (!t || t.indexOf("left") < 0) continue; for (const [o, v] of rep) if (t.includes(o)) t = t.split(o).join(v); if (t !== n.nodeValue) n.nodeValue = t; } }, 250);
+  while ((n = w.nextNode())) { let t = n.nodeValue; if (!t || t.indexOf("left") < 0) continue; for (const [o, v] of rep) if (t.includes(o)) t = t.split(o).join(v); if (t !== n.nodeValue) n.nodeValue = t; } }, 100);   /* 10 times a second, so the last 10 seconds show tenths like the real clock */
 const scoreLine = (sp, g) => { const L = sp === "nba" ? g.away : g.home, R = sp === "nba" ? g.home : g.away; return isPre(g) ? vs(sp, g) : `${L.name} ${L.score}–${R.score} ${R.name}`; };
 // every bet leg is tappable: it opens that game's page
 function legInfo(l) {
