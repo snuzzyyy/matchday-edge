@@ -3956,7 +3956,7 @@ function fundedParse(raw) {
     /* only bets we can follow get a live leg: match winner, totals, full-game handicaps, player overs and unders */
     let q = null;
     if (!/half|quarter|1st|2nd|3rd|4th|first|period|corners?|cards?|exact|correct|margin|double double|triple double|overtime|odd|even/.test(mk)) {
-      const pp = market.match(/^(.+?)\s+((?:points|assists|rebounds|blocks|steals|threes|made threes|3-?pointers?)(?:\s+(?:and|&|\+)\s+(?:points|assists|rebounds))*)\s+over\s*[\/f]?\s*(?:under|funder|\/under)\s+([\d.]+)/i);
+      const pp = market.match(/^(.+?)\s+((?:points|assists|rebounds|blocks|steals|threes|made threes|3-?pointers?)(?:(?:\s*,\s*|\s+(?:and|&|\+)\s+)(?:points|assists|rebounds))*)\s+over\s*[\/f]?\s*(?:under|funder|\/under)\s+([\d.]+)/i);
       if (pp) { const sl = (sel.match(/(?:over|under)\s*\+?(\d+(?:\.\d)?)/i) || [])[1], line = !/\.5$/.test(pp[3]) && sl && /\.5$/.test(sl) ? +sl : +pp[3], under = /under/i.test(sel);   /* a screenshot can drop the ".5" from one copy of the number */ q = under ? `${pp[1]} under ${line} ${pp[2]}` : `${pp[1]} ${Math.floor(line) + 1}+ ${pp[2]}`; }
       else if (/handicap|spread/.test(mk)) { const h = sel.match(/^(.*?)\s*\(([+-]?[\d.]+)\)/); if (h) q = `${home} v ${away}: ${h[1]} ${/^[+-]/.test(h[2]) ? h[2] : "+" + h[2]} handicap`; }
       else if (/total|over|under/.test(mk) || /^(over|under)\b/i.test(sel)) { const t = sel.match(/(over|under)\s*\(?\+?([\d.]+)/i); if (t) q = `${home} v ${away}: ${t[1]} ${t[2]} ${unit}`; }
