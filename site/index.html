@@ -3310,7 +3310,7 @@ function legLine(l, k, legs) {
   const oc = playerTag(l);
   const right = st === "hit" ? "✓" : st === "miss" ? "✗" : st === "void" ? "Void" : c != null ? `<span style="color:${tierColor(c)}">${pct(c)}</span>` : "";
   const showBar = live && bar != null && st !== "void" && !/chance now/.test(h);
-  return `<div class="lgl ${st}"><span class="lgl-ic" aria-hidden="true"></span><div class="lgl-m">${l.pid && !sub ? `<span class="lgl-tt">${legIcon(l)}<span class="lgl-tw"><b>${titleH}</b>${oc}</span></span>` : `<b>${titleH}</b>`}${betHint(l) && !prog ? `<small class="lgl-hint">${esc(betHint(l))}</small>` : ""}${l.pid && !sub ? "" : oc}${showBar ? `<div class="lgl-bar"><i style="width:${bar}%"></i></div>` : ""}${prog ? `<small>${esc(prog)}</small>` : ""}${extra}</div><span class="lgl-r">${right}</span></div>`;
+  return `<div class="lgl ${st}"><span class="lgl-ic" aria-hidden="true"></span><div class="lgl-m">${l.pid && !sub && l.sport === "nba" ? `<span class="lgl-tt">${legIcon(l)}<span class="lgl-tw"><b>${titleH}</b>${oc}</span></span>` : `<b>${titleH}</b>`}${betHint(l) && !prog ? `<small class="lgl-hint">${esc(betHint(l))}</small>` : ""}${l.pid && !sub && l.sport === "nba" ? "" : oc}${showBar ? `<div class="lgl-bar"><i style="width:${bar}%"></i></div>` : ""}${prog ? `<small>${esc(prog)}</small>` : ""}${extra}</div><span class="lgl-r">${right}</span></div>`;
 }
 function legGroups(legs, infos) {
   const out = [], at = new Map();
