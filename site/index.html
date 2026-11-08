@@ -1417,7 +1417,11 @@ function winRange(win) {
   return [now - 6e5, now + 864e5 * 7];
 }
 function upcoming(sport, win = S.win) { const [a, b] = winRange(win); return games(sport).filter(g => { const t = +new Date(kick(g)); return isPre(g) && t >= a && t < b; }); }
-function dayWord(iso) { const d = dayLabel(dayKey(iso))[0]; if (d === "Tomorrow" && +new Date(iso) < ukAt(1, 6)) return "Tonight"; if (d === "Today" && new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", hour12: false, timeZone: TZ }) >= "17") return "Tonight"; return d; }
+function dayWord(iso) { const d = dayLabel(dayKey(iso))[0], hNow = new Date().toLocaleTimeString("en-GB", { hour: "2-digit", hour12: false, timeZone: TZ });
+  if (hNow < "06") {   /* after midnight, "tonight" still means the night you're in: games before 6am are Tonight, the next night's late games get their day name */
+    if (d === "Today") return +new Date(iso) < ukAt(0, 6) ? "Tonight" : "Today";
+    if (d === "Tomorrow") return new Date(iso).toLocaleDateString("en-GB", { weekday: "short", timeZone: TZ }); return d; }
+  if (d === "Tomorrow" && +new Date(iso) < ukAt(1, 6)) return "Tonight"; if (d === "Today" && new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", hour12: false, timeZone: TZ }) >= "17") return "Tonight"; return d; }
 const whenLabel = iso => { const d = dayWord(iso); return (/^(Today|Tonight|Tomorrow)$/.test(d) ? d : new Date(iso).toLocaleDateString("en-GB", { weekday: "short", timeZone: TZ })) + " " + hm(iso); };
 function firstWin(sport) { for (const w of ["today", "tomorrow", "48h", "week"]) if (upcoming(sport, w).length) return w; return "week"; }
 const WIN_NAME = { today: "Today", tomorrow: "Tomorrow", "48h": "Next 48 hrs", week: "This week" };
