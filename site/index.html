@@ -780,7 +780,7 @@ a.prof-bdg{text-decoration:none}
 .leg2 .lm{font-size:12.5px;color:var(--muted);margin-top:2px}
 .leg2 .lcap{font-size:11.5px;color:var(--muted);margin-top:4px}
 .leg2 .rs{color:var(--blue-2);font-size:11.5px;font-weight:700;text-decoration:underline;padding:0}
-.leg2 .oddin{width:78px;font-size:19px;padding:6px 8px}.sl-tag{display:flex;align-items:center;gap:8px;margin-top:4px;flex-wrap:wrap}.sl-warn{font-size:11.5px;font-weight:700;color:var(--loss)}.sl-new{animation:plSwap .75s cubic-bezier(.2,.8,.2,1);background:rgba(255,122,47,.08)}.sl-tools{display:flex;align-items:center;gap:4px}.leg2 .sl-roll{width:30px;height:30px;box-shadow:none}.leg2 .sl-roll svg{width:14px;height:14px}.slip-tot{display:grid;gap:3px;justify-items:start}.slip-tot .oddin{width:92px;font-size:20px;text-align:left;padding:4px 8px}.slip-tot .rs{font-size:11px}.acc-odds{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--bg-2);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:2px 0 10px}.acc-odds label{display:grid;gap:2px;font-size:13px}.acc-odds small{color:var(--muted);font-size:11.5px;line-height:1.35}.acc-odds .oddin{width:92px;flex:none;font-size:20px;padding:6px 8px}
+.leg2 .oddin{width:78px;font-size:19px;padding:6px 8px}.sl-all{display:inline-flex;align-items:center;gap:5px}.sl-all svg{width:13px;height:13px}.sl-tag{display:flex;align-items:center;gap:8px;margin-top:4px;flex-wrap:wrap}.sl-warn{font-size:11.5px;font-weight:700;color:var(--loss)}.sl-new{animation:plSwap .75s cubic-bezier(.2,.8,.2,1);background:rgba(255,122,47,.08)}.sl-tools{display:flex;align-items:center;gap:4px}.leg2 .sl-roll{width:30px;height:30px;box-shadow:none}.leg2 .sl-roll svg{width:14px;height:14px}.slip-tot{display:grid;gap:3px;justify-items:start}.slip-tot .oddin{width:92px;font-size:20px;text-align:left;padding:4px 8px}.slip-tot .rs{font-size:11px}.acc-odds{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--bg-2);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:2px 0 10px}.acc-odds label{display:grid;gap:2px;font-size:13px}.acc-odds small{color:var(--muted);font-size:11.5px;line-height:1.35}.acc-odds .oddin{width:92px;flex:none;font-size:20px;padding:6px 8px}
 .oddhint2{margin:0;padding:10px 14px;font-size:12px;color:var(--muted)}
 .sum3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .sum3 div{display:grid;gap:1px}
@@ -1954,6 +1954,14 @@ function playerAvail(sport, g, q) {
   const LU = (g.lineups || {})[q.side]; if (!LU || (LU.players || []).length < 11) return null;
   const P = LU.players.find(p => String(p.id) === String(q.pid)); return !P ? "out" : P.starter ? "start" : "bench";
 }
+/* swap slip leg i for a similar bet (the same game first, then another game at a similar price); returns the new leg or null */
+function slipSwapAt(i) {
+  const asCur = l => { const g = l.gid && findGame(l.sport, l.gid), m = g && (l.pid ? !l.group && mkt(g, `P:${l.pid}:${l.stat}:${l.target}`) : mkt(g, l.k)); return m ? { sport: l.sport, g, m } : null; };
+  const L0 = S.slip[i], g0 = L0.gid && findGame(L0.sport, L0.gid), cur = asCur(L0) || (g0 ? { sport: L0.sport, g: g0, m: { k: L0.pid ? `P:${L0.pid}:${L0.stat}:${L0.target}` : L0.k, p: L0.p || .5, dec: L0.dec || 1.5, label: L0.label } } : null);   /* a bet with no price now (e.g. the player is out): swap to one at a similar price */
+  if (!cur) return null; S.slipEx = S.slipEx || {}; const ex = (S.slipEx[L0.id] = S.slipEx[L0.id] || []); ex.push(sKey(cur));
+  const others = S.slip.filter((_, j) => j !== i).map(asCur).filter(Boolean), nx = altLeg(cur, ex, others); if (!nx) return null;
+  const nl = { ...asLegs([nx])[0], src: L0.src }; S.slipEx[nl.id] = ex; S.slip[i] = nl; return nl;
+}
 function legOptions(sport, g) {
   const r = RISK[S.accaRisk || "safe"];
   return g.model.markets.filter(m => !SKIP.has(m.k) && m.p <= .96 && priceOf(m) >= 1.05 && (!S.winOnly || WIN_KEYS.has(m.k)) && (!m.prop || !(a => a === "out" || (sport === "football" && a === "bench"))(playerAvail(sport, g, m.prop))))   /* never a player who isn't playing */.sort((a, b) => b.p - a.p).map(m => ({ m, ok: true }));
@@ -2112,7 +2120,7 @@ const fmtRow = () => `<div class="fmt-row"><span>Odds format</span><div class="f
 function slipHTML(mode = "rail") {
   const drawer = mode === "drawer", n = S.slip.length;
   const closeBtn = drawer ? `<button class="close sm" data-close aria-label="Close bet slip">✕</button>` : "";
-  const head = `<div class="slip-hd"><h2>Bet slip${n ? ` <span class="badge alt">${n}</span>` : ""}</h2><div class="hd-acts">${n ? `<button class="more" data-clear>Clear all</button>` : ""}${closeBtn}</div></div>`;
+  const head = `<div class="slip-hd"><h2>Bet slip${n ? ` <span class="badge alt">${n}</span>` : ""}</h2><div class="hd-acts">${n > 1 ? `<button class="more sl-all" data-slipall title="Swap every leg for another bet">${ROLL_SVG}Refresh all</button>` : ""}${n ? `<button class="more" data-clear>Clear all</button>` : ""}${closeBtn}</div></div>`;
   const fmt = `<div class="fmt sm" role="group" aria-label="Odds format"><button data-fmt="frac" aria-pressed="${S.fmt === "frac"}">Fractional</button><button data-fmt="dec" aria-pressed="${S.fmt === "dec"}">Decimal</button></div>`;
   if (!n) {
     let quick = "";
@@ -2124,7 +2132,7 @@ function slipHTML(mode = "rail") {
     return `<div class="slip ${mode}">${head}<div class="slip-body"><div class="empty-slip"><img src="${art("empty-slip.webp")}" alt="" loading="lazy" class="es-img"><b style="color:var(--fg-2)">Your slip is empty</b>Tap any price to add a selection.</div>${quick}</div><div class="slip-ft"><div class="ft-links"><span>Odds shown as</span>${fmt}</div></div></div>`;
   }
   const c = slipCalc(), ret = S.stake * c.dec - (S.slipFree ? +S.stake : 0), type = n === 1 ? "Single" : n === 2 ? "Double" : n === 3 ? "Treble" : n + "-fold";
-  const legs = S.slip.map(l => `<div class="leg2 ${S._slipAnim === l.id ? "sl-new" : ""}">
+  const legs = S.slip.map(l => `<div class="leg2 ${(S._slipAnim || []).includes(l.id) ? "sl-new" : ""}">
       <div class="lg-main"><div class="ls">${esc(legText(l))}</div>${l.pid ? (t => t ? `<div class="sl-tag">${t}${/ptag out/.test(t) ? `<span class="sl-warn">Tap ↻ to swap it</span>` : ""}</div>` : "")(playerTag(l)) : ""}<div class="lm">${esc(l.match)} · ${whenLabel(l.kick)} · <b style="color:${tierColor(l.p)}">${pct(l.p)}</b>${l.custom ? ` · <span style="color:var(--tang-2)">your price</span> <button class="rs" data-legreset="${esc(l.id)}">reset</button>` : l.est ? " · est." : ""}</div></div>
       <input class="oddin ${l.custom ? "mine" : ""}" data-legodds="${esc(l.id)}" value="${esc(l.custom && l.typed ? l.typed : odds(l.dec))}" autocomplete="off" spellcheck="false" aria-label="Odds for ${esc(legText(l))}. Type your bookie's price">
       <span class="sl-tools">${l.gid && !l.manual ? `<button class="reroll sl-roll" data-slipswap="${esc(l.id)}" aria-label="Swap ${esc(legText(l))} for another bet" title="Not at your bookie? Swap it">${ROLL_SVG}</button>` : ""}<button class="x" data-rm="${esc(l.id)}" aria-label="Remove ${esc(legText(l))}">✕</button></span></div>`).join("");
@@ -5463,14 +5471,9 @@ document.addEventListener("click", async e => {
   else if (d.gaundo) { S.gaAdd = S.gaAdd || {}; S.gaAdd[d.gaundo] = Math.max(0, (S.gaAdd[d.gaundo] || 0) - 1); render(); }
   else if (d.gaswap) { const parts = d.gaswap.split("|"), k = parts.pop(), i = +parts.pop(), gk = parts.join("|"); S.gaSwap = S.gaSwap || {}; const sw = (S.gaSwap[gk] = S.gaSwap[gk] || {}); sw[i] = [...(sw[i] || []), k];
     S._swapAnim = gk + "|" + i; render(); setTimeout(() => { S._swapAnim = null; }, 900); }
-  else if (d.slipswap) {   /* swap one slip leg for a similar bet (the same game first, then another game at a similar price) */
-    const i = S.slip.findIndex(l => l.id === d.slipswap); if (i < 0) return; const asCur = l => { const g = l.gid && findGame(l.sport, l.gid), m = g && (l.pid ? !l.group && mkt(g, `P:${l.pid}:${l.stat}:${l.target}`) : mkt(g, l.k)); return m ? { sport: l.sport, g, m } : null; };
-    const L0 = S.slip[i], g0 = L0.gid && findGame(L0.sport, L0.gid), cur = asCur(L0) || (g0 ? { sport: L0.sport, g: g0, m: { k: L0.pid ? `P:${L0.pid}:${L0.stat}:${L0.target}` : L0.k, p: L0.p || .5, dec: L0.dec || 1.5, label: L0.label } } : null);   /* a bet with no price now (e.g. the player is out): swap to one at a similar price */
-    if (!cur) { toast("Can't find another bet for that one"); return; }
-    S.slipEx = S.slipEx || {}; const ex = (S.slipEx[d.slipswap] = S.slipEx[d.slipswap] || []); ex.push(sKey(cur));
-    const others = S.slip.filter((_, j) => j !== i).map(asCur).filter(Boolean), nx = altLeg(cur, ex, others);
-    if (!nx) { toast("No other good bet left for that spot"); return; }
-    const nl = { ...asLegs([nx])[0], src: S.slip[i].src }; S.slipEx[nl.id] = ex; S.slip[i] = nl; S.slipTot = null; save(); S._slipAnim = nl.id; render(); setTimeout(() => { S._slipAnim = null; }, 900); toast(`Swapped for ${legText(nl)}`); }
+  else if (d.slipswap) { const i = S.slip.findIndex(l => l.id === d.slipswap); if (i < 0) return; const nl = slipSwapAt(i); if (!nl) { toast("No other good bet left for that spot"); return; } S.slipTot = null; save(); S._slipAnim = [nl.id]; render(); setTimeout(() => { S._slipAnim = null; }, 900); toast(`Swapped for ${legText(nl)}`); }
+  else if (d.slipall !== undefined) { const done = []; for (let i = 0; i < S.slip.length; i++) { if (!S.slip[i].gid || S.slip[i].manual) continue; const nl = slipSwapAt(i); if (nl) done.push(nl.id); }
+    if (!done.length) { toast("No other good bets left to swap in"); return; } S.slipTot = null; save(); S._slipAnim = done; render(); setTimeout(() => { S._slipAnim = null; }, 900); toast(`Refreshed ${done.length} leg${done.length > 1 ? "s" : ""}`); }
   else if (d.pswap) { const [id, i] = [d.pswap.slice(0, d.pswap.lastIndexOf("|")), +d.pswap.slice(d.pswap.lastIndexOf("|") + 1)], k = swKey(id), cur = applySwaps(id, presetLegs0(id))[i]; if (!cur) return;
     S.pswap = S.pswap || {}; const sw = (S.pswap[k] = S.pswap[k] || {}); sw[i] = [...(sw[i] || []), sKey(cur)]; const nx = applySwaps(id, presetLegs0(id))[i];
     if (!nx || sKey(nx) === sKey(cur)) { sw[i].pop(); toast("No other good bet left for that spot"); return; }
