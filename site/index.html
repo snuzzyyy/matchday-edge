@@ -1242,6 +1242,20 @@ button.setrow{width:100%;text-align:left;font:inherit;color:inherit;background:n
 .chk-v{justify-self:start;font-weight:800;font-size:13px!important;padding:3px 11px;border-radius:999px}.chk-v.good{background:rgba(34,197,94,.16);color:#4ade80!important}.chk-v.fair{background:rgba(245,158,11,.16);color:#fbbf24!important}.chk-v.bad{background:rgba(239,68,68,.16);color:#f87171!important}
 .chk-legs{display:grid;border-top:1px solid var(--line)}.chk-leg{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.06)}.chk-leg>div{display:grid;gap:2px}.chk-leg b{font-size:14.5px}.chk-leg small{font-size:12px;color:var(--muted)}.chk-leg .chk-why{color:var(--fg-2)}.chk-leg>span{font-family:var(--display);font-size:22px;font-weight:700}
 .back-l{display:inline-block;margin-bottom:-6px}
+
+/* ---------- polish pass (Nov 2026): one look for cards, tidier rows on phones, clearer focus ---------- */
+.trk-card,.preset,.fg-game,.fs-sec,.fs-tile,.acca-panel,.fd-hero,.pop-card{box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 14px 30px -22px rgba(0,0,0,.85)}
+.trk-card,.preset,.fg-game,.fs-sec,.fs-tile,.pop-card{border-color:rgba(255,255,255,.08)}
+.chip,.seg3 button,.seg button,.btn{transition:background .15s,border-color .15s,color .15s,transform .1s}
+.btn:active,.chip:active,.preset:active,.fp-it:active{transform:scale(.985)}
+:is(button,a,input,textarea,select,[role=button]):focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.sub,.risk-desc,.note{line-height:1.45}
+@media (max-width:600px){
+  .chips:not(.pcat-row){flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin-left:-16px;margin-right:-16px;padding-left:16px;padding-right:16px;scroll-padding:0 16px}
+  .chips:not(.pcat-row)::-webkit-scrollbar{display:none}
+  .chips:not(.pcat-row)>*{flex:none;white-space:nowrap}
+  .fd-stages{gap:6px;margin-bottom:10px}.fd-stg{padding:8px 10px;gap:8px;border-radius:12px}.fd-stg small{display:none}.fd-stg b{font-size:13px}.fd-sn{width:24px;height:24px;font-size:12px}.fd-sline{width:10px}
+}
 </style>
 
 <header class="top">
@@ -1897,7 +1911,7 @@ const accaWin = () => S.accaWin && upcoming(S.sport, S.accaWin).length ? S.accaW
 /* ready-made accas for the level you've picked (pre-match): the best double, treble and four-fold, plus a same-game one, each aimed at that level's odds */
 function levelPreset(n) {
   const sp = S.sport, aw = accaWin(), r = RISK[S.accaRisk || "safe"], key = [sp, aw, S.accaRisk, n, sgAuto(), S.winOnly ? "w" : "", S.data.updated].join("|");
-  const C = (S._lvl = S._lvl || {})[key]; if (C && Date.now() - C.at < 30e3) return C.v;
+  const C = (S._lvl = S._lvl || {})[key]; if (C && Date.now() - C.at < 180e3) return C.v;   /* the key already changes with new prices, level, day and sport */
   const list = upcoming(sp, aw).filter(isPre); let out = [];
   if (n === 1) {   // one game, a few bets that go together, inside the level's range
     let best = null;
