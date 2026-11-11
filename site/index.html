@@ -4088,6 +4088,9 @@ function fundedParse(raw) {
     }
     let legs = []; if (q) { const r = parseBet(q, playerIndex(false).idx); if (r.legs.length === 1 && !r.missing.length) legs = r.legs; }
     const qm = mk.match(/(1st|2nd|3rd|4th|first|second|third|fourth)\s+quarter|quarter\s*([1-4])|\bq([1-4])\b/), qn = qm ? (qm[2] || qm[3] ? +(qm[2] || qm[3]) : { "1st": 1, first: 1, "2nd": 2, second: 2, "3rd": 3, third: 3, "4th": 4, fourth: 4 }[qm[1]]) : 0;
+    if (!legs.length && /both teams to score|btts/.test(mk) && /(1st|first|2nd|second) half/.test(mk) && !/^no$/i.test(sel.trim()) && !nbaG) {   /* BTTS in one half = each team scores in that half (tracked from the goal times) */
+      const r = parseBet(`${home} v ${away}: ${home} to win`, playerIndex(false).idx), w = r.legs.length === 1 && !r.missing.length ? r.legs[0] : null, h = /(1st|first) half/.test(mk) ? 1 : 2;
+      if (w) legs = [{ ...w, k: `T:h${h}goals:each:1`, label: `Both teams to score in the ${h === 1 ? "1st" : "2nd"} half`, p: null }]; }
     const hh = /handicap|spread/.test(mk) && !/corners?|cards?/.test(mk) && (qn ? "q" + qn : /1st half|first half/.test(mk) ? "h1" : /2nd half|second half/.test(mk) ? "h2" : ""), hs = sel.match(/^(.*?)\s*\(([+-]?[\d.]+)\)/);
     if (hh && hs) { const r = parseBet(`${home} v ${away}: ${hs[1]} to win`, playerIndex(false).idx), w = r.legs.length === 1 && !r.missing.length ? r.legs[0] : null;
       if (w && WIN_KEYS.has(w.k) && !/^(draw|tie|x)$/i.test(hs[1].trim())) { const side = w.k === "1" || w.k === "ML1" ? "home" : "away", ln = +hs[2], three = /draw/.test(mk);
