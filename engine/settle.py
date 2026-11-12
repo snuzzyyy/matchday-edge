@@ -217,10 +217,11 @@ def leg_result(l):
         return None, None
     if k.startswith("OU:"):   # any Over/Under line, e.g. OU:o:4.5:goals (lines our model doesn't price)
         _, side, line, unit = k.split(":"); line = float(line)
-        if unit == "goals": v = tot
+        if unit in ("goals", "points"): v = tot
         elif unit == "corners" and H.get("wonCorners") is not None: v = H.get("wonCorners", 0) + A.get("wonCorners", 0)
         elif unit == "cards" and H.get("yellowCards") is not None: v = H.get("yellowCards", 0) + A.get("yellowCards", 0) + H.get("redCards", 0) + A.get("redCards", 0)
         else: return None, None
+        if v == line: return "void", v   # a whole-number line hit exactly is a push
         return W(v > line if side == "o" else v < line), v
     res = {"1": hs > as_, "X": hs == as_, "2": as_ > hs, "1X": hs >= as_, "X2": as_ >= hs, "12": hs != as_,
            "O05": tot > .5, "O15": tot > 1.5, "O25": tot > 2.5, "O35": tot > 3.5, "U25": tot < 2.5, "U35": tot < 3.5,

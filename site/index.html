@@ -2794,6 +2794,7 @@ function gamesInText(txt) {
 // turn bookie wording into our market names, then pick the longest of our markets that matches
 /* NBA team points: "each team to score 55+ points in each half", "Celtics 110+ points", "Hornets to score 55+ points in the 1st half" */
 function nbaTeamPts(t, g) {
+  const t0 = t;   /* before "over 215 points" becomes "216+ points", so a match total isn't read as one team's points */
   t = t.replace(/ (\d+) or more /g, " $1+ ").replace(/ over (\d+)(?:\.5)? (points|pts) /g, (m, n, u) => ` ${+n + 1}+ ${u} `);
   const half = s => / (?:1st|first) half /.test(s) ? "h1pts" : / (?:2nd|second) half /.test(s) ? "h2pts" : / each half | both halves /.test(s) ? "hpts" : "pts";
   const HW = { pts: "", h1pts: " in the 1st half", h2pts: " in the 2nd half", hpts: " in each half" };
@@ -2802,7 +2803,7 @@ function nbaTeamPts(t, g) {
   for (const [T, side] of [[g.home, "home"], [g.away, "away"]]) for (const a of teamAliases(T)) {
     const r = t.match(new RegExp(` ${a.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} (?:to )?(?:score )?(\\d+)\\+ (?:points|pts)\\b(.*)$`)); if (!r) continue;
     { const pre = t.slice(0, r.index).trim(), other = T === g.home ? g.away : g.home; if (pre && !teamAliases(other).some(x => pre.includes(x))) continue; }   /* "P.J. Washington 14+ points" is a player, not the Washington Wizards */
-    if (/ (?:v|vs|@) $/.test(t.slice(0, r.index + 1)) || / over \d/.test(t) && !/ (?:to )?score | team total /.test(t) && !new RegExp(` ${a.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} over \\d`).test(t.replace(/ (?:v|vs|@) \S+(?: \S+)? over/, " x over"))) continue;   /* "Celtics v Hornets: Over 208.5 points" is the match total, not a Hornets total */
+    if (/ (?:v|vs|@) $/.test(t.slice(0, r.index + 1)) || / over \d/.test(t0) && !/ (?:to )?score | team total /.test(t0) && !new RegExp(` ${a.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} over \\d`).test(t0.replace(/ (?:v|vs|@) \S+(?: \S+)? over/, " x over"))) continue;   /* "Celtics v Hornets: Over 208.5 points" is the match total, not a Hornets total */
     const st = half(r[2] + " "), n = +r[1]; return { k: `T:${st}:${side}:${n}`, label: `${T.name} ${n}+ points${HW[st]}`, p: null, custom: true }; }
   return null;
 }
@@ -2844,7 +2845,7 @@ function marketIn(seg, sp, g) {
   const ms = g.model.markets.filter(m => !isProp(m)).map(m => ({ m, l: normT(m.label) }));
   for (const src of [...extra.map(x => " " + normT(x) + " "), t]) { const hit = ms.filter(x => src.includes(" " + x.l + " ")).sort((a, b) => b.l.length - a.l.length)[0]; if (hit) return hit.m; }
   /* any Over/Under line, even one our model doesn't price ("Over 208.5 points"): tracked from the score, settled by its label */
-  const ouAny = () => { const m = t.replace(/ (over|under) \+ ?(\d)/g, " $1 $2").match(/ (over|under) (\d+\.5) (?:total |match )?(points|pts|goals|corners|cards) /) || t.replace(/ (over|under) \+ ?(\d)/g, " $1 $2").match(/ (over|under) (\d+\.5) (?:\S+ ){0,3}?(?:total |match )(points|pts|goals|corners|cards) /);   /* Sky: "Over +208.5 / Total Points" */ if (!m) return null; const u = m[3] === "pts" ? "points" : m[3];
+  const ouAny = () => { const m = t.replace(/ (over|under) \+ ?(\d)/g, " $1 $2").match(/ (over|under) (\d+(?:\.5)?) (?:total |match )?(points|pts|goals|corners|cards) /) || t.replace(/ (over|under) \+ ?(\d)/g, " $1 $2").match(/ (over|under) (\d+(?:\.5)?) (?:\S+ ){0,3}?(?:total |match )(points|pts|goals|corners|cards) /);   /* Sky: "Over +208.5 / Total Points" */ if (!m) return null; const u = m[3] === "pts" ? "points" : m[3];
     if (sp === "nba" ? u !== "points" : u === "points") return null; const lab = `${m[1][0].toUpperCase() + m[1].slice(1)} ${m[2]} ${u}`; return { k: `OU:${m[1][0]}:${m[2]}:${u}`, label: lab, p: null, custom: true }; };
   return (sp === "football" ? teamStatIn(t, g, H, A) : null) || ouAny();
 }
@@ -3188,8 +3189,8 @@ function legInfo0(l) {   // -> { html, st: "pre" | "live" | "hit" | "miss" | "vo
   let cur = null;
   if (mm) { const t = mm[3].toLowerCase(), c = stt("wonCorners"), y = stt("yellowCards"), rc = stt("redCards"); cur = t === "points" || t === "goals" ? (+H.score || 0) + (+A.score || 0) : t === "corners" ? (c ? c.h + c.a : null) : (y ? y.h + y.a + (rc ? rc.h + rc.a : 0) : null); }
   if (!m && mm && cur != null) { const line = +mm[2], over = /over/i.test(mm[1]), post = g.status.state === "post";   /* a line we don't price: settle it from the score */
-    state = over ? (cur > line ? "won" : post ? "lost" : "open") : (cur > line ? "lost" : post ? "won" : "open"); cls = state === "won" ? "hit" : state === "lost" ? "miss" : ""; }
-  const end = state === "won" ? "✓ Landed" : state === "lost" ? "✗ Lost" : "";
+    state = over ? (cur > line ? "won" : post ? (cur === line ? "void" : "lost") : "open") : (cur > line ? "lost" : post ? (cur === line ? "void" : "won") : "open"); cls = state === "won" ? "hit" : state === "lost" ? "miss" : state === "void" ? "void" : ""; }   /* a whole-number line that lands exactly on it is a push: stake back */
+  const end = state === "won" ? "✓ Landed" : state === "lost" ? "✗ Lost" : state === "void" ? "Void · push" : "";
   let bar, left, right, rows = "";
   if (btts) {   /* half the bar for each team that has scored */
     const hs = +H.score || 0, as = +A.score || 0, n = (hs > 0) + (as > 0);
@@ -5231,6 +5232,7 @@ function betOutcome(legs) {   // "won" / "lost" once it's certain, otherwise nul
       lost = true; continue;
     }
     if (/^T:/.test(l.k || "")) { const st = legInfo0(l).st; if (st === "hit") continue; if (st === "miss" && g._postDetail) { lost = true; continue; } if (st === "miss") { g._luAt = 0; loadDetail(l.sport + ":" + l.gid); } all = false; continue; }
+    if (/^OU:/.test(l.k || "")) { const st = legInfo0(l).st; if (st === "hit") continue; if (st === "miss") { lost = true; continue; } all = false; continue; }   /* any Over/Under line, settled from the score (a push is left for you) */
     if (l.k && g.status.state !== "post" && legInfo0(l).st === "hit") continue;   /* already landed and can't be undone (an Over passed, both teams scored, a team has scored): no need to wait for full time */
     if (!l.k || g.status.state !== "post") { all = false; continue; }
     const m = liveMarkets(l.sport, g).find(x => x.k === l.k); if (!m) { if (!g._luDone) loadDetail(l.sport + ":" + l.gid); all = false; continue; }
