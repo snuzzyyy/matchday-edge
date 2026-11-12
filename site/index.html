@@ -4138,6 +4138,7 @@ function fundedPickerHTML() {
 const FP_TYPES = [["single", "Singles"], ["acca", "Winner accas"], ["game", "Pick a game"], ["btts", "BTTS acca"], ["o15", "Over 1.5 acca"]];
 const fpTypeRow = cur => `<div class="chips fp-types" role="group" aria-label="Bet type">${FP_TYPES.map(([k, l]) => `<button class="chip" data-fptype="${k}" aria-pressed="${cur === k}">${l}</button>`).join("")}</div>`;
 /* Funded → BTTS acca / Over 1.5 acca: tap up to 3 of the day's football games, see the combined odds and chance, add it */
+const FM_MAX = 6;
 const FM = { btts: ["BTTS", "Both teams to score", "BTTS"], o15: ["O15", "Over 1.5 goals", "Over 1.5"] };
 function fundedMarketAccaHTML(kind) {
   const [k, name, short] = FM[kind], now = Date.now(), X = fundedStats(fundedNow()), sel = ((S.fmSel || {})[kind] || []);
@@ -4145,11 +4146,11 @@ function fundedMarketAccaHTML(kind) {
   const picked = sel.map(id => G.find(x => String(x.g.id) === String(id))).filter(Boolean), dec = picked.reduce((a, x) => a * priceOf(x.m), 1), p = picked.reduce((a, x) => a * x.m.p, 1);
   const key = picked.length === 1 ? `football|${picked[0].g.id}|${k}` : "acca|" + picked.map(x => `football:${x.g.id}:${k}`).join(",");
   const rows = G.map(({ g, m }) => { const on = sel.includes(String(g.id)); return `<button class="fm-it ${on ? "on" : ""}" data-fmpick="${kind}|${g.id}" aria-pressed="${on}"><span class="lgg-logos">${logo("football", g.home)}${logo("football", g.away)}</span><span class="fm-t"><b>${esc(vs("football", g))}</b><small>${esc(whenLabel(kick(g)))} · ${esc(leagueName(g.league))}</small></span><span class="fp-o"><b>${odds(priceOf(m))}</b><small style="color:${tierColor(m.p)}">${pct(m.p)}</small></span><span class="fm-tick">${on ? "✓" : "+"}</span></button>`; }).join("");
-  const slip = picked.length ? `<div class="fm-slip"><div class="fm-sh"><b>${picked.length === 1 ? "Single" : picked.length === 2 ? "Double" : "Treble"} · ${short}</b><span>${picked.length}/3 games</span></div>${picked.map(x => `<span class="fm-leg">${esc(vs("football", x.g))}<b>${odds(priceOf(x.m))}</b></span>`).join("")}
+  const slip = picked.length ? `<div class="fm-slip"><div class="fm-sh"><b>${picked.length === 1 ? "Single" : picked.length === 2 ? "Double" : picked.length === 3 ? "Treble" : picked.length + "-fold"} · ${short}</b><span>${picked.length}/${FM_MAX} games</span></div>${picked.map(x => `<span class="fm-leg">${esc(vs("football", x.g))}<b>${odds(priceOf(x.m))}</b></span>`).join("")}
       <div class="fm-tot"><span>Odds <b>${odds(dec)}</b></span><span>Chance <b style="color:${tierColor(p)}">${pct(p)}</b></span></div>
       <div class="fp-drop"><label><span>Odds</span><input id="fpOdds" class="oddin" value="${esc(odds(dec))}" autocomplete="off" inputmode="decimal"></label><label><span>Stake £</span><input id="fpStake" class="oddin" inputmode="decimal" autocomplete="off" value="${Math.max(1, Math.round(X.bal * .02 * 2) / 2)}"></label><button class="btn sm" data-fpadd="${esc(key)}" data-fmdone="${kind}">Add</button></div></div>` : "";
   return `<section class="section"><h2>Bet picker</h2><div class="acca-panel fp-panel">${fpTypeRow(kind)}<div class="seg3 two" role="group">${[["today", "Today & tonight"], ["24h", "Next 24 hours"]].map(([v, l]) => `<button data-fpday="${v}" aria-pressed="${(S.fpDay || "today") === v}">${l}</button>`).join("")}</div>
-    <p class="risk-desc" style="margin:0 4px">${name}: tap up to 3 games, likeliest first. Change the odds to BetPro's, type your stake, press Enter.</p></div>
+    <p class="risk-desc" style="margin:0 4px">${name}: tap up to ${FM_MAX} games, likeliest first. Change the odds to BetPro's, type your stake, press Enter.</p></div>
     ${slip}${G.length ? `<div class="fm-list">${rows}</div>` : `<div class="empty">No football with a ${short} price ${fpDayLabel()}. Try Next 24 hours.</div>`}</section>`;
 }
 /* Funded → Pick a game: every upcoming game in the window; open one to see all its bets, then tap a bet, type a stake, press Enter */
@@ -5668,7 +5669,7 @@ document.addEventListener("click", async e => {
   else if (d.fdpanel) { S.fdPanel = S.fdPanel === d.fdpanel ? null : d.fdpanel; render(); }
   else if (d.fgmore) { S.fgMore = { ...(S.fgMore || {}), [d.fgmore]: true }; render(); }
   else if (d.fmpick) { const [kind, id] = d.fmpick.split("|"); S.fmSel = { ...(S.fmSel || {}) }; const cur = (S.fmSel[kind] || []).slice(), i = cur.indexOf(id);
-    if (i >= 0) cur.splice(i, 1); else { if (cur.length >= 3) { toast("3 games max. Tap one to take it out"); return; } cur.push(id); } S.fmSel[kind] = cur; render(); }
+    if (i >= 0) cur.splice(i, 1); else { if (cur.length >= FM_MAX) { toast(`${FM_MAX} games max. Tap one to take it out`); return; } cur.push(id); } S.fmSel[kind] = cur; render(); }
   else if (d.fpgame) { S.fpGame = S.fpGame === d.fpgame ? null : d.fpgame; S.fpOpen = null; render(); }
   else if (d.fpday) { S.fpDay = d.fpday; S.fpOpen = null; render(); }
   else if (d.fptype) { S.fpType = d.fptype; S.fpOpen = null; S.fpSeed = 0; render(); }
