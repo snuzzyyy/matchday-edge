@@ -540,3 +540,4 @@ No server of our own. ESPN is free, has no key and is about 1–3 minutes behind
 - Funded pass is measured on the cash balance (`X.bal`, open stakes already off) like BetPro: `done = bal >= goal`, the big "+X% / 40%" and "£ to go" use `X.bpct` / `goal - bal`. The top-right P/L still shows profit from settled bets (matches BetPro's P&L).
 - Over/Under lines: whole-number lines (Over 215) parse as `OU:o:215:points` (not a team total: `nbaTeamPts` checks the original text `t0`); landing exactly on the line is a push (void, "Void · push"). `betOutcome` now settles `OU:` legs from `legInfo0`; settle.py handles NBA points and the push.
 - Funded import: BTTS 1st/2nd half → `T:h1goals|h2goals:each:1`.
+- Internationals added to LEAGUES: `uefa.nations` (Nations League) and `fifa.friendly`. Their model prices are rougher (little form data for national teams).

@@ -19,6 +19,8 @@ LEAGUES = [
     ("eng.fa", "FA Cup", "FAC"), ("eng.league_cup", "Carabao Cup", "EFLC"), ("eng.trophy", "EFL Trophy", "EFLT"),
     ("uefa.europa.conf", "Conference League", "UECL"), ("sco.tennents", "Scottish Cup", "SC"), ("sco.cis", "Scottish League Cup", "SLC"),
     ("esp.copa_del_rey", "Copa del Rey", "CDR"), ("ita.coppa_italia", "Coppa Italia", "CI"), ("ger.dfb_pokal", "DFB-Pokal", "DFB"), ("fra.coupe_de_france", "Coupe de France", "CDF"),
+    # internationals: so national-team games show, get prices and track
+    ("uefa.nations", "Nations League", "UNL"), ("fifa.friendly", "International friendly", "INTL"),
 ]
 DAYS_BACK, DAYS_FWD = 1, 5
 
