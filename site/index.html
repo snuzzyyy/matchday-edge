@@ -1256,6 +1256,17 @@ button.setrow{width:100%;text-align:left;font:inherit;color:inherit;background:n
   .chips:not(.pcat-row)>*{flex:none;white-space:nowrap}
   .fd-stages{gap:6px;margin-bottom:10px}.fd-stg{padding:8px 10px;gap:8px;border-radius:12px}.fd-stg small{display:none}.fd-stg b{font-size:13px}.fd-sn{width:24px;height:24px;font-size:12px}.fd-sline{width:10px}
 }
+
+/* Funded picker rehaul */
+.fp-modes{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}.fp-modes button{display:grid;justify-items:center;gap:3px;padding:10px 6px;border-radius:12px;border:1px solid var(--line);background:var(--bg-2);color:var(--fg-2);font-size:12.5px;font-weight:700;cursor:pointer;line-height:1.2;text-align:center}.fp-modes button span{font-size:18px}.fp-modes button[aria-pressed=true]{background:linear-gradient(135deg,var(--blue),#5b8dff);border-color:var(--blue);color:#fff;box-shadow:0 8px 18px -10px rgba(61,123,255,.9)}
+.fp-filt{align-items:center}.fp-sep{flex:none;width:1px;height:20px;background:var(--line-2);margin:0 2px}.fm-mk .chip{border-radius:10px}
+.fm-leg{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:8px}.fm-leg>span{display:grid;min-width:0}.fm-leg>span b{font-family:inherit;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.fm-leg small{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.fm-leg .x{padding:2px 6px;color:var(--muted);background:none;border:0;cursor:pointer}
+.fm-tot{flex-wrap:wrap;gap:4px 12px}.seg3.fa-size{margin:0;grid-template-columns:repeat(4,1fr)}
+.fa-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px;margin-top:10px;align-items:start}.fa-card{display:grid;gap:6px;padding:14px;border-radius:14px;border:1px solid rgba(255,255,255,.08);background:var(--surface);color:inherit;text-align:left;cursor:pointer;box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 14px 30px -22px rgba(0,0,0,.85)}.fa-card:hover{border-color:var(--blue)}.fa-card.mix{border-color:rgba(255,190,60,.5);background:radial-gradient(120% 140% at 100% 0%,rgba(255,190,60,.14),transparent 60%),var(--surface)}
+.fa-hd{display:flex;justify-content:space-between;align-items:baseline;gap:8px}.fa-hd b{font-family:var(--display);font-size:18px;text-transform:uppercase}.fa-hd em{font-style:normal;font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.fa-l{display:flex;justify-content:space-between;gap:8px;font-size:13px}.fa-l>span{display:grid;min-width:0;font-weight:600}.fa-l small{font-size:11.5px;color:var(--muted);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.fa-l i{font-style:normal;font-family:var(--display);font-size:15px}
+.fa-ft{display:flex;justify-content:space-between;align-items:center;margin-top:4px;padding-top:8px;border-top:1px solid var(--line)}.fa-ft b{font-family:var(--display);font-size:22px}
+@media (max-width:600px){.fp-modes{grid-template-columns:repeat(2,1fr)}.fp-modes button{grid-template-columns:auto 1fr;justify-items:start;align-items:center;gap:8px;padding:9px 10px;text-align:left}}
 </style>
 
 <header class="top">
@@ -4125,35 +4136,75 @@ function fundedAccas() {
   return out;
 }
 function fundedPickerHTML() {
-  if (S.fpType === "acca") return fundedAccaHTML();
   if (S.fpType === "game") return fundedGameHTML();
-  if (FM[S.fpType]) return fundedMarketAccaHTML(S.fpType);
+  if (S.fpType === "ready") return fundedReadyHTML();
+  if (S.fpType && S.fpType !== "single") return fundedBuildHTML();   /* "build", and the older acca / btts / o15 modes */
   const P = fundedPicks(), seg = (attr, cur, opts) => `<div class="seg3 ${opts.length === 2 ? "two" : ""}" role="group">${opts.map(([k, l]) => `<button ${attr}="${k}" aria-pressed="${cur === k}">${l}</button>`).join("")}</div>`;
-  return `<section class="section"><h2>Bet picker</h2><div class="acca-panel fp-panel">${fpTypeRow(S.fpType || "single")}${seg("data-fpband", S.fpBand || "low", Object.entries(FP_BANDS).map(([k, v]) => [k, v[0]]))}${seg("data-fpday", S.fpDay || "today", [["today", "Today & tonight"], ["24h", "Next 24 hours"]])}
-    <div class="ch-tools" style="margin:0">${seg("data-fpsport", S.fpSport || "both", [["football", "⚽ Football"], ["nba", "🏀 NBA"], ["both", "Both"]])}<button class="reroll" data-fpshuffle aria-label="Show different bets" title="Show different bets">${ROLL_SVG}</button></div>
+  return `<section class="section"><h2>Bet picker</h2><div class="acca-panel fp-panel">${fpTypeRow()}${fpFilters()}
+    <div class="ch-tools" style="margin:0">${seg("data-fpband", S.fpBand || "low", Object.entries(FP_BANDS).map(([k, v]) => [k, v[0]]))}<button class="reroll" data-fpshuffle aria-label="Show different bets" title="Show different bets">${ROLL_SVG}</button></div>
     <p class="risk-desc" style="margin:0 4px">${(FP_BANDS[S.fpBand] || FP_BANDS.low)[0]}: singles from ${odds((FP_BANDS[S.fpBand] || FP_BANDS.low)[1])} to ${odds((FP_BANDS[S.fpBand] || FP_BANDS.low)[2])} ${fpDayLabel()}. Tap one, type your stake, press Enter.</p></div>
     ${P.length ? `<div class="fp-list">${P.map(c => { const l = asLegs([{ sport: c.sp, g: c.g, m: c.m }])[0], key = `${c.sp}|${c.g.id}|${c.m.k}`, open = S.fpOpen === key, F = fundedNow(), X = fundedStats(F);
       return `<div class="fp-wrap ${open ? "open" : ""}"><button class="fp-it" data-fpick="${esc(key)}" aria-expanded="${open}">${legIcon(l)}<span class="pl-t"><b>${esc(c.m.label)}</b><small>${esc(vs(c.sp, c.g))} · ${esc(twTime(kick(c.g)))}</small>${l.pid ? playerTag(l) : ""}</span><span class="fp-o"><b>${odds(c.pr)}</b><small style="color:${tierColor(c.m.p)}">${pct(c.m.p)}</small></span></button>
         ${open ? `<div class="fp-drop"><label><span>Odds</span><input id="fpOdds" class="oddin" value="${esc(odds(c.pr))}" autocomplete="off" inputmode="decimal"></label><label><span>Stake £</span><input id="fpStake" class="oddin" inputmode="decimal" autocomplete="off" value="${Math.max(1, Math.round(X.bal * .02 * 2) / 2)}"></label><button class="btn sm" data-fpadd="${esc(key)}">Add</button></div>` : ""}</div>`; }).join("")}</div>`
       : `<div class="empty">No ${(FP_BANDS[S.fpBand] || FP_BANDS.low)[0].toLowerCase()} singles ${fpDayLabel()}. Try another band, sport or Next 24 hours.</div>`}</section>`;
 }
-const FP_TYPES = [["single", "Singles"], ["acca", "Winner accas"], ["game", "Pick a game"], ["btts", "BTTS acca"], ["o15", "Over 1.5 acca"]];
-const fpTypeRow = cur => `<div class="chips fp-types" role="group" aria-label="Bet type">${FP_TYPES.map(([k, l]) => `<button class="chip" data-fptype="${k}" aria-pressed="${cur === k}">${l}</button>`).join("")}</div>`;
-/* Funded → BTTS acca / Over 1.5 acca: tap up to 3 of the day's football games, see the combined odds and chance, add it */
+const FP_TYPES = [["single", "Singles", "🎯"], ["build", "Acca builder", "🧱"], ["ready", "Ready-made accas", "⚡"], ["game", "Pick a game", "🔎"]];
+const fpMode = () => S.fpType === "game" || S.fpType === "ready" || !S.fpType || S.fpType === "single" ? S.fpType || "single" : "build";
+const fpTypeRow = () => `<div class="fp-modes" role="group" aria-label="Bet picker mode">${FP_TYPES.map(([k, l, ic]) => `<button data-fptype="${k}" aria-pressed="${fpMode() === k}"><span>${ic}</span>${l}</button>`).join("")}</div>`;
+const fpFilters = () => `<div class="chips fp-filt">${[["today", "Today & tonight"], ["24h", "Next 24 hours"]].map(([v, l]) => `<button class="chip" data-fpday="${v}" aria-pressed="${(S.fpDay || "today") === v}">${l}</button>`).join("")}<span class="fp-sep"></span>${[["both", "All sports"], ["football", "⚽ Football"], ["nba", "🏀 NBA"]].map(([v, l]) => `<button class="chip" data-fpsport="${v}" aria-pressed="${(S.fpSport || "both") === v}">${l}</button>`).join("")}</div>`;
+/* Funded → Acca builder / Ready-made accas. Each market gives one bet per game (the likelier side where there are two); you can mix markets, one leg per game, up to FM_MAX */
 const FM_MAX = 6;
-const FM = { btts: ["BTTS", "Both teams to score", "BTTS"], o15: ["O15", "Over 1.5 goals", "Over 1.5"] };
-function fundedMarketAccaHTML(kind) {
-  const [k, name, short] = FM[kind], now = Date.now(), X = fundedStats(fundedNow()), sel = ((S.fmSel || {})[kind] || []);
-  const G = games("football").filter(g => isPre(g) && +new Date(kick(g)) > now && fpInWindow(+new Date(kick(g)))).map(g => ({ g, m: mkt(g, k) })).filter(x => x.m && priceOf(x.m) > 1.01).sort((a, b) => b.m.p - a.m.p);
-  const picked = sel.map(id => G.find(x => String(x.g.id) === String(id))).filter(Boolean), dec = picked.reduce((a, x) => a * priceOf(x.m), 1), p = picked.reduce((a, x) => a * x.m.p, 1);
-  const key = picked.length === 1 ? `football|${picked[0].g.id}|${k}` : "acca|" + picked.map(x => `football:${x.g.id}:${k}`).join(",");
-  const rows = G.map(({ g, m }) => { const on = sel.includes(String(g.id)); return `<button class="fm-it ${on ? "on" : ""}" data-fmpick="${kind}|${g.id}" aria-pressed="${on}"><span class="lgg-logos">${logo("football", g.home)}${logo("football", g.away)}</span><span class="fm-t"><b>${esc(vs("football", g))}</b><small>${esc(whenLabel(kick(g)))} · ${esc(leagueName(g.league))}</small></span><span class="fp-o"><b>${odds(priceOf(m))}</b><small style="color:${tierColor(m.p)}">${pct(m.p)}</small></span><span class="fm-tick">${on ? "✓" : "+"}</span></button>`; }).join("");
-  const slip = picked.length ? `<div class="fm-slip"><div class="fm-sh"><b>${picked.length === 1 ? "Single" : picked.length === 2 ? "Double" : picked.length === 3 ? "Treble" : picked.length + "-fold"} · ${short}</b><span>${picked.length}/${FM_MAX} games</span></div>${picked.map(x => `<span class="fm-leg">${esc(vs("football", x.g))}<b>${odds(priceOf(x.m))}</b></span>`).join("")}
-      <div class="fm-tot"><span>Odds <b>${odds(dec)}</b></span><span>Chance <b style="color:${tierColor(p)}">${pct(p)}</b></span></div>
-      <div class="fp-drop"><label><span>Odds</span><input id="fpOdds" class="oddin" value="${esc(odds(dec))}" autocomplete="off" inputmode="decimal"></label><label><span>Stake £</span><input id="fpStake" class="oddin" inputmode="decimal" autocomplete="off" value="${Math.max(1, Math.round(X.bal * .02 * 2) / 2)}"></label><button class="btn sm" data-fpadd="${esc(key)}" data-fmdone="${kind}">Add</button></div></div>` : "";
-  return `<section class="section"><h2>Bet picker</h2><div class="acca-panel fp-panel">${fpTypeRow(kind)}<div class="seg3 two" role="group">${[["today", "Today & tonight"], ["24h", "Next 24 hours"]].map(([v, l]) => `<button data-fpday="${v}" aria-pressed="${(S.fpDay || "today") === v}">${l}</button>`).join("")}</div>
-    <p class="risk-desc" style="margin:0 4px">${name}: tap up to ${FM_MAX} games, likeliest first. Change the odds to BetPro's, type your stake, press Enter.</p></div>
-    ${slip}${G.length ? `<div class="fm-list">${rows}</div>` : `<div class="empty">No football with a ${short} price ${fpDayLabel()}. Try Next 24 hours.</div>`}</section>`;
+const bestOf = keys => (sp, g) => keys.map(k => mkt(g, k)).filter(Boolean).sort((a, b) => b.p - a.p)[0] || null;
+const FMK = [
+  { id: "win", name: "To win", sp: "both", pick: (sp, g) => bestOf(sp === "nba" ? ["ML1", "ML2"] : ["1", "2"])(sp, g) },
+  { id: "dc", name: "Win or draw", sp: "football", pick: bestOf(["1X", "X2"]) },
+  { id: "dnb", name: "Draw no bet", sp: "football", pick: bestOf(["DNB1", "DNB2"]) },
+  { id: "btts", name: "Both teams to score", sp: "football", pick: bestOf(["BTTS"]) },
+  { id: "o15", name: "Over 1.5 goals", sp: "football", pick: bestOf(["O15"]) },
+  { id: "o25", name: "Over 2.5 goals", sp: "football", pick: bestOf(["O25"]) },
+  { id: "u35", name: "Under 3.5 goals", sp: "football", pick: bestOf(["U35"]) },
+  { id: "corn", name: "Over 8.5 corners", sp: "football", pick: bestOf(["C8.5"]) },
+  { id: "cards", name: "Over 2.5 cards", sp: "football", pick: bestOf(["Y2.5"]) },
+  { id: "hcp", name: "NBA handicap", sp: "nba", pick: bestOf(["SP1", "SP2", "FAVH"]) },
+  { id: "pts", name: "NBA points over", sp: "nba", pick: bestOf(["TO-10", "TO-6", "TO"]) }];
+function fmGames(M) {   /* the games in the window with this market's bet, likeliest first */
+  const now = Date.now(), sps = (M.sp === "both" ? ["football", "nba"] : [M.sp]).filter(sp => !S.fpSport || S.fpSport === "both" || S.fpSport === sp);
+  return sps.flatMap(sp => games(sp).filter(g => isPre(g) && +new Date(kick(g)) > now && fpInWindow(+new Date(kick(g)))).map(g => ({ sp, g, m: M.pick(sp, g) })).filter(x => x.m && priceOf(x.m) > 1.01 && x.m.p < .97)).sort((a, b) => b.m.p - a.m.p);
+}
+const fmMarkets = () => FMK.filter(M => M.sp === "both" || !S.fpSport || S.fpSport === "both" || S.fpSport === M.sp);
+const fmPicked = () => (Array.isArray(S.fmSel) ? S.fmSel : []).map(x => { const g = findGame(x.sp, x.gid), m = g && mkt(g, x.k); return m && isPre(g) ? { ...x, g, m } : null; }).filter(Boolean);
+function fmSlipHTML() {
+  const P = fmPicked(); if (!P.length) return ""; const X = fundedStats(fundedNow()), dec = P.reduce((a, x) => a * priceOf(x.m), 1), p = P.reduce((a, x) => a * x.m.p, 1), n = P.length;
+  const key = n === 1 ? `${P[0].sp}|${P[0].g.id}|${P[0].m.k}` : "acca|" + P.map(x => `${x.sp}:${x.g.id}:${x.m.k}`).join(",");
+  return `<div class="fm-slip"><div class="fm-sh"><b>${n === 1 ? "Single" : n === 2 ? "Double" : n === 3 ? "Treble" : n + "-fold"}</b><span>${n}/${FM_MAX} legs · <button class="linkbtn" data-fmclear>Clear</button></span></div>
+    ${P.map((x, i) => `<span class="fm-leg"><span><b>${esc(x.m.label)}</b><small>${esc(vs(x.sp, x.g))} · ${esc(whenLabel(kick(x.g)))}</small></span><b>${odds(priceOf(x.m))}</b><button class="x" data-fmrm="${i}" aria-label="Remove ${esc(x.m.label)}">✕</button></span>`).join("")}
+    <div class="fm-tot"><span>Odds <b>${odds(dec)}</b></span><span>Chance <b style="color:${tierColor(p)}">${pct(p)}</b></span><span>£10 returns <b>${money(10 * dec)}</b></span></div>
+    <div class="fp-drop"><label><span>Odds</span><input id="fpOdds" class="oddin" value="${esc(odds(dec))}" autocomplete="off" inputmode="decimal"></label><label><span>Stake £</span><input id="fpStake" class="oddin" inputmode="decimal" autocomplete="off" value="${Math.max(1, Math.round(X.bal * .02 * 2) / 2)}"></label><button class="btn sm" data-fpadd="${esc(key)}" data-fmdone="1">Add</button></div></div>`;
+}
+function fundedBuildHTML() {
+  const MK = fmMarkets(), M = MK.find(x => x.id === S.fmK) || MK[0], G = M ? fmGames(M) : [], P = fmPicked();
+  const rows = G.map(({ sp, g, m }) => { const on = P.some(x => x.sp === sp && String(x.g.id) === String(g.id) && x.m.k === m.k), other = !on && P.find(x => x.sp === sp && String(x.g.id) === String(g.id));
+    return `<button class="fm-it ${on ? "on" : ""}" data-fmpick="${sp}|${g.id}|${esc(m.k)}" aria-pressed="${on}"><span class="lgg-logos">${logo(sp, sp === "nba" ? g.away : g.home)}${logo(sp, sp === "nba" ? g.home : g.away)}</span><span class="fm-t"><b>${esc(m.label)}</b><small>${esc(vs(sp, g))} · ${esc(whenLabel(kick(g)))}${other ? ` · swaps your ${esc(other.m.label)}` : ""}</small></span><span class="fp-o"><b>${odds(priceOf(m))}</b><small style="color:${tierColor(m.p)}">${pct(m.p)}</small></span><span class="fm-tick">${on ? "✓" : other ? "⇄" : "+"}</span></button>`; }).join("");
+  return `<section class="section"><h2>Bet picker</h2><div class="acca-panel fp-panel">${fpTypeRow()}${fpFilters()}
+    <div class="chips fm-mk" role="group" aria-label="Market">${MK.map(x => `<button class="chip" data-fmk="${x.id}" aria-pressed="${M && M.id === x.id}">${x.name}</button>`).join("")}</div>
+    <p class="risk-desc" style="margin:0 4px">Tap games to add them, likeliest first. Switch market to mix bets: one leg per game, up to ${FM_MAX}. Change the odds to your funder's, type your stake, press Enter.</p></div>
+    ${fmSlipHTML()}${G.length ? `<div class="fm-list">${rows}</div>` : `<div class="empty">No ${M ? esc(M.name.toLowerCase()) : ""} bets ${fpDayLabel()}. Try Next 24 hours or another market.</div>`}</section>`;
+}
+/* one-tap accas: for each market, the n likeliest legs (one per game), plus the best mix across markets */
+function fmReady(n) {
+  const out = [];
+  for (const M of fmMarkets()) { const G = fmGames(M).slice(0, n); if (G.length === n) out.push({ id: M.id, name: M.name, legs: G }); }
+  const best = new Map(); for (const M of fmMarkets()) for (const x of fmGames(M)) { if (priceOf(x.m) < 1.2) continue; const key = x.sp + x.g.id, c = best.get(key); if (!c || x.m.p > c.m.p) best.set(key, x); }
+  const mix = [...best.values()].sort((a, b) => b.m.p - a.m.p).slice(0, n); if (mix.length === n) out.unshift({ id: "mix", name: "Best mix", legs: mix });
+  return out.map(a => ({ ...a, dec: a.legs.reduce((t, x) => t * priceOf(x.m), 1), p: a.legs.reduce((t, x) => t * x.m.p, 1) }));
+}
+function fundedReadyHTML() {
+  const n = S.faSize || 3, A = fmReady(n), nm = k => k === 2 ? "Double" : k === 3 ? "Treble" : k + "-fold";
+  return `<section class="section"><h2>Bet picker</h2><div class="acca-panel fp-panel">${fpTypeRow()}${fpFilters()}
+    <div class="seg3 fa-size" role="group" aria-label="Acca size">${[2, 3, 4, 5].map(k => `<button data-fasize="${k}" aria-pressed="${n === k}">${nm(k)}</button>`).join("")}</div>
+    <p class="risk-desc" style="margin:0 4px">The likeliest ${nm(n).toLowerCase()} for each market, one bet per game. Tap one to load it, then set your stake.</p></div>
+    ${A.length ? `<div class="fa-grid">${A.map(a => `<button class="fa-card ${a.id === "mix" ? "mix" : ""}" data-fmload="${a.id}|${n}"><span class="fa-hd"><b>${esc(a.name)}</b><em>${nm(n)}</em></span>${a.legs.map(x => `<span class="fa-l"><span>${esc(x.m.label)}<small>${esc(vs(x.sp, x.g))}</small></span><i>${odds(priceOf(x.m))}</i></span>`).join("")}<span class="fa-ft"><b>${odds(a.dec)}</b><span class="pill ${a.p > .3 ? "good" : "hot"}">${pct(a.p)} chance</span></span></button>`).join("")}</div>`
+      : `<div class="empty">Not enough games ${fpDayLabel()} for a ${nm(n).toLowerCase()}. Try Next 24 hours or a smaller acca.</div>`}</section>`;
 }
 /* Funded → Pick a game: every upcoming game in the window; open one to see all its bets, then tap a bet, type a stake, press Enter */
 function fundedGameHTML() {
@@ -4169,8 +4220,7 @@ function fundedGameHTML() {
       body = ["Result", "Totals", "Handicaps", "Players", "Other"].filter(k => groups[k]).map(k => { const all = groups[k].sort((a, b) => priceOf(a) - priceOf(b)), more = (S.fgMore || {})[id + k], sh = more ? all : all.slice(0, 6), openIn = all.findIndex(m => S.fpOpen === `${sp}|${g.id}|${m.k}`) >= 6;
         return `<h4 class="fg-h">${k} <span>${all.length}</span></h4><div class="fp-list">${(openIn && !more ? all : sh).map(m => card(sp, g, m)).join("")}</div>${all.length > 6 && !more && !openIn ? `<button class="linkbtn fg-more" data-fgmore="${id + k}">Show all ${all.length} ›</button>` : ""}`; }).join("") || `<div class="empty">No prices for this game yet.</div>`; }
     return `<div class="fg-game ${open ? "open" : ""}"><button class="fg-hd" data-fpgame="${id}" aria-expanded="${open}"><span class="lgg-logos">${logo(sp, L)}${logo(sp, R)}</span><span class="fg-t"><b>${esc(vs(sp, g))}</b><small>${esc(whenLabel(kick(g)))}${sp === "football" ? " · " + esc(leagueName(g.league)) : " · NBA"}</small></span><span class="fg-x">${open ? "▴" : "▾"}</span></button>${body ? `<div class="fg-body">${body}</div>` : ""}</div>`; }).join("");
-  return `<section class="section"><h2>Bet picker</h2><div class="acca-panel fp-panel">${fpTypeRow("game")}${seg("data-fpday", S.fpDay || "today", [["today", "Today & tonight"], ["24h", "Next 24 hours"]])}
-    <div class="ch-tools" style="margin:0">${seg("data-fpsport", S.fpSport || "both", [["football", "⚽ Football"], ["nba", "🏀 NBA"], ["both", "Both"]])}</div>
+  return `<section class="section"><h2>Bet picker</h2><div class="acca-panel fp-panel">${fpTypeRow()}${fpFilters()}
     <p class="risk-desc" style="margin:0 4px">Tap a game to see all its bets, then tap one, type your stake, press Enter.</p></div>
     ${G.length ? `<div class="fg-list">${list}</div>` : `<div class="empty">No games ${fpDayLabel()}. Try Next 24 hours.</div>`}</section>`;
 }
@@ -5670,8 +5720,13 @@ document.addEventListener("click", async e => {
   else if (d.fdtab) { S.fdTab = d.fdtab; S.fpOpen = null; render(); }
   else if (d.fdpanel) { S.fdPanel = S.fdPanel === d.fdpanel ? null : d.fdpanel; render(); }
   else if (d.fgmore) { S.fgMore = { ...(S.fgMore || {}), [d.fgmore]: true }; render(); }
-  else if (d.fmpick) { const [kind, id] = d.fmpick.split("|"); S.fmSel = { ...(S.fmSel || {}) }; const cur = (S.fmSel[kind] || []).slice(), i = cur.indexOf(id);
-    if (i >= 0) cur.splice(i, 1); else { if (cur.length >= FM_MAX) { toast(`${FM_MAX} games max. Tap one to take it out`); return; } cur.push(id); } S.fmSel[kind] = cur; render(); }
+  else if (d.fmpick) { const [sp, gid, k] = d.fmpick.split("|"), cur = (Array.isArray(S.fmSel) ? S.fmSel : []).slice(), i = cur.findIndex(x => x.sp === sp && String(x.gid) === gid);
+    if (i >= 0 && cur[i].k === k) cur.splice(i, 1); else if (i >= 0) cur[i] = { sp, gid, k }; else { if (cur.length >= FM_MAX) { toast(`${FM_MAX} legs max. Take one out first`); return; } cur.push({ sp, gid, k }); } S.fmSel = cur; render(); }
+  else if (d.fmrm !== undefined) { S.fmSel = (Array.isArray(S.fmSel) ? S.fmSel : []).filter((_, i) => i !== +d.fmrm); render(); }
+  else if (d.fmclear !== undefined) { S.fmSel = []; render(); }
+  else if (d.fmk) { S.fmK = d.fmk; render(); }
+  else if (d.fasize) { S.faSize = +d.fasize; render(); }
+  else if (d.fmload) { const [id, n] = d.fmload.split("|"), a = fmReady(+n).find(x => x.id === id); if (!a) return; S.fmSel = a.legs.map(x => ({ sp: x.sp, gid: String(x.g.id), k: x.m.k })); S.fpType = "build"; if (id !== "mix") S.fmK = id; render(); const sl = $(".fm-slip"); if (sl) sl.scrollIntoView({ block: "center", behavior: "smooth" }); toast("Loaded. Set your stake and tap Add"); }
   else if (d.fpgame) { S.fpGame = S.fpGame === d.fpgame ? null : d.fpgame; S.fpOpen = null; render(); }
   else if (d.fpday) { S.fpDay = d.fpday; S.fpOpen = null; render(); }
   else if (d.fptype) { S.fpType = d.fptype; S.fpOpen = null; S.fpSeed = 0; render(); }
@@ -5684,13 +5739,13 @@ document.addEventListener("click", async e => {
     const dec = parseOdds(($("#fpOdds") || {}).value || "") || legs.reduce((a, l) => a * l.dec, 1), stake = +(($("#fpStake") || {}).value) || 0;
     if (!(stake > 0)) { toast("Add your stake"); return; } if (stake > X.avail + 1e-9) { toast(`You've only got ${money(X.avail)} available`); return; }
     F.bets = [{ id: "f" + Date.now().toString(36), text: `${legs.length}-fold: ${legs.map(l => l.label).join(", ")}`, legs, dec: Math.round(dec * 1000) / 1000, stake, result: "open", at: new Date().toISOString() }, ...F.bets];
-    S.fpOpen = null; if (d.fmdone) S.fmSel = { ...(S.fmSel || {}), [d.fmdone]: [] }; fundedSave(F); toast(`Added acca: ${money(stake)} at ${odds(dec)}`); }
+    S.fpOpen = null; if (d.fmdone) S.fmSel = []; fundedSave(F); toast(`Added acca: ${money(stake)} at ${odds(dec)}`); }
   else if (d.fpadd) { const [sp, gid, k] = d.fpadd.split("|"), g = findGame(sp, gid), m = g && mkt(g, k); if (!m) return; const F = fundedNow(), X = fundedStats(F);
     const dec = parseOdds(($("#fpOdds") || {}).value || "") || priceOf(m), stake = +(($("#fpStake") || {}).value) || 0;
     if (!(stake > 0)) { toast("Add your stake"); return; } if (stake > X.avail + 1e-9) { toast(`You've only got ${money(X.avail)} available`); return; }
     const leg = asLegs([{ sport: sp, g, m }])[0];
     F.bets = [{ id: "f" + Date.now().toString(36), text: m.prop ? legText(leg) : `${m.label} (${vs(sp, g)})`, legs: [leg], dec: Math.round(dec * 1000) / 1000, stake, result: "open", at: new Date().toISOString() }, ...F.bets];
-    S.fpOpen = null; if (d.fmdone) S.fmSel = { ...(S.fmSel || {}), [d.fmdone]: [] }; fundedSave(F); toast(`Added: ${money(stake)} at ${odds(dec)}`); }
+    S.fpOpen = null; if (d.fmdone) S.fmSel = []; fundedSave(F); toast(`Added: ${money(stake)} at ${odds(dec)}`); }
   else if (d.fdimpgo !== undefined) { const F = fundedNow(), P = fundedParse(S.fdImp || ""), key = b => [b.text, b.stake, b.at].join("|"), have = new Set(F.bets.map(key)); let n = 0;
     let u = 0; for (const b of P) { if (!b.stake || !b.dec) continue;
       /* the same bet already here (added from the picker or an earlier import): take BetPro's exact odds and result rather than adding it twice */
