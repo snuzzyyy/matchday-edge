@@ -261,11 +261,16 @@ def bbc_events(e):
     def mn(x): m = re.match(r"(\d+)(?:'\+(\d+))?", x["min"]); return (int(m.group(1)), int(m.group(2) or 0)) if m else (999, 0)
     return sorted(out, key=mn)
 def team_key(n):
-    w = [x for x in nname(n).split() if x not in ("fc", "afc", "town", "city", "united", "utd", "the", "cf", "sc")]
+    w = [x for x in nname(n).split() if len(x) > 2 and x not in ("afc", "fco", "town", "city", "united", "utd", "the", "asptt", "stade", "club", "football", "sporting", "real", "olympique")]
     return w[0] if w else nname(n)
 def bbc_extra(have):
     """have: ESPN games already in the data. Adds the rest of BBC's list (3 days back to 2 ahead), ids start with "bbc"."""
-    seen = {(m["kickoff"][:10], team_key(m["home"].get("full") or m["home"]["name"]), team_key(m["away"].get("full") or m["away"]["name"])) for m in have}
+    seen = {(m["kickoff"][:10], team_key(m["home"].get("full") or m["home"]["name"]), team_key(m["away"].get("full") or m["away"]["name"])): m for m in have}
+    when = {(m["kickoff"][:16].replace(":00Z", ""), side, team_key(m[side].get("full") or m[side]["name"])): m for m in have for side in ("home", "away")}   # same kick-off and one team matching = same game ("Is-Selongey" / "Selongey")
+    def aka(m, H, A):   # the game is ESPN's: keep BBC's fuller names too, so slips that use them still find it ("SA Gazinet-Cestas" for "SAG Cestas")
+        for side, t in (("home", H), ("away", A)):
+            n = t.get("fullName") or ""; T = m[side]
+            if n and nname(n) not in (nname(T.get("name")), nname(T.get("full"))) and n not in T.setdefault("aka", []): T["aka"].append(n)
     out = []
     for i in range(-3, 3):
         d = (today + dt.timedelta(days=i)).isoformat()
@@ -275,8 +280,11 @@ def bbc_extra(have):
                 for e in sg.get("events") or []:
                     try:
                         H, A = e["home"], e["away"]; ko = e.get("startDateTime") or (e.get("date") or {}).get("iso", "")
-                        if not ko or (ko[:10], team_key(H["fullName"]), team_key(A["fullName"])) in seen: continue
-                        seen.add((ko[:10], team_key(H["fullName"]), team_key(A["fullName"])))
+                        if not ko: continue
+                        dup = seen.get((ko[:10], team_key(H["fullName"]), team_key(A["fullName"]))) or when.get((ko[:16], "home", team_key(H["fullName"]))) or when.get((ko[:16], "away", team_key(A["fullName"])))
+                        if dup:
+                            if dup.get("src") != "bbc": aka(dup, H, A)
+                            continue
                         def T(t): n = t["fullName"]; return {"id": "bbc" + t["id"], "name": n, "full": n, "abbr": re.sub(r"[^A-Z]", "", n.upper())[:3], "color": "#334155", "alt": "#94a3b8", "logo": "", "score": t.get("score") if e.get("status") != "PreEvent" else None, "form": "", "record": "", "last5": []}
                         lg = (e.get("tournament") or {}).get("name") or g.get("displayLabel") or "Football"; stg = (e.get("stage") or {}).get("name") or ""
                         if stg and re.search(r"round|final|qualif|play-?off", stg, re.I): lg = f"{lg} · {stg}"
@@ -284,7 +292,7 @@ def bbc_extra(have):
                              "home": T(H), "away": T(A), "venue": "", "events": bbc_events(e)}
                         model(m, "all", {}, 1.35)
                         m["model"]["markets"] = [x for x in m["model"]["markets"] if not x["k"].startswith(("C", "Y"))]
-                        out.append(m)
+                        out.append(m); seen[(ko[:10], team_key(H["fullName"]), team_key(A["fullName"]))] = m
                     except Exception as ex:
                         print("bbc game failed", e.get("id"), ex, file=sys.stderr)
     out.sort(key=lambda m: m["kickoff"])

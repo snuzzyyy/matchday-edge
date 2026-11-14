@@ -2799,11 +2799,11 @@ function findPlayer(idx, q) {
     || idx.find(p => qw.length > 1 && p.n.endsWith(" " + last));
 }
 const normT = t => deLetter(t).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9.\/+ ]/g, " ").replace(/\s+/g, " ").trim();
-const GENERIC = new Set(["united", "city", "real", "club", "athletic", "atletico", "sporting", "town", "rovers", "county", "olympique", "inter", "milan"]);
+const GENERIC = new Set(["united", "city", "real", "club", "athletic", "atletico", "sporting", "town", "rovers", "county", "olympique", "inter", "milan", "football", "calcio", "stade", "union", "racing", "wanderers", "albion", "academy", "women"]);
 const NAT_ALIAS = [["turkiye", "turkey"], ["czechia", "czech republic"], ["korea republic", "south korea"], ["usa", "united states"], ["bosnia-herz", "bosnia and herzegovina"], ["bosnia-herz", "bosnia"], ["rep ireland", "republic of ireland"], ["rep ireland", "ireland"], ["n ireland", "northern ireland"], ["ivory coast", "cote d'ivoire"], ["dr congo", "congo dr"], ["kyrgyz rep.", "kyrgyzstan"], ["uae", "united arab emirates"]].map(([a, b]) => [normT(a), normT(b)]);
 function teamAliases(t) {
-  const out = new Set([normT(t.name), normT(t.full || t.name)].filter(x => x.length >= 3));
-  for (const n of [t.name, t.full]) for (const w of normT(n).split(" ")) if (w.length >= 5 && !GENERIC.has(w)) out.add(w);
+  const out = new Set([normT(t.name), normT(t.full || t.name), ...(t.aka || []).map(normT)].filter(x => x.length >= 3));   /* aka: other feeds' names for the club */
+  for (const n of [t.name, t.full, ...(t.aka || [])]) for (const w of normT(n).split(" ")) if (w.length >= 5 && !GENERIC.has(w)) out.add(w);
   for (const x of [...out]) for (const [p, q] of NAT_ALIAS) { if (x === p) out.add(q); if (x === q) out.add(p); }   /* bookies and ESPN spell some countries differently */
   return [...out].sort((a, b) => b.length - a.length);
 }
