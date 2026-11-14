@@ -1376,6 +1376,7 @@ const freshAt = () => S.liveAt || S.data.updated;
 const ago = iso => { const m = Math.round((Date.now() - new Date(iso)) / 6e4); return m < 1 ? "just now" : m < 60 ? m + " min ago" : m < 1440 ? Math.round(m / 60) + " hr ago" : Math.round(m / 1440) + " days ago"; };
 
 /* ---------- data helpers ---------- */
+const gLeague = g => g.league === "all" ? g.lg || "Football" : leagueName(g.league);   /* games outside our leagues carry their own league name */
 const leagueName = id => (S.data.leagues.find(l => l.id === id) || {}).name || id;
 const games = sport => sport === "nba" ? S.data.nba : S.data.football;
 const kick = g => g.kickoff || g.start;
@@ -1388,6 +1389,7 @@ const nbaLogoFix = u => { const m = String(u || "").match(/teamlogos\/nba\/500\/
 function logo(sport, t, cls = "") {
   const src = S.logos[(sport === "nba" ? "nba" : "soccer") + "-" + t.id];
   if (src) return `<img class="logo ${cls}" src="${src}" alt="" loading="lazy">`;
+  if (t.logo && /^https:\/\/a\.espncdn\.com\//.test(t.logo)) return `<img class="logo ${cls}" src="https://a.espncdn.com/combiner/i?img=${esc(t.logo.replace(/^https:\/\/a\.espncdn\.com/, ""))}&w=64&h=64" alt="" loading="lazy" onerror="this.style.visibility='hidden'">`;   /* clubs outside our leagues: ESPN's own badge */
   return `<span class="mono ${cls}" style="background:${esc(t.color)}">${esc((t.abbr || t.name).slice(0, 3))}</span>`;
 }
 const formPills = f => f ? `<span class="form" aria-label="Form ${esc(f)}">${[...f.slice(-5)].map(c => `<i class="${c}"></i>`).join("")}</span>` : "";
@@ -1557,7 +1559,7 @@ function renderChrome() {
 /* a finished game in one line: tap for the full stats */
 function resRow(sp, g) {
   const L = sp === "nba" ? g.away : g.home, R = sp === "nba" ? g.home : g.away, lw = +L.score > +R.score, rw = +R.score > +L.score;
-  return `<button class="res-row" data-open="${sp}:${g.id}"><span class="res-lg">${sp === "nba" ? "NBA" : esc((S.data.leagues.find(l => l.id === g.league) || {}).short || leagueName(g.league))}</span><span class="res-t ${rw ? "res-l" : ""}">${esc(L.name)}${logo(sp, L)}</span><b class="res-s"><span class="${rw ? "res-l" : ""}">${esc(L.score)}</span>–<span class="${lw ? "res-l" : ""}">${esc(R.score)}</span></b><span class="res-t r ${lw ? "res-l" : ""}">${logo(sp, R)}${esc(R.name)}</span><span class="res-ft">FT</span></button>`;
+  return `<button class="res-row" data-open="${sp}:${g.id}"><span class="res-lg">${sp === "nba" ? "NBA" : esc((S.data.leagues.find(l => l.id === g.league) || {}).short || gLeague(g))}</span><span class="res-t ${rw ? "res-l" : ""}">${esc(L.name)}${logo(sp, L)}</span><b class="res-s"><span class="${rw ? "res-l" : ""}">${esc(L.score)}</span>–<span class="${lw ? "res-l" : ""}">${esc(R.score)}</span></b><span class="res-t r ${lw ? "res-l" : ""}">${logo(sp, R)}${esc(R.name)}</span><span class="res-ft">FT</span></button>`;
 }
 /* Sky-style live pitch from ESPN's play-by-play positions: the ball sits where the latest action happened, with a short trail.
    Positions are given from the acting team's point of view (attacking left to right), so away actions are flipped: home attacks right. */
@@ -1612,7 +1614,7 @@ function liveCard(sport, g) {
     }
   }
   const clk = live ? `<span class="clock"><span class="dot red"></span>${esc(clockLabel(sport, g))}</span>` : `<span class="clock ft">${esc(g.status.detail)}</span>`;
-  const lg = sport === "nba" ? (g.venue || "NBA") : leagueName(g.league);
+  const lg = sport === "nba" ? (g.venue || "NBA") : gLeague(g);
   const card = `<button class="lcard ${live ? "is-live" : ""}" data-open="${sport}:${g.id}"><div class="lhead"><span>${esc(lg)}</span>${clk}</div>
     <div class="lteams">${sport === "nba" ? row(a, as, hs) + row(h, hs, as) : row(h, hs, as) + row(a, as, hs)}</div>
     ${mini ? `<div class="mini">${mini}</div>` : ""}${pace}${tick}</button>`;
@@ -1659,7 +1661,7 @@ function fxRow(sport, g) {
     ? `<div class="prices">${oddBtn(sport, g, "ML2", g.away.abbr)}${oddBtn(sport, g, "ML1", g.home.abbr)}${oddBtn(sport, g, "TO", g.odds && g.odds.total ? "O " + g.odds.total : "Over")}</div>`
     : `<div class="prices">${oddBtn(sport, g, "1")}${oddBtn(sport, g, "X")}${oddBtn(sport, g, "2")}</div>`;
   const chev = `<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg>`;
-  const right = post ? "<span></span>" : live ? `<span class="lgn">${esc(sport === "nba" ? "NBA" : leagueName(g.league))}</span>` : prices;
+  const right = post ? "<span></span>" : live ? `<span class="lgn">${esc(sport === "nba" ? "NBA" : gLeague(g))}</span>` : prices;
   return `<div class="fx ${live ? "live-row" : ""}"><div class="tm num">${tm}${post ? "" : bellBtn(sport, g)}</div><button class="teams" data-open="${sport}:${g.id}">${sport === "nba" ? tline(a) + tline(h) : tline(h) + tline(a)}${chev}</button>${right}</div>`;
 }
 function lvRow(sport, g) {
@@ -1692,7 +1694,7 @@ function lvRow(sport, g) {
     }
     foot = `${ev ? `<span class="last">${evIcon(ev.type)}<span>Latest: ${esc(ev.min)} ${esc(ev.who || ev.type)} (${esc(ev.side === "h" ? h.name : a.name)})</span></span>` : `<span class="last" style="color:var(--muted)">No goals or cards yet</span>`}`;
     if (ins.length) foot += `<div class="ins">${ins.map(([k, v]) => `<div><span class="k">${k}</span><span>${v}</span></div>`).join("")}</div>`;
-    top = `<span class="min"><span class="dot red"></span>${esc(g.status.detail)}</span><span>${esc(leagueName(g.league))}</span><span class="prog"><i style="width:${prog * 100}%"></i></span><span>${mn >= 45 && g.status.period === 1 ? "HT" : mn >= 46 ? "2nd half" : "1st half"}</span>`;
+    top = `<span class="min"><span class="dot red"></span>${esc(g.status.detail)}</span><span>${esc(gLeague(g))}</span><span class="prog"><i style="width:${prog * 100}%"></i></span><span>${mn >= 45 && g.status.period === 1 ? "HT" : mn >= 46 ? "2nd half" : "1st half"}</span>`;
   } else {
     const q = g.status.period || 1, played = Math.max((q - 1) * 12 + (12 - clockMins(g.status.clock)), 0); prog = Math.min(played / 48, 1);
     s4 = pair("fieldGoalPct", "FG %") + pair("threePointFieldGoalPct", "3PT %") + pair("totalRebounds", "Reb") + pair("assists", "Ast");
@@ -1709,7 +1711,7 @@ function fixtureBlocks(sport, list, groupDay = true) {
   let html = "";
   for (const [dk, gs] of byDay) {
     const byL = new Map();
-    for (const g of gs) { const L = sport === "nba" ? "NBA" : leagueName(g.league); if (!byL.has(L)) byL.set(L, []); byL.get(L).push(g); }
+    for (const g of gs) { const L = sport === "nba" ? "NBA" : gLeague(g); if (!byL.has(L)) byL.set(L, []); byL.get(L).push(g); }
     const cols = sport === "nba" ? ["Away", "Home", "Total"] : ["Home", "Draw", "Away"];
     /* one card per day: leagues are thin labels inside it, not boxes of their own */
     const blocks = `<div class="lg-block"><div class="lg-hd"><span>${sport === "nba" ? "NBA" : byL.size > 1 ? `${gs.length} games` : esc([...byL.keys()][0])}</span><span class="cols">${cols.map(c => `<span>${c}</span>`).join("")}</span></div>${[...byL].map(([L, arr]) => `${sport !== "nba" && byL.size > 1 ? `<div class="lg-sub">${esc(L)}</div>` : ""}${arr.map(g => fxRow(sport, g)).join("")}`).join("")}</div>`;
@@ -1744,7 +1746,7 @@ function pickCard(c) {
   const { sport, g, m } = c, id = legId(sport, g, m), p = m.p;
   const why = reasons(sport, g, m);
   return `<article class="pick"><div class="ring" style="--p:${Math.round(p * 100)};--c:${tierColor(p)}"><span>${pct(p)}</span></div>
-  <div><div class="sel">${esc(m.label)}</div><div class="mt"><button class="more" data-open="${sport}:${g.id}">${esc(vs(sport, g))}</button><span>${whenLabel(kick(g))}</span>${sport === "football" ? `<span>${esc(leagueName(g.league))}</span>` : ""}</div></div>
+  <div><div class="sel">${esc(m.label)}</div><div class="mt"><button class="more" data-open="${sport}:${g.id}">${esc(vs(sport, g))}</button><span>${whenLabel(kick(g))}</span>${sport === "football" ? `<span>${esc(gLeague(g))}</span>` : ""}</div></div>
   ${why.length ? `<ul class="why">${why.map(w => `<li>${esc(w)}</li>`).join("")}</ul>` : ""}
   <div class="pfoot"><div class="price"><span class="big">${odds(priceOf(m))}</span><small>${m.dec ? `Market price${m.edge > 0 ? ` · <span style="color:var(--win)">+${Math.round(m.edge * 100)}% edge</span>` : ""}` : "Fair price · check your bookie"}</small></div>
   <button class="add" data-leg="${sport}|${g.id}|${m.k}" aria-pressed="${inSlip(id)}">${inSlip(id) ? "✓ In slip" : "+ Add to slip"}</button></div></article>`;
@@ -2149,7 +2151,7 @@ function viewAccaLive() {
   const rows = `<div class="ag-list">${live.map(g => { const on = sel.includes(g.id); S._accaN = Math.max(2, sel.length + (on ? 0 : 1)); const { m } = liveAccaLeg(sp, g);
     return `<button class="ag ${on ? "on" : ""}" data-accalive="${g.id}" aria-pressed="${on}"><span class="ag-tick" aria-hidden="true">${on ? "✓" : "+"}</span>
       <span class="ag-main"><span class="ag-teams">${logo(sp, sp === "nba" ? g.away : g.home)}<b>${esc(sp === "nba" ? g.away.name : g.home.name)}</b><span class="ag-score">${esc((sp === "nba" ? g.away : g.home).score)}–${esc((sp === "nba" ? g.home : g.away).score)}</span>${logo(sp, sp === "nba" ? g.home : g.away)}<b>${esc(sp === "nba" ? g.home.name : g.away.name)}</b></span>
-      <span class="ag-meta"><span class="live-tag"><span class="dot red"></span>${esc(clockLabel(sp, g))}</span>${sp === "football" ? " · " + esc(leagueName(g.league)) : ""}</span>
+      <span class="ag-meta"><span class="live-tag"><span class="dot red"></span>${esc(clockLabel(sp, g))}</span>${sp === "football" ? " · " + esc(gLeague(g)) : ""}</span>
       ${m ? `<span class="ag-pick"><span>${esc(m.label)}</span><b style="color:${tierColor(m.p)}">${pct(m.p)} now</b></span>` : `<span class="ag-pick"><span>No safe live bet right now</span><b></b></span>`}</span></button>`; }).join("")}</div>`;
   return `${head}${summary}<section class="section"><h2>On now · ${live.length} game${live.length > 1 ? "s" : ""}</h2>${rows}</section>`;
 }
@@ -2175,7 +2177,7 @@ function viewAcca() {
       const on = sel.includes(g.id), m = legFor(sp, g, Math.max(2, sel.length + (on ? 0 : 1)));
       return `<button class="ag ${on ? "on" : ""}" data-accag="${g.id}" aria-pressed="${on}"><span class="ag-tick" aria-hidden="true">${on ? "✓" : "+"}</span>
         <span class="ag-main"><span class="ag-teams">${logo(sp, sp === "nba" ? g.away : g.home)}<b>${esc(sp === "nba" ? g.away.name : g.home.name)}</b><span class="ag-v">${sp === "nba" ? "@" : "v"}</span>${logo(sp, sp === "nba" ? g.home : g.away)}<b>${esc(sp === "nba" ? g.home.name : g.away.name)}</b></span>
-        <span class="ag-meta">${hm(kick(g))}${sp === "football" ? " · " + esc(leagueName(g.league)) : ""}</span>
+        <span class="ag-meta">${hm(kick(g))}${sp === "football" ? " · " + esc(gLeague(g)) : ""}</span>
         ${m ? `<span class="ag-pick"><span>${esc(m.label)}</span><b style="color:${tierColor(m.p)}">${pct(m.p)}</b></span>` : ""}</span></button>`; }).join("")}</div></div>`).join("");
   return `<div class="acca-panel">${accaModeSeg()}
   <div class="seg3" role="group" aria-label="Safety level">${Object.entries(RISK).map(([k, r]) => `<button data-accarisk="${k}" aria-pressed="${risk === k}">${r.name}</button>`).join("")}</div>
@@ -2723,7 +2725,7 @@ function drawerHTML(sport, g) {
     : tab === "players" ? lay([[sec.pitch, 0, 1], [sec.ptable, 1, 2], [sec.injuries, 1, 3]])
     : lay([[sport === "football" && live ? livePitch(g) : "", 0, 0], [sec.win, 0, 1], [live ? anglesHTML(sport, g) : "", 0, 2], [quick, 0, 3], [pop || (ended ? "" : `<section class="section"><h2>Ready-made accas</h2><p class="sub">No ready-made accas for this game yet.</p><button class="btn sm" data-gtab="bets">See all markets</button></section>`), 0, 4], [pre ? bestForGame(sport, g) : "", 0, 5]], "wide ovw");
   const tabs = `<nav class="gtabs" aria-label="Game sections">${T.map(([k, n]) => `<button data-gtab="${k}" aria-current="${k === tab ? "page" : "false"}">${n}</button>`).join("")}</nav>`;
-  return `<div class="scrim" data-close></div><aside class="drawer full" role="dialog" aria-modal="true" aria-label="${esc(vs(sport, g))}"><div class="gtop"><button class="gback" data-close aria-label="Back">‹ Back</button><span class="eyebrow">${esc(sport === "nba" ? "NBA" : leagueName(g.league))}${g.venue ? " · " + esc(g.venue) : ""}</span>${ended ? "" : bellBtn(sport, g, true)}</div><div class="dr-in">${hero}<div class="gtabbar">${tabs}</div>${body}</div></aside>`;
+  return `<div class="scrim" data-close></div><aside class="drawer full" role="dialog" aria-modal="true" aria-label="${esc(vs(sport, g))}"><div class="gtop"><button class="gback" data-close aria-label="Back">‹ Back</button><span class="eyebrow">${esc(sport === "nba" ? "NBA" : gLeague(g))}${g.venue ? " · " + esc(g.venue) : ""}</span>${ended ? "" : bellBtn(sport, g, true)}</div><div class="dr-in">${hero}<div class="gtabbar">${tabs}</div>${body}</div></aside>`;
 }
 function injuryCard(name) {
   const f = feed(`${SB}/basketball/nba/injuries`, 20 * 60e3);
@@ -3407,10 +3409,10 @@ function legGroups(legs, infos, ck) {
   for (const G of out) if (G.lines) G.lines.sort((a, b) => rank(a.st) - rank(b.st));
   out.sort((a, b) => (a.lines ? +a.lines.every(x => rank(x.st) === 2) : 0) - (b.lines ? +b.lines.every(x => rank(x.st) === 2) : 0));
   return out.map(G => { if (G.raw) return G.raw; const { sp, g } = G, Lt = sp === "nba" ? g.away : g.home, Rt = sp === "nba" ? g.home : g.away, live = isLive(g), post = g.status.state === "post";
-    const head = isPre(g) ? `<span class="lgg-t"><b>${esc(vs(sp, g))}</b><small>${esc(whenLabel(kick(g)))}${sp === "football" ? " · " + esc(leagueName(g.league)) : ""}</small></span><span class="lgg-cd">${untilTxt(kick(g))}</span>`
-      : `<span class="lgg-t"><b>${esc(Lt.name)} <span class="lgg-sc">${esc(Lt.score)}–${esc(Rt.score)}</span> ${esc(Rt.name)}</b><small>${sp === "football" ? esc(leagueName(g.league)) : "NBA"}</small></span><span class="lgg-clk ${live ? "live" : ""}">${live ? `<span class="dot red"></span>${esc(clockLabel(sp, g))}` : post ? "FT" : esc(g.status.detail || "")}</span>`;
+    const head = isPre(g) ? `<span class="lgg-t"><b>${esc(vs(sp, g))}</b><small>${esc(whenLabel(kick(g)))}${sp === "football" ? " · " + esc(gLeague(g)) : ""}</small></span><span class="lgg-cd">${untilTxt(kick(g))}</span>`
+      : `<span class="lgg-t"><b>${esc(Lt.name)} <span class="lgg-sc">${esc(Lt.score)}–${esc(Rt.score)}</span> ${esc(Rt.name)}</b><small>${sp === "football" ? esc(gLeague(g)) : "NBA"}</small></span><span class="lgg-clk ${live ? "live" : ""}">${live ? `<span class="dot red"></span>${esc(clockLabel(sp, g))}` : post ? "FT" : esc(g.status.detail || "")}</span>`;
     if (!isPre(g)) { const ls = +Lt.score || 0, rs = +Rt.score || 0, row = (T, sc, lead) => `<span class="lgg-row ${lead ? "lead" : ""}">${logo(sp, T)}<span class="lgg-nm">${esc(T.name)}</span><b class="lgg-num">${esc(T.score ?? "0")}</b></span>`;
-      return `<div class="lgg"><button type="button" class="lgg-hd lgg-sbh" data-open="${sp}:${g.id}" aria-label="Open ${esc(vs(sp, g))}"><span class="lgg-sb">${row(Lt, ls, ls > rs)}${row(Rt, rs, rs > ls)}</span><span class="lgg-side"><span class="lgg-clk ${live ? "live" : ""}">${live ? `<span class="dot red"></span>${esc(clockLabel(sp, g))}` : post ? "FT" : esc(g.status.detail || "")}</span><small>${sp === "football" ? esc(leagueName(g.league)) : "NBA"}</small></span></button><div class="lgg-legs">${G.lines.map(x => x.html).join("")}</div>${G.gone ? "" : (() => { const id = `${ck || legSig(legs)}|${sp}:${g.id}`, open = (S.gStats || {})[id]; return `<button type="button" class="gst-tog" data-gstats="${id}" aria-expanded="${!!open}">📊 ${open ? "Hide stats ▴" : "Stats ▾"}</button>${open ? gameStatsHTML(sp, g) : ""}`; })()}</div>`; }
+      return `<div class="lgg"><button type="button" class="lgg-hd lgg-sbh" data-open="${sp}:${g.id}" aria-label="Open ${esc(vs(sp, g))}"><span class="lgg-sb">${row(Lt, ls, ls > rs)}${row(Rt, rs, rs > ls)}</span><span class="lgg-side"><span class="lgg-clk ${live ? "live" : ""}">${live ? `<span class="dot red"></span>${esc(clockLabel(sp, g))}` : post ? "FT" : esc(g.status.detail || "")}</span><small>${sp === "football" ? esc(gLeague(g)) : "NBA"}</small></span></button><div class="lgg-legs">${G.lines.map(x => x.html).join("")}</div>${G.gone ? "" : (() => { const id = `${ck || legSig(legs)}|${sp}:${g.id}`, open = (S.gStats || {})[id]; return `<button type="button" class="gst-tog" data-gstats="${id}" aria-expanded="${!!open}">📊 ${open ? "Hide stats ▴" : "Stats ▾"}</button>${open ? gameStatsHTML(sp, g) : ""}`; })()}</div>`; }
     return `<div class="lgg"><button type="button" class="lgg-hd" data-open="${sp}:${g.id}" aria-label="Open ${esc(vs(sp, g))}"><span class="lgg-logos">${logo(sp, Lt)}${logo(sp, Rt)}</span>${head}</button><div class="lgg-legs">${G.lines.map(x => x.html).join("")}</div></div>`; }).join("");
 }
 function betCard(t) {
@@ -4231,7 +4233,7 @@ function fundedGameHTML() {
     let body = ""; if (open) { const M = legOptions(sp, g).map(x => x.m).filter(m => !S.winOnly || WIN_KEYS.has(m.k)), groups = {}; for (const m of M) (groups[kind(m)] = groups[kind(m)] || []).push(m);
       body = ["Result", "Totals", "Handicaps", "Players", "Other"].filter(k => groups[k]).map(k => { const all = groups[k].sort((a, b) => priceOf(a) - priceOf(b)), more = (S.fgMore || {})[id + k], sh = more ? all : all.slice(0, 6), openIn = all.findIndex(m => S.fpOpen === `${sp}|${g.id}|${m.k}`) >= 6;
         return `<h4 class="fg-h">${k} <span>${all.length}</span></h4><div class="fp-list">${(openIn && !more ? all : sh).map(m => card(sp, g, m)).join("")}</div>${all.length > 6 && !more && !openIn ? `<button class="linkbtn fg-more" data-fgmore="${id + k}">Show all ${all.length} ›</button>` : ""}`; }).join("") || `<div class="empty">No prices for this game yet.</div>`; }
-    return `<div class="fg-game ${open ? "open" : ""}"><button class="fg-hd" data-fpgame="${id}" aria-expanded="${open}"><span class="lgg-logos">${logo(sp, L)}${logo(sp, R)}</span><span class="fg-t"><b>${esc(vs(sp, g))}</b><small>${esc(whenLabel(kick(g)))}${sp === "football" ? " · " + esc(leagueName(g.league)) : " · NBA"}</small></span><span class="fg-x">${open ? "▴" : "▾"}</span></button>${body ? `<div class="fg-body">${body}</div>` : ""}</div>`; }).join("");
+    return `<div class="fg-game ${open ? "open" : ""}"><button class="fg-hd" data-fpgame="${id}" aria-expanded="${open}"><span class="lgg-logos">${logo(sp, L)}${logo(sp, R)}</span><span class="fg-t"><b>${esc(vs(sp, g))}</b><small>${esc(whenLabel(kick(g)))}${sp === "football" ? " · " + esc(gLeague(g)) : " · NBA"}</small></span><span class="fg-x">${open ? "▴" : "▾"}</span></button>${body ? `<div class="fg-body">${body}</div>` : ""}</div>`; }).join("");
   return `<section class="section"><h2>Bet picker</h2><div class="acca-panel fp-panel">${fpTypeRow()}${fpFilters()}
     <p class="risk-desc" style="margin:0 4px">Tap a game to see all its bets, then tap one, type your stake, press Enter.</p></div>
     ${G.length ? `<div class="fg-list">${list}</div>` : `<div class="empty">No games ${fpDayLabel()}. Try Next 24 hours.</div>`}</section>`;
@@ -4509,7 +4511,7 @@ function twBuild(T) {
     ask = bets ? twPick(["Which one are you on? 👇", "Who are you backing tonight? 👇", "Best bet on the card? 👇"], s) : twPick(["Which game are you watching? 👇", "Who are you backing tonight? 👇", "Predictions? 👇"], s);
     card = { type: "previews", title: `${day.toUpperCase()} PREVIEWS`, sub: `${sports.length === 1 ? (sports[0] === "nba" ? "NBA" : "FOOTBALL") + " · " : ""}${sel.length} GAMES`, more: Math.max(0, sel.length - 6),
       games: sel.slice(0, 6).map(({ sp, g }) => { const L = sp === "nba" ? g.away : g.home, R = sp === "nba" ? g.home : g.away, b = bets ? prevBest(g) : null, f = !bets && fav(sp, g);
-        return { sep: sp === "nba" ? "@" : "v", time: twTime(kick(g)), lg: sp === "nba" ? "NBA" : leagueName(g.league), ic: bets ? "🎯" : "📈", pick: b ? b.label : f ? `${f[0]} to win` : "", p: b ? pct(b.p) : f ? pct(f[1]) : "", teams: [L, R].map(t => ({ logo: t.logo, color: t.color, abbr: t.abbr || t.name, name: t.name })) }; }) };
+        return { sep: sp === "nba" ? "@" : "v", time: twTime(kick(g)), lg: sp === "nba" ? "NBA" : gLeague(g), ic: bets ? "🎯" : "📈", pick: b ? b.label : f ? `${f[0]} to win` : "", p: b ? pct(b.p) : f ? pct(f[1]) : "", teams: [L, R].map(t => ({ logo: t.logo, color: t.color, abbr: t.abbr || t.name, name: t.name })) }; }) };
   } else if (T.kind === "game") {
     const { sp, g } = sel[0], h = g.home, a = g.away, L = sp === "nba" ? a : h, R = sp === "nba" ? h : a;
     if (isPre(g)) {
@@ -4520,7 +4522,7 @@ function twBuild(T) {
       if (best) body.push(E("🎯", `Most likely: ${best.label} (${pct(best.p)})`)); if (big) body.push(E("💰", `Bigger price: ${big.label} ${odds(priceOf(big))}`));
       if (!bets) { const fm = t => sp === "nba" ? t.record : t.form; if (fm(L) || fm(R)) body.push(E(sp === "nba" ? "📊" : "📋", `${sp === "nba" ? "Records" : "Form"}: ${L.name} ${fm(L) || "–"} · ${R.name} ${fm(R) || "–"}`)); if (g.venue) body.push(E("🏟️", g.venue)); }
       ask = bets ? twPick(["What's your call? 👇", "How are you betting this one? 👇", "Score prediction? 👇"], s) : twPick(["Score prediction? 👇", "Who are you backing? 👇", "Who takes this one? 👇"], s);
-      card = { type: "preview", teams: [L, R].map(t => ({ logo: t.logo, color: t.color, abbr: t.abbr || t.name, name: t.name })), title: "PREVIEW", sub: `${vs(sp, g)} · ${/\d{1,2}:\d{2}/.test(whenLabel(kick(g))) ? whenLabel(kick(g)) : whenLabel(kick(g)) + " " + hm(kick(g))}`, sep: sp === "nba" ? "@" : "V", when: `${sp === "nba" ? "NBA" : leagueName(g.league)} · ${/\d{1,2}:\d{2}/.test(whenLabel(kick(g))) ? whenLabel(kick(g)) : whenLabel(kick(g)) + " " + hm(kick(g))}`, rows: [best && [best.label, pct(best.p) + " chance", "Most likely"], big && [big.label, odds(priceOf(big)), "Bigger price"],
+      card = { type: "preview", teams: [L, R].map(t => ({ logo: t.logo, color: t.color, abbr: t.abbr || t.name, name: t.name })), title: "PREVIEW", sub: `${vs(sp, g)} · ${/\d{1,2}:\d{2}/.test(whenLabel(kick(g))) ? whenLabel(kick(g)) : whenLabel(kick(g)) + " " + hm(kick(g))}`, sep: sp === "nba" ? "@" : "V", when: `${sp === "nba" ? "NBA" : gLeague(g)} · ${/\d{1,2}:\d{2}/.test(whenLabel(kick(g))) ? whenLabel(kick(g)) : whenLabel(kick(g)) + " " + hm(kick(g))}`, rows: [best && [best.label, pct(best.p) + " chance", "Most likely"], big && [big.label, odds(priceOf(big)), "Bigger price"],
         sp === "football" ? (() => { const p1 = mkt(g, "1"), px = mkt(g, "X"), p2 = mkt(g, "2"); return p1 && px && p2 ? [`${h.name} ${pct(p1.p)} · Draw ${pct(px.p)} · ${a.name} ${pct(p2.p)}`, "", "Win chances"] : null; })()
           : (() => { const m1 = mkt(g, "ML1"); return m1 ? [`${a.name} ${pct(1 - m1.p)} · ${h.name} ${pct(m1.p)}`, "", "Win chances"] : null; })(),
         sp === "football" ? [`Expected goals ${g.model.xgH.toFixed(1)}–${g.model.xgA.toFixed(1)}${g.model.corners ? ` · corners ~${g.model.corners.toFixed(1)}` : ""}`, "", "Our model"] : [`Projected total ${g.model.proj}${bets && g.odds && g.odds.total ? ` · line ${g.odds.total}` : ""}`, "", "Our model"],
@@ -5361,7 +5363,7 @@ function gameAlerts() {   /* kick-off, goals, red cards, breaks, close finishes 
     const was = G[f.gid];
     if (!was) { G[f.gid] = { ...now, k: g.status.state === "post" ? ["ft"] : [] }; keep.push(f); continue; }
     const once = (k, kind, title, body) => { if (was.k.includes(k)) return; was.k.push(k); if (apref(kind)) out.push([title, body, `g${f.gid}:${k}`]); };
-    const lg = sp === "nba" ? "NBA" : leagueName(g.league), kat = +new Date(kick(g));
+    const lg = sp === "nba" ? "NBA" : gLeague(g), kat = +new Date(kick(g));
     if (nativeAlarms() && isPre(g) && kat > Date.now() + 20e3 && kat - Date.now() < 3 * 864e5) { if (apref("ko")) natWant[`g${f.gid}:ko`] = [kat, `${sp === "nba" ? "🏀 Tip-off" : "⚽ Kick-off"}: ${vs(sp, g)}`, lg]; if (!was.k.includes("ko")) was.k.push("ko"); }
     if (was.s === "pre" && g.status.state !== "pre") once("ko", "ko", `${sp === "nba" ? "🏀 Tip-off" : "⚽ Kick-off"}: ${vs(sp, g)}`, lg);
     if (sp === "football" && (h > was.h || a > was.a)) {
@@ -5392,7 +5394,7 @@ function notifSheet() {
     <div class="nf-grp ${on ? "" : "off"}"><h3>Your bets</h3><div class="chips">${chip("soon", "5 mins before kick-off")}${chip("betko", "Kick-off")}${chip("land", "Legs landing")}${chip("miss", "Legs missing")}${chip("result", "Won or lost")}</div></div>
     <div class="nf-grp ${on ? "" : "off"}"><h3>Friends</h3><div class="chips">${chip("social", "Reactions & comments")}${chip("copy", "Copies of your bets")}${chip("fwin", "Friends' wins")}${chip("fbet", "Friends' new bets")}</div></div>
     <div class="nf-grp ${on ? "" : "off"}"><h3>Games you follow</h3><div class="chips">${chip("ko", "Kick-off")}${chip("goal", "Goals")}${chip("red", "Red cards")}${chip("ht", "Half-time & quarters")}${chip("tight", "Close NBA finishes")}${chip("ft", "Full-time")}</div>
-      ${F.length ? `<div class="nf-list">${F.map(({ f, g }) => `<div class="nf-row">${logo(f.sport, f.sport === "nba" ? g.away : g.home)}<span><b>${esc(vs(f.sport, g))}</b><small>${isLive(g) ? `<span class="dot red"></span> Live · ${esc(clockLabel(f.sport, g))}` : g.status.state === "post" ? "Finished" : esc(whenLabel(kick(g)))} · ${esc(f.sport === "nba" ? "NBA" : leagueName(g.league))}</small></span><button class="btn ghost sm" data-gfollow="${f.sport}:${g.id}">Remove</button></div>`).join("")}</div>`
+      ${F.length ? `<div class="nf-list">${F.map(({ f, g }) => `<div class="nf-row">${logo(f.sport, f.sport === "nba" ? g.away : g.home)}<span><b>${esc(vs(f.sport, g))}</b><small>${isLive(g) ? `<span class="dot red"></span> Live · ${esc(clockLabel(f.sport, g))}` : g.status.state === "post" ? "Finished" : esc(whenLabel(kick(g)))} · ${esc(f.sport === "nba" ? "NBA" : gLeague(g))}</small></span><button class="btn ghost sm" data-gfollow="${f.sport}:${g.id}">Remove</button></div>`).join("")}</div>`
         : `<div class="nf-empty">${BELL_SVG}<span>Tap the bell next to any game on the Live page, or <b>Notify me</b> on a game's page, to follow it.</span></div>`}</div>
     <p class="colkey" style="margin:0">Notifications arrive while Accabox is open or running in the background.</p></div>`;
 }

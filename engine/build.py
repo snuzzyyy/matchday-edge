@@ -225,8 +225,12 @@ def football_extra(known):
                 c = e["competitions"][0]; comps = {x["homeAway"]: x for x in c["competitors"]}
                 if "home" not in comps: continue
                 h, a = team_obj(comps["home"]), team_obj(comps["away"]); h["last5"], a["last5"] = [], []
+                for t in (h, a): t["name"] = t["full"] or t["name"]   # "Ayr United", not "Ayr": these clubs aren't household names
                 lid = (re.search(r"~l:(\d+)", e.get("uid", "")) or [None, ""])[1]
-                m = {"id": e["id"], "league": "all", "lg": names.get(lid, "") or "Football", "lite": True, "kickoff": e["date"], "status": status_obj(e),
+                slug = re.sub(r"^\d{4}(-\d{2,4})?-", "", (e.get("season") or {}).get("slug", "") or "")   # "2026-27-scottish-championship"
+                lgname = names.get(lid, "") or ("" if slug in ("", "regular-season") else " ".join(w.upper() if w in ("fa", "efl", "uefa", "afc", "caf") else w.capitalize() for w in slug.split("-")))
+                if lgname and re.search(r"round|final|stage|qualif|play-?off|leg$", slug): lgname = "Cup · " + lgname   # a round name on its own, e.g. FA Cup "Second Round"
+                m = {"id": e["id"], "league": "all", "lg": lgname or "Football", "lite": True, "kickoff": e["date"], "status": status_obj(e),
                      "home": h, "away": a, "venue": (c.get("venue") or {}).get("fullName", ""), "events": []}
                 model(m, "all", {}, 1.35)
                 m["model"]["markets"] = [x for x in m["model"]["markets"] if not x["k"].startswith(("C", "Y"))]   # no corner/card history for these
