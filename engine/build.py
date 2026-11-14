@@ -514,9 +514,13 @@ def model(m, L, table, mu):
 
 # ---------------------------------------------------------------- NBA
 # ---------- NBA player bets (props) ----------
-PROP_LINES = {"PTS": (10, 15, 20, 25, 30, 35, 40), "REB": (4, 6, 8, 10, 12), "AST": (3, 4, 6, 8, 10),
-              "3PM": (1, 2, 3, 4, 5), "PRA": (20, 25, 30, 35, 40, 45, 50)}
-PROP_WORD = {"PTS": "points", "REB": "rebounds", "AST": "assists", "3PM": "threes", "PRA": "pts+reb+ast"}
+PROP_LINES = {"PTS": (5, 10, 15, 20, 25, 30, 35, 40, 45), "REB": (2, 4, 6, 8, 10, 12, 14), "AST": (2, 3, 4, 6, 8, 10, 12),
+              "3PM": (1, 2, 3, 4, 5, 6), "PRA": (15, 20, 25, 30, 35, 40, 45, 50, 55), "PR": (10, 15, 20, 25, 30, 35, 40, 45),
+              "PA": (10, 15, 20, 25, 30, 35, 40, 45), "RA": (4, 6, 8, 10, 12, 14, 16, 18), "STL": (1, 2, 3), "BLK": (1, 2, 3)}
+PROP_WORD = {"PTS": "points", "REB": "rebounds", "AST": "assists", "3PM": "threes", "PRA": "pts+reb+ast", "PR": "pts+reb", "PA": "pts+ast",
+             "RA": "reb+ast", "STL": "steals", "BLK": "blocks"}
+PROP_STAT = {"PR": "combo:PTS,REB", "PA": "combo:PTS,AST", "RA": "combo:REB,AST"}   # how the tracker counts the combos
+PROP_COUNT = ("3PM", "STL", "BLK")   # small counts: Poisson, not the normal curve
 NBA_SEASON = today.year + 1 if today.month >= 9 else today.year
 
 def player_log(pid, season):
@@ -537,10 +541,11 @@ def player_log(pid, season):
                 seen.add(ev.get("eventId"))
                 try:
                     mn = f(st[ix["MIN"]]); pts = f(st[ix["PTS"]]); reb = f(st[ix["REB"]]); ast = f(st[ix["AST"]])
-                    tpm = f(str(st[ix["3PT"]]).split("-")[0])
+                    tpm = f(str(st[ix["3PT"]]).split("-")[0]); stl = f(st[ix["STL"]]) if "STL" in ix else 0; blk = f(st[ix["BLK"]]) if "BLK" in ix else 0
                 except Exception: continue
                 if mn <= 0: continue
-                out.append({"d": dates.get(ev.get("eventId"), ""), "MIN": mn, "PTS": pts, "REB": reb, "AST": ast, "3PM": tpm, "PRA": pts + reb + ast})
+                out.append({"d": dates.get(ev.get("eventId"), ""), "MIN": mn, "PTS": pts, "REB": reb, "AST": ast, "3PM": tpm, "PRA": pts + reb + ast,
+                            "PR": pts + reb, "PA": pts + ast, "RA": reb + ast, "STL": stl, "BLK": blk})
     out.sort(key=lambda x: x["d"], reverse=True)
     return out
 
@@ -564,38 +569,38 @@ def player_props(g, s):
         if not cur and not prev: continue
         base = cur if len(cur) >= 3 else (prev or cur)
         mins = sum(x["MIN"] for x in base) / len(base)
-        if mins < 22: continue
+        if mins < 18: continue
         players.append((mins, side, tname, pid, name, cur, prev))
-    # best 4 per team by minutes (about 8 per game)
+    # best 5 per team by minutes (about 10 per game)
     players.sort(key=lambda x: -x[0])
     keep, cnt = [], {"h": 0, "a": 0}
     for pl in players:
-        if cnt[pl[1]] < 4: keep.append(pl); cnt[pl[1]] += 1
+        if cnt[pl[1]] < 5: keep.append(pl); cnt[pl[1]] += 1
     mk = []
     for mins, side, tname, pid, name, cur, prev in keep:
         for stat, lines in PROP_LINES.items():
             n, k = len(cur), 6
-            mc = sum(x[stat] for x in cur) / n if n else 0
-            mp = sum(x[stat] for x in prev) / len(prev) if prev else mc
+            mc = sum(x.get(stat, 0) for x in cur) / n if n else 0
+            mp = sum(x.get(stat, 0) for x in prev) / len(prev) if prev else mc
             if not prev and not n: continue
             m = (n * mc + k * mp) / (n + k)
             if m <= 0.2: continue
             recent = (cur + prev)[:20]
             if len(recent) >= 5:
-                mu = sum(x[stat] for x in recent) / len(recent)
-                esd = math.sqrt(sum((x[stat] - mu) ** 2 for x in recent) / (len(recent) - 1))
+                mu = sum(x.get(stat, 0) for x in recent) / len(recent)
+                esd = math.sqrt(sum((x.get(stat, 0) - mu) ** 2 for x in recent) / (len(recent) - 1))
             else: esd = 0
-            sd = max(esd, 0.25 * m + 2)
+            sd = max(esd, 0.25 * m + (1 if stat in ("REB", "AST", "RA") else 2))
             opts = []
             for t in lines:
-                p = p_over(t - 1, m) if stat == "3PM" else 1 - phi((t - 0.5 - m) / sd)
-                if 0.12 <= p <= 0.92:
+                p = p_over(t - 1, m) if stat in PROP_COUNT else 1 - phi((t - 0.5 - m) / sd)
+                if 0.08 <= p <= 0.95:
                     dist = 0 if 0.5 <= p <= 0.8 else min(abs(p - 0.5), abs(p - 0.8))
                     opts.append((dist, t, p))
-            for dist, t, p in sorted(opts)[:3]:
+            for dist, t, p in sorted(opts)[:4]:
                 word = PROP_WORD[stat]; p = round(p, 4)
                 mk.append({"k": f"P:{pid}:{stat}:{t}", "label": f"{name} {t}+ {word}", "p": p, "fair": round(1 / p, 3),
-                           "prop": {"pid": pid, "name": name, "side": side, "team": tname, "stat": stat, "target": t, "label": word}})
+                           "prop": {"pid": pid, "name": name, "side": side, "team": tname, "stat": PROP_STAT.get(stat, stat), "target": t, "label": word, "avg": round(m, 1)}})
     mk.sort(key=lambda x: (x["prop"]["side"], x["prop"]["pid"], x["prop"]["stat"], x["prop"]["target"]))
     return mk
 

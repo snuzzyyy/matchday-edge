@@ -1272,6 +1272,18 @@ button.setrow{width:100%;text-align:left;font:inherit;color:inherit;background:n
 /* bet lists on wider screens: a grid that reads left to right in date order (columns read top to bottom, so the order looked muddled) */
 @media (min-width:600px){#main div.trk:not(.chal-row),div.trk:not(.chal-row){display:grid;columns:auto;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px 16px;align-items:start}#main div.trk:not(.chal-row)>*,div.trk:not(.chal-row)>*{margin:0}#main div.trk>.trk-other,div.trk>.trk-other{grid-column:1 / -1}}
 @media (min-width:600px){#main div.trk.mas:not(.chal-row),div.trk.mas:not(.chal-row){grid-auto-rows:2px;row-gap:0;align-items:start}}
+
+/* Funded → NBA bets */
+.nbx-games .chip,.nbx-cats .chip{flex:0 0 auto}.nbx-gc{display:inline-flex;align-items:center;gap:6px}.nbx-gc .logo{width:18px;height:18px}.nbx-gc small{color:var(--muted);font-size:11px;margin-left:2px}
+.nbx-side{max-width:260px}.nbx-list{display:grid;gap:10px;margin-top:12px}@media (min-width:900px){.nbx-list{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}}
+.nbx-card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px;display:grid;gap:10px;min-width:0}
+.nbx-p{grid-template-columns:44px minmax(0,1fr);align-items:start}.nbx-p .pl-ic{width:44px;height:44px}.nbx-pm{display:grid;gap:8px;min-width:0}
+.nbx-pt{display:grid;gap:2px;min-width:0}.nbx-pt b{font-size:15px}.nbx-pt small{color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.nbx-pt small b{font-size:12px;color:var(--fg)}
+.nbx-chs{display:flex;flex-wrap:wrap;gap:6px}.nbx-ch{display:grid;justify-items:center;gap:0;min-width:62px;padding:6px 8px;border-radius:10px;border:1px solid var(--line-2);background:var(--bg-2);color:var(--fg);font:inherit;cursor:pointer;line-height:1.15}
+.nbx-ch span{font-size:12px;color:var(--fg-2);font-weight:700;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.nbx-ch b{font-family:var(--display);font-size:16px}.nbx-ch small{font-size:10.5px;font-weight:700}
+.nbx-ch:hover{border-color:var(--blue-2)}.nbx-ch.on{background:rgba(59,130,246,.18);border-color:var(--blue);box-shadow:inset 0 0 0 1px var(--blue)}
+.nbx-gh{display:flex;align-items:center;gap:10px}.nbx-gh>span:last-child{display:grid}.nbx-gh small{color:var(--muted);font-size:12px}.nbx-row{display:grid;gap:6px}.nbx-rn{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+@media (max-width:420px){.nbx-ch{min-width:56px;padding:5px 6px}.nbx-ch b{font-size:15px}}
 </style>
 
 <header class="top">
@@ -1350,7 +1362,7 @@ const money = v => "£" + (v >= 1000 ? v.toLocaleString("en-GB", { minimumFracti
 const priceOf = m => m.dec || (m.prop ? livePrice(m.p) : m.fair);
 /* NBA player bets ("P:" markets): priced like a bookie would (shorter than fair), legs carry the player fields tracking reads */
 const isProp = m => /^P:/.test((m && m.k) || m || "");
-const propLeg = m => m && m.prop ? { pid: m.prop.pid, name: m.prop.name, side: m.prop.side, team: m.prop.team, stat: m.prop.stat, target: m.prop.target, label: m.prop.label } : {};
+const propLeg = m => m && m.prop ? { pid: m.prop.pid, name: m.prop.name, side: m.prop.side, team: m.prop.team, stat: m.prop.stat, target: m.prop.under ? m.prop.max : m.prop.target, label: m.prop.label, ...(m.prop.under ? { under: true, line: m.prop.line, max: m.prop.max } : {}) } : {};
 const shortName = n => { const w = String(n || "").split(" "); return w.length > 1 ? w[0][0] + ". " + w.slice(1).join(" ") : n; };
 const propText = (l, nm) => (nm = nm || l.name, l.under ? `${nm} under ${l.line} ${l.label}` : l.stat === "totalGoals" && +l.target === 1 && !l.half ? `${nm} to score` : l.stat === "cards" && +l.target === 1 && !l.half ? `${nm} to be carded` : `${nm} ${l.target}+ ${l.label}`);
 const legText = l => l.pid ? (l.group ? `${l.name} ${l.target}+ ${l.label}` : propText(l)) : l.label;
@@ -1418,7 +1430,14 @@ function oldGame(sp, id) {
     g._postDetail = true; g._luDone = true; g._luAt = Date.now(); g._sumAt = Date.now(); OLDG.set(k, g); IDX.delete(S.data); render();
   }).catch(() => {});
 }
-const mkt = (g, k) => { const A = g.model.markets; let M = MKC.get(A); if (!M || M.n !== A.length) { M = new Map(A.map(m => [m.k, m])); M.n = A.length; MKC.set(A, M); } return M.get(k); };
+/* NBA player unders (the other side of each "20+ points" line = under 19.5), made on demand for the funded picker: never added to the game's own list, so tips and accas don't use them */
+const UNDERS = new WeakMap();
+function nbaUnders(g) { const A = g && g.model && g.model.markets; if (!A) return []; let U = UNDERS.get(A); if (U && U.n === A.length) return U.list;
+  const list = A.filter(m => /^P:/.test(m.k) && m.prop && !m.prop.under).map(m => { const t = +m.prop.target, p = Math.round((1 - m.p) * 1e4) / 1e4;
+    return p < .05 || p > .95 ? null : { k: m.k.replace(/:(\d+)$/, ":u$1"), label: `${m.prop.name} under ${t - .5} ${m.prop.label}`, p, fair: Math.round(1000 / p) / 1000, prop: { ...m.prop, under: true, line: t - .5, max: t - 1 } }; }).filter(Boolean);
+  UNDERS.set(A, { n: A.length, list }); return list; }
+const mkt = (g, k) => /^P:.*:u\d+$/.test(k || "") ? nbaUnders(g).find(m => m.k === k) : mkt0(g, k);
+const mkt0 = (g, k) => { const A = g.model.markets; let M = MKC.get(A); if (!M || M.n !== A.length) { M = new Map(A.map(m => [m.k, m])); M.n = A.length; MKC.set(A, M); } return M.get(k); };
 const vs = (sport, g) => sport === "nba" ? `${g.away.name} @ ${g.home.name}` : `${g.home.name} v ${g.away.name}`;
 const minute = g => { const n = parseInt(g.status.clock || g.status.detail); return isNaN(n) ? null : n; };
 
@@ -4180,6 +4199,7 @@ function fundedAccas() {
 }
 function fundedPickerHTML() {
   if (S.fpType === "game") return fundedGameHTML();
+  if (S.fpType === "nba") return fundedNbaHTML();
   if (S.fpType === "ready") return fundedReadyHTML();
   if (S.fpType && S.fpType !== "single") return fundedBuildHTML();   /* "build", and the older acca / btts / o15 modes */
   const P = fundedPicks(), seg = (attr, cur, opts) => `<div class="seg3 ${opts.length === 2 ? "two" : ""}" role="group">${opts.map(([k, l]) => `<button ${attr}="${k}" aria-pressed="${cur === k}">${l}</button>`).join("")}</div>`;
@@ -4191,12 +4211,12 @@ function fundedPickerHTML() {
         ${open ? `<div class="fp-drop"><label><span>Odds</span><input id="fpOdds" class="oddin" value="${esc(odds(c.pr))}" autocomplete="off" inputmode="decimal"></label><label><span>Stake £</span><input id="fpStake" class="oddin" inputmode="decimal" autocomplete="off" value="${Math.max(1, Math.round(X.bal * .02 * 2) / 2)}"></label><button class="btn sm" data-fpadd="${esc(key)}">Add</button></div>` : ""}</div>`; }).join("")}</div>`
       : `<div class="empty">No ${(FP_BANDS[S.fpBand] || FP_BANDS.low)[0].toLowerCase()} singles ${fpDayLabel()}. Try another band, sport or Next 24 hours.</div>`}</section>`;
 }
-const FP_TYPES = [["single", "Singles", "🎯"], ["build", "Acca builder", "🧱"], ["ready", "Ready-made accas", "⚡"], ["game", "Pick a game", "🔎"]];
-const fpMode = () => S.fpType === "game" || S.fpType === "ready" || !S.fpType || S.fpType === "single" ? S.fpType || "single" : "build";
+const FP_TYPES = [["single", "Singles", "🎯"], ["nba", "NBA bets", "🏀"], ["build", "Acca builder", "🧱"], ["ready", "Ready-made accas", "⚡"], ["game", "Pick a game", "🔎"]];
+const fpMode = () => ["game", "ready", "nba", "single"].includes(S.fpType) || !S.fpType ? S.fpType || "single" : "build";
 const fpTypeRow = () => `<div class="fp-modes" role="group" aria-label="Bet picker mode">${FP_TYPES.map(([k, l, ic]) => `<button data-fptype="${k}" aria-pressed="${fpMode() === k}"><span>${ic}</span>${l}</button>`).join("")}</div>`;
 const fpFilters = () => `<div class="chips fp-filt">${[["today", "Today & tonight"], ["24h", "Next 24 hours"]].map(([v, l]) => `<button class="chip" data-fpday="${v}" aria-pressed="${(S.fpDay || "today") === v}">${l}</button>`).join("")}<span class="fp-sep"></span>${[["both", "All sports"], ["football", "⚽ Football"], ["nba", "🏀 NBA"]].map(([v, l]) => `<button class="chip" data-fpsport="${v}" aria-pressed="${(S.fpSport || "both") === v}">${l}</button>`).join("")}</div>`;
 /* Funded → Acca builder / Ready-made accas. Each market gives one bet per game (the likelier side where there are two); you can mix markets, one leg per game, up to FM_MAX */
-const FM_MAX = 6;
+const FM_MAX = 10;
 const bestOf = keys => (sp, g) => keys.map(k => mkt(g, k)).filter(Boolean).sort((a, b) => b.p - a.p)[0] || null;
 const FMK = [
   { id: "win", name: "To win", sp: "both", pick: (sp, g) => bestOf(sp === "nba" ? ["ML1", "ML2"] : ["1", "2"])(sp, g) },
@@ -4248,6 +4268,43 @@ function fundedReadyHTML() {
     <p class="risk-desc" style="margin:0 4px">The likeliest ${nm(n).toLowerCase()} for each market, one bet per game. Tap one to load it, then set your stake.</p></div>
     ${A.length ? `<div class="fa-grid">${A.map(a => `<button class="fa-card ${a.id === "mix" ? "mix" : ""}" data-fmload="${a.id}|${n}"><span class="fa-hd"><b>${esc(a.name)}</b><em>${nm(n)}</em></span>${a.legs.map(x => `<span class="fa-l"><span>${esc(x.m.label)}<small>${esc(vs(x.sp, x.g))}</small></span><i>${odds(priceOf(x.m))}</i></span>`).join("")}<span class="fa-ft"><b>${odds(a.dec)}</b><span class="pill ${a.p > .3 ? "good" : "hot"}">${pct(a.p)} chance</span></span></button>`).join("")}</div>`
       : `<div class="empty">Not enough games ${fpDayLabel()} for a ${nm(n).toLowerCase()}. Try Next 24 hours or a smaller acca.</div>`}</section>`;
+}
+/* Funded → NBA bets: every player line (points, rebounds, assists, threes, combos, steals, blocks, overs and unders) and the game lines, by game and category. Tap lines to build a single or an acca */
+const NB_CATS = [["PTS", "Points"], ["REB", "Rebounds"], ["AST", "Assists"], ["3PM", "Threes"], ["PRA", "Pts+Reb+Ast"], ["PR", "Pts+Reb"], ["PA", "Pts+Ast"], ["RA", "Reb+Ast"], ["STL", "Steals"], ["BLK", "Blocks"], ["lines", "Game lines"]];
+const nbStat = k => (String(k).split(":")[2] || "");
+function fundedNbaHTML() {
+  const now = Date.now(), G = games("nba").filter(g => isPre(g) && +new Date(kick(g)) > now && fpInWindow(+new Date(kick(g)))).sort((a, b) => kick(a).localeCompare(kick(b)));
+  const gsel = G.some(g => String(g.id) === S.fnGame) ? S.fnGame : "all", GG = gsel === "all" ? G : G.filter(g => String(g.id) === gsel), cat = S.fnCat || "PTS", under = S.fnSide === "under";
+  const P = fmPicked(), on = (g, k) => P.some(x => x.sp === "nba" && String(x.g.id) === String(g.id) && x.m.k === k);
+  const chip = (g, m, top, sub) => `<button class="nbx-ch ${on(g, m.k) ? "on" : ""}" data-fnpick="${g.id}|${esc(m.k)}" aria-pressed="${on(g, m.k)}" title="${esc(m.label)}"><span>${top}</span><b>${odds(priceOf(m))}</b><small style="color:${tierColor(m.p)}">${pct(m.p)}</small>${sub ? `<em>${sub}</em>` : ""}</button>`;
+  const avail = c => c === "lines" || GG.some(g => g.model.markets.some(m => /^P:/.test(m.k) && nbStat(m.k) === c));
+  const cats = NB_CATS.filter(([c]) => avail(c));
+  const cur = cats.some(([c]) => c === cat) ? cat : (cats[0] || ["lines"])[0];
+  let body = "";
+  if (cur === "lines") {
+    body = GG.map(g => { const M = k => mkt(g, k), row = (name, ks, lab) => { const ms = ks.map(k => [k, M(k)]).filter(x => x[1]); return ms.length ? `<div class="nbx-row"><span class="nbx-rn">${name}</span><div class="nbx-chs">${ms.map(([k, m]) => chip(g, m, lab(k, m))).join("")}</div></div>` : ""; };
+      const tot = g.odds && g.odds.total;
+      return `<div class="nbx-card"><div class="nbx-gh"><span class="lgg-logos">${logo("nba", g.away)}${logo("nba", g.home)}</span><span><b>${esc(vs("nba", g))}</b><small>${esc(whenLabel(kick(g)))}</small></span></div>
+        ${row("Winner", ["ML2", "ML1"], k => esc(k === "ML1" ? g.home.name : g.away.name))}
+        ${row("Handicap", ["SP2", "SP1", "FAVH"], (k, m) => esc(m.label.replace(/ handicap$/, "")))}
+        ${row("Total points", ["TO", "TU", "TO-6", "TO-10"], (k, m) => esc(m.label.replace(/ points$/, "")))}</div>`; }).join("");
+  } else {
+    const word = (NB_CATS.find(([c]) => c === cur) || [, ""])[1].toLowerCase(), pl = new Map();
+    for (const g of GG) for (const m of (under ? nbaUnders(g) : g.model.markets)) { if (!/^P:/.test(m.k) || !m.prop || nbStat(m.k) !== cur || !!m.prop.under !== under || priceOf(m) < 1.02) continue;
+      const key = g.id + ":" + m.prop.pid; if (!pl.has(key)) pl.set(key, { g, prop: m.prop, ms: [] }); pl.get(key).ms.push(m); }
+    const list = [...pl.values()].sort((a, b) => (b.prop.avg || 0) - (a.prop.avg || 0) || b.ms.length - a.ms.length);
+    body = list.map(({ g, prop, ms }) => { const l = asLegs([{ sport: "nba", g, m: ms[0] }])[0], opp = prop.side === "h" ? g.away : g.home;
+      ms.sort((a, b) => under ? b.prop.line - a.prop.line : a.prop.target - b.prop.target);
+      return `<div class="nbx-card nbx-p">${legIcon(l)}<div class="nbx-pm"><span class="nbx-pt"><b>${esc(prop.name)}</b><small>${esc(prop.team)} ${prop.side === "h" ? "v" : "@"} ${esc(opp.name)} · ${esc(whenLabel(kick(g)))}${prop.avg != null ? ` · avg <b>${prop.avg}</b>` : ""}</small>${playerTag(l)}</span>
+        <div class="nbx-chs">${ms.map(m => chip(g, m, under ? `U ${m.prop.line}` : `${m.prop.target}+`)).join("")}</div></div></div>`; }).join("") || `<div class="empty">No ${esc(word)} ${under ? "unders" : "lines"} for ${gsel === "all" ? "these games" : "this game"} yet. Player lines come out the day before.</div>`;
+  }
+  return `<section class="section"><h2>Bet picker</h2><div class="acca-panel fp-panel">${fpTypeRow()}
+    <div class="chips fp-filt">${[["today", "Today & tonight"], ["24h", "Next 24 hours"]].map(([v, l]) => `<button class="chip" data-fpday="${v}" aria-pressed="${(S.fpDay || "today") === v}">${l}</button>`).join("")}</div>
+    ${G.length ? `<div class="chips scroll nbx-games" role="group" aria-label="Game"><button class="chip" data-fngame="all" aria-pressed="${gsel === "all"}">All games · ${G.length}</button>${G.map(g => `<button class="chip nbx-gc" data-fngame="${g.id}" aria-pressed="${gsel === String(g.id)}">${logo("nba", g.away)}${esc(g.away.abbr || g.away.name)} @ ${esc(g.home.abbr || g.home.name)}<small>${esc(hm(kick(g)))}</small></button>`).join("")}</div>
+    <div class="chips scroll nbx-cats" role="group" aria-label="Category">${cats.map(([c, l]) => `<button class="chip" data-fncat="${c}" aria-pressed="${cur === c}">${l}</button>`).join("")}</div>
+    ${cur !== "lines" ? `<div class="seg3 two nbx-side" role="group" aria-label="Over or under"><button data-fnside="over" aria-pressed="${!under}">Over</button><button data-fnside="under" aria-pressed="${under}">Under</button></div>` : ""}` : ""}
+    <p class="risk-desc" style="margin:0 4px">Tap any line to add it. Mix players, games and categories: one line is a single, more make an acca (up to ${FM_MAX}). Change the odds to your funder's, type your stake, press Enter.</p></div>
+    ${fmSlipHTML()}${G.length ? `<div class="nbx-list">${body}</div>` : `<div class="empty">No NBA games ${fpDayLabel()}. Try Next 24 hours.</div>`}</section>`;
 }
 /* Funded → Pick a game: every upcoming game in the window; open one to see all its bets, then tap a bet, type a stake, press Enter */
 function fundedGameHTML() {
@@ -5322,6 +5379,9 @@ function betOutcome(legs) {   // "won" / "lost" once it's certain, otherwise nul
       if (r.v == null) { all = false; continue; }
       lost = true; continue;
     }
+    if (l.pid && l.under) {   /* player under: lost once he goes over; landed only on the final box score */
+      const st = legInfo0(l).st; if (st === "miss") { lost = true; continue; }
+      if (st === "hit" && g._postDetail) continue; if (st === "hit") { g._luAt = 0; loadDetail(l.sport + ":" + l.gid); } all = false; continue; }
     if (l.pid) {
       if (!isPre(g) && !(l.sport === "nba" ? g.box : g.lineups)) loadDetail(l.sport + ":" + l.gid);
       const r = legValue(l);
@@ -5782,6 +5842,12 @@ document.addEventListener("click", async e => {
   else if (d.fgmore) { S.fgMore = { ...(S.fgMore || {}), [d.fgmore]: true }; render(); }
   else if (d.fmpick) { const [sp, gid, k] = d.fmpick.split("|"), cur = (Array.isArray(S.fmSel) ? S.fmSel : []).slice(), i = cur.findIndex(x => x.sp === sp && String(x.gid) === gid);
     if (i >= 0 && cur[i].k === k) cur.splice(i, 1); else if (i >= 0) cur[i] = { sp, gid, k }; else { if (cur.length >= FM_MAX) { toast(`${FM_MAX} legs max. Take one out first`); return; } cur.push({ sp, gid, k }); } S.fmSel = cur; render(); }
+  else if (d.fngame) { S.fnGame = d.fngame; render(); }
+  else if (d.fncat) { S.fnCat = d.fncat; render(); }
+  else if (d.fnside) { S.fnSide = d.fnside; render(); }
+  else if (d.fnpick) { const [gid, k] = [d.fnpick.slice(0, d.fnpick.indexOf("|")), d.fnpick.slice(d.fnpick.indexOf("|") + 1)], cur = (Array.isArray(S.fmSel) ? S.fmSel : []).slice(), same = x => x.sp === "nba" && String(x.gid) === gid;
+    const i = cur.findIndex(x => same(x) && x.k === k), grp = q => /^P:/.test(q) ? q.split(":").slice(0, 3).join(":") : /^(ML|SP|FAVH)/.test(q) ? "res" : /^T/.test(q) ? "tot" : q, j = cur.findIndex(x => same(x) && grp(x.k) === grp(k));   /* one line per player and stat, one winner/handicap and one total per game */
+    if (i >= 0) cur.splice(i, 1); else if (j >= 0) cur[j] = { sp: "nba", gid, k }; else { if (cur.length >= FM_MAX) { toast(`${FM_MAX} legs max. Take one out first`); return; } cur.push({ sp: "nba", gid, k }); } S.fmSel = cur; render(); }
   else if (d.fmrm !== undefined) { S.fmSel = (Array.isArray(S.fmSel) ? S.fmSel : []).filter((_, i) => i !== +d.fmrm); render(); }
   else if (d.fmclear !== undefined) { S.fmSel = []; render(); }
   else if (d.fmk) { S.fmK = d.fmk; render(); }
@@ -5794,11 +5860,11 @@ document.addEventListener("click", async e => {
   else if (d.fpsport) { S.fpSport = d.fpsport; S.fpSeed = 0; render(); }
   else if (d.fpshuffle !== undefined) { S.fpSeed = (S.fpSeed || 0) + 1; render(); const b = $("[data-fpshuffle] svg"); if (b) b.animate([{ transform: "rotate(0)" }, { transform: "rotate(-360deg)" }], { duration: 500, easing: "ease-out" }); }
   else if (d.fpick) { S.fpOpen = S.fpOpen === d.fpick ? null : d.fpick; render(); setTimeout(() => { const st = $("#fpStake"); if (st) { st.focus({ preventScroll: true }); st.select(); } }, 30); }
-  else if (d.fpadd && d.fpadd.startsWith("acca|")) { const parts = d.fpadd.slice(5).split(",").map(x => x.split(":")), F = fundedNow(), X = fundedStats(F);
+  else if (d.fpadd && d.fpadd.startsWith("acca|")) { const parts = d.fpadd.slice(5).split(",").map(x => { const q = x.split(":"); return [q[0], q[1], q.slice(2).join(":")]; }), F = fundedNow(), X = fundedStats(F);   /* player keys have colons too */
     const legs = parts.map(([sp, gid, k]) => { const g = findGame(sp, gid), m = g && mkt(g, k); return m ? asLegs([{ sport: sp, g, m }])[0] : null; }).filter(Boolean); if (legs.length < 2) return;
     const dec = parseOdds(($("#fpOdds") || {}).value || "") || legs.reduce((a, l) => a * l.dec, 1), stake = +(($("#fpStake") || {}).value) || 0;
     if (!(stake > 0)) { toast("Add your stake"); return; } if (stake > X.avail + 1e-9) { toast(`You've only got ${money(X.avail)} available`); return; }
-    F.bets = [{ id: "f" + Date.now().toString(36), text: `${legs.length}-fold: ${legs.map(l => l.label).join(", ")}`, legs, dec: Math.round(dec * 1000) / 1000, stake, result: "open", at: new Date().toISOString() }, ...F.bets];
+    F.bets = [{ id: "f" + Date.now().toString(36), text: `${legs.length}-fold: ${legs.map(legText).join(", ")}`, legs, dec: Math.round(dec * 1000) / 1000, stake, result: "open", at: new Date().toISOString() }, ...F.bets];
     S.fpOpen = null; if (d.fmdone) S.fmSel = []; fundedSave(F); toast(`Added acca: ${money(stake)} at ${odds(dec)}`); }
   else if (d.fpadd) { const [sp, gid, k] = d.fpadd.split("|"), g = findGame(sp, gid), m = g && mkt(g, k); if (!m) return; const F = fundedNow(), X = fundedStats(F);
     const dec = parseOdds(($("#fpOdds") || {}).value || "") || priceOf(m), stake = +(($("#fpStake") || {}).value) || 0;

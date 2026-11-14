@@ -127,7 +127,8 @@ def leg_result(l):
                     if a.get("didNotPlay") or not a.get("stats"): return None, None
                     v = dict(zip(labels, a["stats"]))
                     n = lambda k: num(v.get(k, 0))
-                    val = n("PTS") + n("REB") + n("AST") if l["stat"] == "PRA" else n("3PT") if l["stat"] == "3PM" else n(l["stat"])
+                    stt = str(l["stat"])
+                    val = n("PTS") + n("REB") + n("AST") if stt == "PRA" else n("3PT") if stt == "3PM" else sum(n(x) for x in stt[6:].split(",")) if stt.startswith("combo:") else n(stt)   # combo:PTS,REB etc.
                     return ("won" if val >= l["target"] else "lost"), val
             return None, None
         if l.get("half") or str(l.get("stat", "")).startswith("headed"):   # half bets and headers: count from the play-by-play (each play once)
