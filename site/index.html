@@ -3121,7 +3121,7 @@ const scoreLine = (sp, g) => { const L = sp === "nba" ? g.away : g.home, R = sp 
 // every bet leg is tappable: it opens that game's page
 function legInfo(l) {
   const r = legInfo0(l), g = l.gid && findGame(l.sport, l.gid);
-  if (g) { r.html = r.html.replace(/^<div class="tl-leg([^"]*)"/, `<button type="button" class="tl-leg linkleg$1" data-open="${l.sport}:${l.gid}" aria-label="Open the game"`); const k = r.html.lastIndexOf("</div>"); r.html = r.html.slice(0, k) + "</button>" + r.html.slice(k + 6); }
+  if (g && !stalePre(l)) { r.html = r.html.replace(/^<div class="tl-leg([^"]*)"/, `<button type="button" class="tl-leg linkleg$1" data-open="${l.sport}:${l.gid}" aria-label="Open the game"`); const k = r.html.lastIndexOf("</div>"); r.html = r.html.slice(0, k) + "</button>" + r.html.slice(k + 6); }
   return r;
 }
 /* when a leg's game has finished, keep its result and the final score on the leg itself, so the bet still shows them after the game leaves the data */
@@ -3132,7 +3132,10 @@ function snapLeg(l) {
   const T = t => ({ id: t.id, name: t.name, abbr: t.abbr, score: t.score });
   return { ...l, fst: l.fst || st, final: l.pid ? legValue(l).v : l.final ?? null, fin: { home: T(g.home), away: T(g.away), lg: g.league || "", at: kick(g) } };
 }
+/* a game that should have finished but no feed has a score for (small cup ties): after 3 hours you can mark the leg yourself */
+const stalePre = l => { if (!l || l.manual || !l.gid) return false; const g = findGame(l.sport, l.gid); return !!g && isPre(g) && Date.now() - new Date(kick(g)) > 3 * 3600e3; };
 function legInfo0(l) {   // -> { html, st: "pre" | "live" | "hit" | "miss" | "void" | "manual" }
+  if (stalePre(l)) { const g = findGame(l.sport, l.gid); return legInfo0({ ...l, manual: true, gid: null, match: `${vs(l.sport, g)} · no score from the feeds` }); }
   if (l.manual) { const hit = l.fst === "hit", miss = l.fst === "miss", vd = l.fst === "void";
     return { st: l.fst || "manual", html: `<div class="tl-leg ${hit ? "hit" : miss ? "miss" : vd ? "void" : ""}"><div class="tl-top"><b>${esc(l.label)}</b><span>${esc(l.match || "You mark this one")}</span></div><div class="tl-num"><span>${hit || miss || vd ? "" : l.match ? "You mark this one" : "We couldn't match it to a game"}</span><span>${hit ? "✓ Landed" : miss ? "✗ Lost" : vd ? "Void" : ""}</span></div></div>` }; }
   if (l.fst && !l.fin && l.gid && !findGame(l.sport, l.gid)) oldGame(l.sport, l.gid);   /* no scoreboard saved yet: fetch the final once */
@@ -3336,7 +3339,7 @@ function withPc(i, l) {
 }
 function betChance(legs) { let p = 1, unknown = 0; for (const l of legs) { const c = legChance(l); if (c == null) unknown++; else p *= c; } return { p, unknown }; }
 /* ---------- a leg in a bet card: badges, kick-off countdown before, a mini scoreboard and progress during, the result after ---------- */
-const untilTxt = iso => { const m = Math.round((new Date(iso) - Date.now()) / 6e4); return m <= 0 ? "starting" : m < 60 ? `in ${m}m` : m < 1440 ? `in ${Math.floor(m / 60)}h${m % 60 ? ` ${m % 60}m` : ""}` : `in ${Math.round(m / 1440)}d`; };
+const untilTxt = iso => { const m = Math.round((new Date(iso) - Date.now()) / 6e4); return m <= -15 ? "no live score" : m <= 0 ? "starting" : m < 60 ? `in ${m}m` : m < 1440 ? `in ${Math.floor(m / 60)}h${m % 60 ? ` ${m % 60}m` : ""}` : `in ${Math.round(m / 1440)}d`; };
 /* legs grouped by game: the game once (badges, kick-off countdown or live score), then one tidy line per bet */
 /* is the player in a bet starting / on the pitch? */
 /* NBA starting fives from NBA.com before tip-off (g.lu, added by build.py): expected, then confirmed */
@@ -3416,7 +3419,7 @@ document.addEventListener("click", e => { const b = e.target.closest && e.target
 document.addEventListener("click", e => { const t = e.target.closest && e.target.closest(".gst-tabs i"); if (!t) return; const P = t.closest(".gst").querySelector(".gst-pages"); P.scrollTo({ left: [...t.parentNode.children].indexOf(t) * P.clientWidth, behavior: "smooth" }); });
 function legGroups(legs, infos, ck) {
   const out = [], at = new Map();
-  legs.forEach((l, k) => { const g = !l.manual && l.gid && findGame(l.sport, l.gid);
+  legs.forEach((l, k) => { const g = !l.manual && l.gid && !stalePre(l) && findGame(l.sport, l.gid);
     if (!g && l.fin) { const key = l.sport + l.gid; if (!at.has(key)) { at.set(key, out.length); out.push({ sp: l.sport, g: { id: l.gid, home: l.fin.home, away: l.fin.away, league: l.fin.lg, start: l.fin.at, status: { state: "post", detail: "FT" } }, lines: [], gone: true }); } out[at.get(key)].lines.push({ html: legLine(l, k, legs), st: infos[k].st }); return; }
     if (!g) { out.push({ raw: infos[k].html }); return; }
     const key = l.sport + g.id; if (!at.has(key)) { at.set(key, out.length); out.push({ sp: l.sport, g, lines: [] }); } out[at.get(key)].lines.push({ html: legLine(l, k, legs), st: infos[k].st }); });
@@ -3433,8 +3436,8 @@ function legGroups(legs, infos, ck) {
 }
 function betCard(t) {
   const info = t.legs.map((l, i) => { const r = legInfo(i && l.pid && !l.group && t.legs[i - 1].pid === l.pid ? { ...l, _sub: true } : l);
-    if (l.manual && !l.fst && t.fd && !t.legs.some(x => legInfo0(x).st === "miss")) r.html = r.html.replace(/<\/div>$/, `<div class="mleg"><button class="btn sm win" data-fdmleg="${t.fd}|${i}|hit">Landed</button><button class="btn sm lose" data-fdmleg="${t.fd}|${i}|miss">Lost</button></div></div>`);
-    else if (l.manual && !l.fst && t.saved && !t.legs.some(x => legInfo0(x).st === "miss")) r.html = r.html.replace(/<\/div>$/, `<div class="mleg"><button class="btn sm win" data-mleg="${t.saved}|${i}|hit">Landed</button><button class="btn sm lose" data-mleg="${t.saved}|${i}|miss">Lost</button><button class="btn sm ghost" data-mleg="${t.saved}|${i}|void">Void</button></div></div>`);
+    if ((l.manual || stalePre(l)) && !l.fst && t.fd && !t.legs.some(x => legInfo0(x).st === "miss")) r.html = r.html.replace(/<\/div>$/, `<div class="mleg"><button class="btn sm win" data-fdmleg="${t.fd}|${i}|hit">Landed</button><button class="btn sm lose" data-fdmleg="${t.fd}|${i}|miss">Lost</button></div></div>`);
+    else if ((l.manual || stalePre(l)) && !l.fst && t.saved && !t.legs.some(x => legInfo0(x).st === "miss")) r.html = r.html.replace(/<\/div>$/, `<div class="mleg"><button class="btn sm win" data-mleg="${t.saved}|${i}|hit">Landed</button><button class="btn sm lose" data-mleg="${t.saved}|${i}|miss">Lost</button><button class="btn sm ghost" data-mleg="${t.saved}|${i}|void">Void</button></div></div>`);
     return r; }), n = t.legs.length, hit = info.filter(i => i.st === "hit").length, voids = info.filter(i => i.st === "void").length;
   const lost = info.some(i => i.st === "miss"), started = info.some(i => i.st !== "pre");
   const gs0 = t.legs.map(l => l.gid && findGame(l.sport, l.gid)).filter(Boolean), anyLive = gs0.some(isLive), first = gs0.filter(isPre).map(kick).sort()[0];
@@ -4337,7 +4340,7 @@ function viewFunded() {
   const X = fundedStats(F), prog = Math.max(0, Math.min(1, (X.bal - F.start) / (X.goal - F.start))), sign = v => (v > 0 ? "+" : v < 0 ? "-" : "") + money(Math.abs(v));
   for (const b of X.open) for (const l of b.legs || []) { const g = l.gid && findGame(l.sport, l.gid); if (g && !isPre(g) && (l.pid ? !(l.sport === "nba" ? g.box : g.lineups) : !g.events && l.sport === "football")) loadDetail(l.sport + ":" + l.gid); }   /* same as the Bets page: player stats for live games */
   const fdEditRow = b => `<div class="fd-editrow"><label><span>Odds</span><input id="fdEO" class="oddin" value="${esc(odds(b.dec))}" autocomplete="off" inputmode="decimal"></label><label><span>Stake £</span><input id="fdES" class="oddin" value="${b.stake}" autocomplete="off" inputmode="decimal"></label><label><span>Returns £</span><input id="fdER" class="oddin" value="${(b.stake * b.dec).toFixed(2)}" autocomplete="off" inputmode="decimal"></label><button class="btn sm" data-fdesave="${b.id}">Save</button>${(b.legs || []).map((l, i) => l.pid && !l.group && !l.under ? `<label class="fd-eline"><span>${esc(l.name)} · ${esc(l.label)} at least</span><input id="fdEL${i}" class="oddin" value="${l.target}" inputmode="numeric" autocomplete="off"></label>` : "").join("")}<div class="fd-respick"><span>Result</span>${[["open", "Open"], ["won", "Won"], ["lost", "Lost"], ["void", "Void"]].map(([k, t]) => `<button type="button" class="${k}" data-fdsetres="${b.id}|${k}" aria-pressed="${b.result === k}">${t}</button>`).join("")}</div></div>`;
-  const fdCard = b => betCard({ legs: (b.legs || []).length ? b.legs : [(t => ({ manual: true, label: t[1] ? t[1].replace(/,\s*Whole Match/i, "") : b.text, match: t[2] ? `${t[2]} v ${t[3]}` : "", fst: b.result === "won" ? "hit" : b.result === "lost" ? "miss" : b.result === "void" ? "void" : undefined }))(String(b.text || "").match(/^(.+?)(?: \((.+?) v (.+)\))?$/) || [])], text: b.text, stake: b.stake, dec: b.dec, result: b.result, noX: true, fd: b.result === "open" && (b.legs || []).length > 1 ? b.id : "" })
+  const fdCard = b => betCard({ legs: (b.legs || []).length ? b.legs : [(t => ({ manual: true, label: t[1] ? t[1].replace(/,\s*Whole Match/i, "") : b.text, match: t[2] ? `${t[2]} v ${t[3]}` : "", fst: b.result === "won" ? "hit" : b.result === "lost" ? "miss" : b.result === "void" ? "void" : undefined }))(String(b.text || "").match(/^(.+?)(?: \((.+?) v (.+)\))?$/) || [])], text: b.text, stake: b.stake, dec: b.dec, result: b.result, noX: true, fd: b.result === "open" && ((b.legs || []).length > 1 || (b.legs || []).some(stalePre)) ? b.id : "" })
     .replace(/<\/article>$/, b.result !== "open" ? `<div class="fd-acts fd-cacts"><button class="linkbtn fd-ed" data-fdedit="${b.id}">${S.fdEdit === b.id ? "Cancel" : "Edit"}</button><button class="linkbtn" data-fdel="${b.id}">Delete</button></div>${S.fdEdit === b.id ? fdEditRow(b) : ""}</article>` : `<div class="fd-acts fd-cacts">${(b.legs || []).some(l => /^T:(h1|ft)hc/.test(l.k || "")) ? `<button class="btn sm ghost" data-fdhc="${b.id}">${(b.legs || []).some(l => /^T:fthc/.test(l.k || "")) ? "Track as 1st half" : "Track as full game"}</button>` : ""}${(b.legs || []).length ? "" : `<span class="fd-auto">Import it again from BetPro once it's settled and the result fills in</span>`}<button class="linkbtn fd-ed" data-fdedit="${b.id}">${S.fdEdit === b.id ? "Cancel" : "Edit"}</button><button class="linkbtn" data-fdel="${b.id}">Delete</button></div>${S.fdEdit === b.id ? fdEditRow(b) : ""}</article>`);
   const doneAt = b => (b.legs || []).reduce((m, l) => { const g = l.gid && findGame(l.sport, l.gid), t = (g && kick(g)) || (l.fin && l.fin.at) || ""; return t > m ? t : m; }, "") || b.at || b.settledAt || "";   /* when its last game kicked off: a bet fixed up later doesn't jump to the top */
   const settled = F.bets.filter(b => b.result !== "open").sort((a, b) => String(doneAt(b)).localeCompare(String(doneAt(a))) || String(b.at || "").localeCompare(String(a.at || "")));
@@ -5303,7 +5306,7 @@ function betOutcome(legs) {   // "won" / "lost" once it's certain, otherwise nul
   if (!legs || !legs.length) return null;
   let all = true, lost = false;
   for (const l of legs) {
-    if (l.manual) { if (l.fst === "miss") lost = true; else if (l.fst !== "hit") all = false; continue; }   /* a leg you mark yourself */
+    if (l.manual || stalePre(l)) { if (l.fst === "miss") lost = true; else if (l.fst !== "hit") all = false; continue; }   /* a leg you mark yourself (or one no feed has a score for) */
     if (l.fst && !findGame(l.sport, l.gid)) { if (l.fst === "miss") lost = true; else if (l.fst !== "hit") all = false; continue; }   /* game gone from the data: use the result saved when it finished */
     const g = findGame(l.sport, l.gid); if (!g) { all = false; continue; }
     if (l.group) {
