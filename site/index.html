@@ -3112,7 +3112,7 @@ function legInfo(l) {
 /* when a leg's game has finished, keep its result and the final score on the leg itself, so the bet still shows them after the game leaves the data */
 function snapLeg(l) {
   if (!l || l.manual || !l.gid || (l.fst && l.fin)) return null; const g = findGame(l.sport, l.gid); if (!g || g.status.state !== "post") return null;
-  if (l.pid && !(l.sport === "nba" ? g._postDetail || g.box : g.lineups)) { loadDetail(l.sport + ":" + l.gid); return null; }
+  if (l.pid && !g._postDetail) { g._luAt = 0; loadDetail(l.sport + ":" + l.gid); return null; }   /* wait for the final box score: the full-time scoreline can arrive before the last stats */
   const st = legInfo0(l).st; if (!/^(hit|miss|void)$/.test(st)) return null;
   const T = t => ({ id: t.id, name: t.name, abbr: t.abbr, score: t.score });
   return { ...l, fst: l.fst || st, final: l.pid ? legValue(l).v : l.final ?? null, fin: { home: T(g.home), away: T(g.away), lg: g.league || "", at: kick(g) } };
@@ -4063,8 +4063,12 @@ function fundedAuto(F) {
     const P = fundedParse(`Single\nOpen\n${m[1]}\n${m[2]} · ${m[3]} vs ${m[4]}\n${b.dec}\nStake\n£${b.stake}\nPotential Returns\n£${(b.stake * b.dec).toFixed(2)}`);
     if (P.length === 1 && P[0].legs.length) { b.legs = P[0].legs; rl++; } }
   if (rl && S.chalLoaded) fundedSave(F);
-  for (const b of F.bets) { if (b.result !== "open" || !(b.legs || []).length) continue; const sts = b.legs.map(l => legInfo0(l).st);
-    const res = sts.includes("miss") ? "lost" : sts.every(x => x === "void") ? "void" : sts.every(x => x === "hit" || x === "void") ? "won" : null;
+  /* a bet we settled as lost before the final stats came in: put it right once every leg shows it landed */
+  for (const b of F.bets) { if (b.result !== "lost" || b.manualRes || !(b.legs || []).length) continue;
+    if (!b.legs.every(l => { const g = !l.manual && l.gid && findGame(l.sport, l.gid); if (!g) return l.fst === "hit" || l.fst === "void"; if (l.pid && !g._postDetail) { loadDetail(l.sport + ":" + l.gid); return false; } return /^(hit|void)$/.test(legInfo0(l).st); })) continue;
+    b.legs = b.legs.map(l => { const g = l.gid && findGame(l.sport, l.gid); return g ? { ...l, fst: legInfo0(l).st, final: l.pid ? legValue(l).v : l.final } : l; }); b.result = "won"; b.settledAt = new Date().toISOString(); n++; }
+  for (const b of F.bets) { if (b.result !== "open" || !(b.legs || []).length) continue; const sts = b.legs.map(l => legInfo0(l).st), oc = betOutcome(b.legs);
+    const res = sts.includes("miss") && oc === "lost" ? "lost" : sts.every(x => x === "void") ? "void" : sts.every(x => x === "hit" || x === "void") ? "won" : null;   /* lost only once the final stats agree (same check as the Bets page) */
     if (res) { if (res === "won" && sts.includes("void")) { const vd = b.legs.reduce((a, l, i) => sts[i] === "void" ? a * (l.dec || 1) : a, 1); if (vd > 1) b.dec = Math.round(b.dec / vd * 1000) / 1000; }   /* a void leg drops out of the price */
       b.result = res; b.settledAt = new Date().toISOString(); n++; } }
   if (n && S.chalLoaded) { fundedSave(F); toast(`Funded: ${n} bet${n > 1 ? "s" : ""} settled`); render(); }

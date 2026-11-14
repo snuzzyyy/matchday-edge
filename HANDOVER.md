@@ -552,3 +552,4 @@ No server of our own. ESPN is free, has no key and is about 1–3 minutes behind
 - The page polls the same BBC URL (CORS `*`) every ~15s in `bbcTick()` for BBC games you have a bet on; `loadDetail` skips them; no Stats button. Score-only: no lineups/player stats/corners.
 - `settle.py` `final_state` uses the built data's score for `src == "bbc"` games.
 - Funded accas: legs that still can't be matched become tick-off legs (Landed / Lost buttons, `data-fdmleg`) instead of the whole acca losing tracking.
+- Funded settling: `fundedAuto` now only marks a bet lost when `betOutcome` agrees (waits for the final box score, `g._postDetail`), and `snapLeg` waits for `_postDetail` on player legs. ESPN's FT scoreline can land before the last points reach the box score; that wrongly lost a Harden 20+ bet. Bets auto-settled as lost (not `manualRes`) flip to won once every leg shows landed.
