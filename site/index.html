@@ -4130,7 +4130,7 @@ function fundedParse(raw) {
     const nbaG = gamesInText(normT(`${home} v ${away}`)).some(f => f.sp === "nba"), mk = market.toLowerCase(), unit = nbaG ? "points" : /corner/.test(mk) ? "corners" : /card|booking/.test(mk) ? "cards" : "goals";
     /* only bets we can follow get a live leg: match winner, totals, full-game handicaps, player overs and unders */
     let q = null;
-    if (!/half|quarter|1st|2nd|3rd|4th|first|period|exact|correct|margin|double double|triple double|overtime|odd|even/.test(mk) && !(/corners?|cards?|booking/.test(mk) && !/over|under|total/.test(mk))) {   /* corners and cards totals track; other corner/card markets don't */
+    if (!/half|quarter|1st|2nd|3rd|4th|first|period|exact|correct|margin|double double|triple double|overtime|\bodd\b|\beven\b/.test(mk) && !(/corners?|cards?|booking/.test(mk) && !/over|under|total/.test(mk))) {   /* corners and cards totals track; other corner/card markets don't */
       const pp = market.match(/^(.+?)\s+((?:points|assists|rebounds|blocks|steals|threes|made threes|3-?pointers?)(?:(?:\s*,\s*|\s+(?:and|&|\+)\s+)(?:points|assists|rebounds))*)\s+over\s*[\/f]?\s*(?:under|funder|\/under)\s+([\d.]+)/i);
       const fpp = !nbaG && market.match(/^(.+?)\s+(shots on target|shots|saves|tackles|fouls committed|fouls|times fouled|goals|assists)\s+over\s*[\/f]?\s*(?:under|funder|\/under)\s+([\d.]+)/i);   /* football player lines: "Isaac Price Shots On Target Over/Under 0.5" */
       if (fpp) { const line = +fpp[3], under = /under/i.test(sel.replace(/^.*?:/, "")), st = fpp[2].toLowerCase(); q = under ? `${fpp[1]} under ${line} ${st}` : `${fpp[1]} ${Math.floor(line) + 1}+ ${st}`; }
