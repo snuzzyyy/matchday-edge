@@ -1401,7 +1401,19 @@ const IDX = new WeakMap(), MKC = new WeakMap();
 function gameIdx() { const D = S.data, X = IDX.get(D); if (X && X.f === D.football && X.n === D.nba && X.x === D.extra && X.lf === D.football.length && X.ln === D.nba.length) return X;
   const fb = new Map(); for (const g of extraGames()) fb.set(String(g.id), g); for (const g of D.football) fb.set(String(g.id), g); const nb = new Map(D.nba.map(g => [String(g.id), g]));
   const out = { f: D.football, n: D.nba, x: D.extra, lf: D.football.length, ln: D.nba.length, fb, nb }; IDX.set(D, out); return out; }
-const findGame = (sport, id) => { if (!S.data || id == null) return undefined; const X = gameIdx(); return (sport === "nba" ? X.nb : X.fb).get(String(id)); };
+const findGame = (sport, id) => { if (!S.data || id == null) return undefined; const X = gameIdx(); return (sport === "nba" ? X.nb : X.fb).get(String(id)) || OLDG.get(sport + ":" + id); };
+/* games that have dropped out of the feed: fetch the final score and stats once from ESPN, so older bets keep their scoreboard (then snapLeg saves it onto the bet) */
+const OLDG = new Map(), OLDQ = new Set();
+function oldGame(sp, id) {
+  const k = sp + ":" + id; if (!id || OLDG.has(k) || OLDQ.has(k) || /^bbc/.test(id) || OLDQ.size > 80) return; OLDQ.add(k);
+  getJ(`${SB}/${sp === "nba" ? "basketball/nba" : "soccer/all"}/summary?event=${id}`).then(s => {
+    const c = ((s.header || {}).competitions || [])[0], H = c && (c.competitors || []).find(x => x.homeAway === "home"), A = c && (c.competitors || []).find(x => x.homeAway === "away"); if (!H || !A) return;
+    const T = x => ({ id: String(x.team.id), name: sp === "nba" ? x.team.shortDisplayName || x.team.displayName : x.team.displayName, full: x.team.displayName, abbr: x.team.abbreviation || "", color: "#" + (x.team.color || "334155"), alt: "#94a3b8", logo: ((x.team.logos || [])[0] || {}).href || x.team.logo || "", score: x.score, last5: [] });
+    const g = { id: String(id), league: sp === "nba" ? "nba" : "all", lg: ((s.header || {}).league || {}).name || "Football", lite: true, old: true, kickoff: c.date, home: T(H), away: T(A), status: { state: "pre", detail: "", clock: "", period: 0, completed: false }, events: [], ...JSON.parse(JSON.stringify((t => ({ model: t.model, odds: t.odds || {} }))((sp === "nba" ? S.data.nba : S.data.football).find(x => x.model && x.model.markets && x.model.markets.length > 10) || { model: { markets: [] } }))) };   /* a stand-in price model, so finished legs can be judged from the score */
+    applyHeader(sp, g, s); sp === "nba" ? applyNba(g, s) : applyFb(g, s); if (g.status.state !== "post") return;
+    g._postDetail = true; g._luDone = true; g._luAt = Date.now(); g._sumAt = Date.now(); OLDG.set(k, g); IDX.delete(S.data); render();
+  }).catch(() => {});
+}
 const mkt = (g, k) => { const A = g.model.markets; let M = MKC.get(A); if (!M || M.n !== A.length) { M = new Map(A.map(m => [m.k, m])); M.n = A.length; MKC.set(A, M); } return M.get(k); };
 const vs = (sport, g) => sport === "nba" ? `${g.away.name} @ ${g.home.name}` : `${g.home.name} v ${g.away.name}`;
 const minute = g => { const n = parseInt(g.status.clock || g.status.detail); return isNaN(n) ? null : n; };
@@ -3120,6 +3132,7 @@ function snapLeg(l) {
 function legInfo0(l) {   // -> { html, st: "pre" | "live" | "hit" | "miss" | "void" | "manual" }
   if (l.manual) { const hit = l.fst === "hit", miss = l.fst === "miss", vd = l.fst === "void";
     return { st: l.fst || "manual", html: `<div class="tl-leg ${hit ? "hit" : miss ? "miss" : vd ? "void" : ""}"><div class="tl-top"><b>${esc(l.label)}</b><span>${esc(l.match || "You mark this one")}</span></div><div class="tl-num"><span>${hit || miss || vd ? "" : l.match ? "You mark this one" : "We couldn't match it to a game"}</span><span>${hit ? "✓ Landed" : miss ? "✗ Lost" : vd ? "Void" : ""}</span></div></div>` }; }
+  if (l.fst && !l.fin && l.gid && !findGame(l.sport, l.gid)) oldGame(l.sport, l.gid);   /* no scoreboard saved yet: fetch the final once */
   if (l.fst && !findGame(l.sport, l.gid)) {   // the game has left the feed: show the numbers saved when it settled
     const hit = l.fst === "hit", miss = l.fst === "miss", name = l.pid ? l.name : String(l.label || "").replace(/ \(in-play\)$/, "");
     const w = l.pid && l.final != null ? Math.min(1, l.final / l.target) : hit ? 1 : miss ? .5 : 0;
@@ -3147,7 +3160,7 @@ function legInfo0(l) {   // -> { html, st: "pre" | "live" | "hit" | "miss" | "vo
       <div class="tl-bar"><i style="width:${pctv * 100}%"></i></div><div class="tl-num"><span>${r.v == null ? (g && isPre(g) ? `Needs ${l.target}+ ${esc(l.label)}` : r.dnp ? "Not in the squad tonight" : "Waiting for stats…") : `<b>${r.v}</b> / ${l.target} ${esc(l.label)}`}</span><span>${done ? "✓ Landed" : r.dnp ? "Void · not playing" : post ? "✗ Missed" : l.target - (r.v || 0) > 0 && r.v != null ? `${l.target - r.v} to go` : ""}</span></div>${cbRows(l, r, g)}</div>` };
   }
   const name = esc(String(l.label || "").replace(/ \(in-play\)$/, ""));
-  if (!g) return { st: "pre", html: `<div class="tl-leg"><div class="tl-top"><b>${name}</b><span>${esc(l.match || "")}</span></div><div class="tl-num"><span>This game has dropped out of the feed</span><span></span></div></div>` };
+  if (!g) { if (l.gid) oldGame(l.sport, l.gid); return { st: "pre", html: `<div class="tl-leg"><div class="tl-top"><b>${name}</b><span>${esc(l.match || "")}</span></div><div class="tl-num"><span></span><span>Loading result…</span></div></div>` }; }
   const H = g.home, A = g.away, Lt = l.sport === "nba" ? A : H, Rt = l.sport === "nba" ? H : A;
   if (isPre(g)) return { st: "pre", html: `<div class="tl-leg"><div class="tl-top"><b>${name}</b><span>${esc(vs(l.sport, g))}</span></div><div class="tl-num"><span>${tip} ${whenLabel(kick(g))}</span><span></span></div></div>` };
   if (/^T:(h[12]|q[1-4]|ft)hc3?:/.test(l.k || "")) {   /* half or quarter handicap, e.g. T:h1hc3:away:-4 = away team -4 in the 1st half, T:q2hc:home:+1.5 (3 = three-way, a tie loses; otherwise a tie is void) */
@@ -5500,12 +5513,10 @@ function autoSettle() {
   for (const b of S.bets || []) if (b.result === "open" && (b.legs || []).length && b.user_id === (S.user || {}).id) { let ch = false; const legs = b.legs.map(l => { const n = snapLeg(l); if (n) { ch = true; return n; } return l; }); if (ch) { b.legs = legs; sb.from("bets").update({ legs }).eq("id", b.id).eq("user_id", S.user.id); } }   /* keep finished legs' results on open accas */
   for (const b of S.bets || []) if (b.result === "open" && !skip.includes(b.id)) { const r = betOutcome(b.legs); if (r) settleBet(b, r, true); }
   // fill in final numbers for settled bets (from the box score fetched after full time), so the breakdown lasts
-  for (const b of S.bets || []) if (b.result !== "open" && (b.legs || []).some(l => (l.pid || l.k) && !l.fst)) {
+  for (const b of S.bets || []) if (b.result !== "open" && b.user_id === (S.user || {}).id && (b.legs || []).some(l => (l.pid || l.k) && l.gid && !(l.fst && l.fin))) {
     let changed = false;
-    const legs = b.legs.map(l => { const g = findGame(l.sport, l.gid); if (!(l.pid || l.k) || l.fst || !g || g.status.state !== "post") return l;
-      if (l.pid && !g._postDetail) { g._luAt = 0; loadDetail(l.sport + ":" + l.gid); return l; }
-      changed = true; return { ...l, fst: legInfo0(l).st, final: l.pid ? legValue(l).v : null }; });
-    if (changed) { b.legs = legs; sb.from("bets").update({ legs }).eq("id", b.id); }
+    const legs = b.legs.map(l => { if (!(l.pid || l.k)) return l; const n = snapLeg(l); if (n) { changed = true; return n; } return l; });   /* final score, badges and result, so the card keeps its scoreboard once the game leaves the feed */
+    if (changed) { b.legs = legs; sb.from("bets").update({ legs }).eq("id", b.id).eq("user_id", S.user.id); }
   }
 }
 /* ---------- render ---------- */
