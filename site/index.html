@@ -1342,7 +1342,7 @@ function frac(dec) {
 }
 const odds = dec => !dec ? "–" : S.fmt === "dec" ? dec.toFixed(2) : frac(dec);
 const pct = p => Math.round(p * 100) + "%";
-const money = v => "£" + (v >= 1000 ? Math.round(v).toLocaleString("en-GB") : v.toFixed(2).replace(/\.00$/, ""));
+const money = v => "£" + (v >= 1000 ? v.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).replace(/\.00$/, "") : v.toFixed(2).replace(/\.00$/, ""));   /* pennies always, so it matches the bookie's slip */
 const priceOf = m => m.dec || (m.prop ? livePrice(m.p) : m.fair);
 /* NBA player bets ("P:" markets): priced like a bookie would (shorter than fair), legs carry the player fields tracking reads */
 const isProp = m => /^P:/.test((m && m.k) || m || "");
