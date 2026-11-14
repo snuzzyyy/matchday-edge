@@ -1271,6 +1271,7 @@ button.setrow{width:100%;text-align:left;font:inherit;color:inherit;background:n
 
 /* bet lists on wider screens: a grid that reads left to right in date order (columns read top to bottom, so the order looked muddled) */
 @media (min-width:600px){#main div.trk:not(.chal-row),div.trk:not(.chal-row){display:grid;columns:auto;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px 16px;align-items:start}#main div.trk:not(.chal-row)>*,div.trk:not(.chal-row)>*{margin:0}#main div.trk>.trk-other,div.trk>.trk-other{grid-column:1 / -1}}
+@media (min-width:600px){#main div.trk.mas:not(.chal-row),div.trk.mas:not(.chal-row){grid-auto-rows:2px;row-gap:0;align-items:start}}
 </style>
 
 <header class="top">
@@ -5531,6 +5532,13 @@ function autoSettle() {
   }
 }
 /* ---------- render ---------- */
+/* bet lists on wider screens: a grid that fills left to right in order, with shorter cards moving up into the gaps (masonry) */
+function masonry() {
+  for (const el of document.querySelectorAll("div.trk:not(.chal-row)")) {
+    const kids = [...el.children]; if (innerWidth < 600) { if (el.classList.contains("mas")) { el.classList.remove("mas"); kids.forEach(k => k.style.gridRowEnd = ""); } continue; }
+    el.classList.add("mas"); for (const k of kids) { const h = k.getBoundingClientRect().height, span = Math.ceil((h + 14) / 2); if (k.style.gridRowEnd !== `span ${span}`) k.style.gridRowEnd = `span ${span}`; } }
+}
+addEventListener("resize", () => requestAnimationFrame(masonry));
 function render() {
   if (!S.data) return;
   applySpooky();
@@ -5578,6 +5586,7 @@ function render() {
   else impRefresh();
   const dr = $(".drawer"); if (dr && dkey) { dr.dataset.key = dkey; if (same) { dr.style.animation = "none"; dr.scrollTop = keepTop; } }
   document.body.style.overflow = (S.drawer || S.slipOpen) ? "hidden" : "";
+  requestAnimationFrame(masonry);
 }
 
 document.addEventListener("click", async e => {
