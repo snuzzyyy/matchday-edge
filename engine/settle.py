@@ -54,6 +54,9 @@ def summary(sport, g):
 
 def final_state(sport, g):
     """Fresh final score and status from the summary (data.json may be up to 20 minutes old)."""
+    if g.get("src") == "bbc":   # games from BBC's scores list: the score is all we have (fresh from this run's build)
+        if (g.get("status") or {}).get("state") != "post" or not (g.get("status") or {}).get("completed"): return None
+        return {}, num(g["home"].get("score")), num(g["away"].get("score")), {}
     s = summary(sport, g)
     if not s: return None
     comp = ((s.get("header") or {}).get("competitions") or [{}])[0]

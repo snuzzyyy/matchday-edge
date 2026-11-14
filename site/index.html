@@ -3412,12 +3412,13 @@ function legGroups(legs, infos, ck) {
     const head = isPre(g) ? `<span class="lgg-t"><b>${esc(vs(sp, g))}</b><small>${esc(whenLabel(kick(g)))}${sp === "football" ? " · " + esc(gLeague(g)) : ""}</small></span><span class="lgg-cd">${untilTxt(kick(g))}</span>`
       : `<span class="lgg-t"><b>${esc(Lt.name)} <span class="lgg-sc">${esc(Lt.score)}–${esc(Rt.score)}</span> ${esc(Rt.name)}</b><small>${sp === "football" ? esc(gLeague(g)) : "NBA"}</small></span><span class="lgg-clk ${live ? "live" : ""}">${live ? `<span class="dot red"></span>${esc(clockLabel(sp, g))}` : post ? "FT" : esc(g.status.detail || "")}</span>`;
     if (!isPre(g)) { const ls = +Lt.score || 0, rs = +Rt.score || 0, row = (T, sc, lead) => `<span class="lgg-row ${lead ? "lead" : ""}">${logo(sp, T)}<span class="lgg-nm">${esc(T.name)}</span><b class="lgg-num">${esc(T.score ?? "0")}</b></span>`;
-      return `<div class="lgg"><button type="button" class="lgg-hd lgg-sbh" data-open="${sp}:${g.id}" aria-label="Open ${esc(vs(sp, g))}"><span class="lgg-sb">${row(Lt, ls, ls > rs)}${row(Rt, rs, rs > ls)}</span><span class="lgg-side"><span class="lgg-clk ${live ? "live" : ""}">${live ? `<span class="dot red"></span>${esc(clockLabel(sp, g))}` : post ? "FT" : esc(g.status.detail || "")}</span><small>${sp === "football" ? esc(gLeague(g)) : "NBA"}</small></span></button><div class="lgg-legs">${G.lines.map(x => x.html).join("")}</div>${G.gone ? "" : (() => { const id = `${ck || legSig(legs)}|${sp}:${g.id}`, open = (S.gStats || {})[id]; return `<button type="button" class="gst-tog" data-gstats="${id}" aria-expanded="${!!open}">📊 ${open ? "Hide stats ▴" : "Stats ▾"}</button>${open ? gameStatsHTML(sp, g) : ""}`; })()}</div>`; }
+      return `<div class="lgg"><button type="button" class="lgg-hd lgg-sbh" data-open="${sp}:${g.id}" aria-label="Open ${esc(vs(sp, g))}"><span class="lgg-sb">${row(Lt, ls, ls > rs)}${row(Rt, rs, rs > ls)}</span><span class="lgg-side"><span class="lgg-clk ${live ? "live" : ""}">${live ? `<span class="dot red"></span>${esc(clockLabel(sp, g))}` : post ? "FT" : esc(g.status.detail || "")}</span><small>${sp === "football" ? esc(gLeague(g)) : "NBA"}</small></span></button><div class="lgg-legs">${G.lines.map(x => x.html).join("")}</div>${G.gone || g.src === "bbc" ? "" : (() => { const id = `${ck || legSig(legs)}|${sp}:${g.id}`, open = (S.gStats || {})[id]; return `<button type="button" class="gst-tog" data-gstats="${id}" aria-expanded="${!!open}">📊 ${open ? "Hide stats ▴" : "Stats ▾"}</button>${open ? gameStatsHTML(sp, g) : ""}`; })()}</div>`; }
     return `<div class="lgg"><button type="button" class="lgg-hd" data-open="${sp}:${g.id}" aria-label="Open ${esc(vs(sp, g))}"><span class="lgg-logos">${logo(sp, Lt)}${logo(sp, Rt)}</span>${head}</button><div class="lgg-legs">${G.lines.map(x => x.html).join("")}</div></div>`; }).join("");
 }
 function betCard(t) {
   const info = t.legs.map((l, i) => { const r = legInfo(i && l.pid && !l.group && t.legs[i - 1].pid === l.pid ? { ...l, _sub: true } : l);
-    if (l.manual && !l.fst && t.saved && !t.legs.some(x => legInfo0(x).st === "miss")) r.html = r.html.replace(/<\/div>$/, `<div class="mleg"><button class="btn sm win" data-mleg="${t.saved}|${i}|hit">Landed</button><button class="btn sm lose" data-mleg="${t.saved}|${i}|miss">Lost</button><button class="btn sm ghost" data-mleg="${t.saved}|${i}|void">Void</button></div></div>`);
+    if (l.manual && !l.fst && t.fd && !t.legs.some(x => legInfo0(x).st === "miss")) r.html = r.html.replace(/<\/div>$/, `<div class="mleg"><button class="btn sm win" data-fdmleg="${t.fd}|${i}|hit">Landed</button><button class="btn sm lose" data-fdmleg="${t.fd}|${i}|miss">Lost</button></div></div>`);
+    else if (l.manual && !l.fst && t.saved && !t.legs.some(x => legInfo0(x).st === "miss")) r.html = r.html.replace(/<\/div>$/, `<div class="mleg"><button class="btn sm win" data-mleg="${t.saved}|${i}|hit">Landed</button><button class="btn sm lose" data-mleg="${t.saved}|${i}|miss">Lost</button><button class="btn sm ghost" data-mleg="${t.saved}|${i}|void">Void</button></div></div>`);
     return r; }), n = t.legs.length, hit = info.filter(i => i.st === "hit").length, voids = info.filter(i => i.st === "void").length;
   const lost = info.some(i => i.st === "miss"), started = info.some(i => i.st !== "pre");
   const gs0 = t.legs.map(l => l.gid && findGame(l.sport, l.gid)).filter(Boolean), anyLive = gs0.some(isLive), first = gs0.filter(isPre).map(kick).sort()[0];
@@ -4129,7 +4130,7 @@ function fundedParse(raw) {
   if (out.length > 1 && /^\s*(accumulator|acca|double|treble|trixie|\d+\s*-?\s*folds?)\s*$/im.test(String(raw || ""))) {
     const withStake = out.filter(b => b.stake), stake = withStake.length ? withStake[withStake.length - 1].stake : 0, ret = (String(raw).match(/(?:potential\s+)?returns?\s*:?\s*£?\s*([\d,]+(?:\.\d+)?)/i) || [])[1], tot = (String(raw).match(/1 bet\s*[×x]\s*£?[\d.]+\s*\n\s*(\d+(?:\.\d+)?)/i) || [])[1];
     const dec = stake && ret ? Math.round(+ret.replace(/,/g, "") / stake * 1000) / 1000 : tot ? +tot : out.reduce((a, b) => a * (b.legs.length ? b.legs[0].dec || 1 : 1), 1);
-    const legs = out.every(b => b.legs.length) ? out.flatMap(b => b.legs) : [];
+    const legs = out.some(b => b.legs.length) ? out.map(b => b.legs[0] || (t => ({ manual: true, sport: "football", label: (t[1] || b.text).replace(/,\s*Whole Match/i, ""), match: t[2] ? `${t[2]} v ${t[3]}` : "", dec: b.dec || 1, fst: b.result === "won" ? "hit" : b.result === "lost" ? "miss" : b.result === "void" ? "void" : undefined }))(String(b.text || "").match(/^(.+?)(?: \((.+?) v (.+)\))?$/) || [])) : [];   /* legs we can't follow (games outside our data) stay in the acca for you to tick off */
     const res = out.some(b => b.result === "lost") ? "lost" : out.every(b => b.result === "won") ? "won" : "open";
     return [{ text: `${out.length}-fold: ${out.map(b => b.text).join(" + ")}`, legs, dec, stake, result: res, at: out[0].at, src: "import" }];
   }
@@ -4314,7 +4315,7 @@ function viewFunded() {
   const X = fundedStats(F), prog = Math.max(0, Math.min(1, (X.bal - F.start) / (X.goal - F.start))), sign = v => (v > 0 ? "+" : v < 0 ? "-" : "") + money(Math.abs(v));
   for (const b of X.open) for (const l of b.legs || []) { const g = l.gid && findGame(l.sport, l.gid); if (g && !isPre(g) && (l.pid ? !(l.sport === "nba" ? g.box : g.lineups) : !g.events && l.sport === "football")) loadDetail(l.sport + ":" + l.gid); }   /* same as the Bets page: player stats for live games */
   const fdEditRow = b => `<div class="fd-editrow"><label><span>Odds</span><input id="fdEO" class="oddin" value="${esc(odds(b.dec))}" autocomplete="off" inputmode="decimal"></label><label><span>Stake £</span><input id="fdES" class="oddin" value="${b.stake}" autocomplete="off" inputmode="decimal"></label><label><span>Returns £</span><input id="fdER" class="oddin" value="${(b.stake * b.dec).toFixed(2)}" autocomplete="off" inputmode="decimal"></label><button class="btn sm" data-fdesave="${b.id}">Save</button>${(b.legs || []).map((l, i) => l.pid && !l.group && !l.under ? `<label class="fd-eline"><span>${esc(l.name)} · ${esc(l.label)} at least</span><input id="fdEL${i}" class="oddin" value="${l.target}" inputmode="numeric" autocomplete="off"></label>` : "").join("")}<div class="fd-respick"><span>Result</span>${[["open", "Open"], ["won", "Won"], ["lost", "Lost"], ["void", "Void"]].map(([k, t]) => `<button type="button" class="${k}" data-fdsetres="${b.id}|${k}" aria-pressed="${b.result === k}">${t}</button>`).join("")}</div></div>`;
-  const fdCard = b => betCard({ legs: (b.legs || []).length ? b.legs : [(t => ({ manual: true, label: t[1] ? t[1].replace(/,\s*Whole Match/i, "") : b.text, match: t[2] ? `${t[2]} v ${t[3]}` : "", fst: b.result === "won" ? "hit" : b.result === "lost" ? "miss" : b.result === "void" ? "void" : undefined }))(String(b.text || "").match(/^(.+?)(?: \((.+?) v (.+)\))?$/) || [])], text: b.text, stake: b.stake, dec: b.dec, result: b.result, noX: true })
+  const fdCard = b => betCard({ legs: (b.legs || []).length ? b.legs : [(t => ({ manual: true, label: t[1] ? t[1].replace(/,\s*Whole Match/i, "") : b.text, match: t[2] ? `${t[2]} v ${t[3]}` : "", fst: b.result === "won" ? "hit" : b.result === "lost" ? "miss" : b.result === "void" ? "void" : undefined }))(String(b.text || "").match(/^(.+?)(?: \((.+?) v (.+)\))?$/) || [])], text: b.text, stake: b.stake, dec: b.dec, result: b.result, noX: true, fd: b.result === "open" && (b.legs || []).length > 1 ? b.id : "" })
     .replace(/<\/article>$/, b.result !== "open" ? `<div class="fd-acts fd-cacts"><button class="linkbtn fd-ed" data-fdedit="${b.id}">${S.fdEdit === b.id ? "Cancel" : "Edit"}</button><button class="linkbtn" data-fdel="${b.id}">Delete</button></div>${S.fdEdit === b.id ? fdEditRow(b) : ""}</article>` : `<div class="fd-acts fd-cacts">${(b.legs || []).some(l => /^T:(h1|ft)hc/.test(l.k || "")) ? `<button class="btn sm ghost" data-fdhc="${b.id}">${(b.legs || []).some(l => /^T:fthc/.test(l.k || "")) ? "Track as 1st half" : "Track as full game"}</button>` : ""}${(b.legs || []).length ? "" : `<span class="fd-auto">Import it again from BetPro once it's settled and the result fills in</span>`}<button class="linkbtn fd-ed" data-fdedit="${b.id}">${S.fdEdit === b.id ? "Cancel" : "Edit"}</button><button class="linkbtn" data-fdel="${b.id}">Delete</button></div>${S.fdEdit === b.id ? fdEditRow(b) : ""}</article>`);
   const settled = F.bets.filter(b => b.result !== "open").sort((a, b) => String(b.settledAt || b.at).localeCompare(String(a.settledAt || a.at)));
   const p1 = (F.past || []).filter(x => x.passed).slice(-1)[0], st2 = X.s2;
@@ -5646,6 +5647,7 @@ document.addEventListener("click", async e => {
     else pinGame(live, gid, ks => ks.filter(x => x !== k));
     render(); }
   else if (d.iosx !== undefined) { store.set("iosTipX", true); render(); }
+  else if (d.fdmleg) { const [id, i, st] = d.fdmleg.split("|"), F = fundedNow(), b = F.bets.find(x => String(x.id) === id); if (!b) return; b.legs = b.legs.map((l, k) => k === +i ? { ...l, fst: st } : l); fundedSave(F); toast(st === "hit" ? "Marked as landed" : "Marked as lost"); S._fundAutoAt = 0; render(); }
   else if (d.mleg) { const [id, i, st] = d.mleg.split("|"), b = (S.bets || []).find(x => String(x.id) === id); if (!b) return;
     const legs = b.legs.map((l, k) => k === +i ? { ...l, fst: st } : l); b.legs = legs; render();
     const r = await sb.from("bets").update({ legs }).eq("id", b.id); if (r.error) toast("Couldn't save. Check your connection."); else toast(st === "hit" ? "Marked as landed" : st === "void" ? "Marked as void. Tap \"Void leg · update returns\" to set your new returns" : "Marked as lost"); autoAt = 0; autoSettle(); }
@@ -6011,6 +6013,7 @@ function applyNba(g, s) {
 }
 async function loadDetail(key) {
   const [sp, id] = key.split(":"), g = findGame(sp, id); if (!g || g._luAt && Date.now() - g._luAt < 60e3) return;
+  if (g.src === "bbc") { g._luDone = true; if (g.status.state === "post") g._postDetail = true; return; }   /* BBC games: scores and goals only, kept fresh by bbcTick */
   g._luAt = Date.now();
   try { const wasPost = g.status.state === "post"; if (sp === "nba") { if (!isPre(g)) { const s = await getJ(`${SB}/basketball/nba/summary?event=${g.id}`); applyHeader(sp, g, s); applyNba(g, s); } } else { const s = await getJ(`${SB}/soccer/${g.league}/summary?event=${g.id}`); if (isPre(g)) parseLineups(g, s); else { applyHeader(sp, g, s); applyFb(g, s); } } if (wasPost) g._postDetail = true; } catch {}
   g._luDone = true; render();
@@ -6018,6 +6021,32 @@ async function loadDetail(key) {
 let ticking = false;
 for (const ev of ["input", "keydown", "focusin", "pointerdown"]) document.addEventListener(ev, () => { S._typedAt = Date.now(); }, true);
 function typingNow() { const ae = document.activeElement; return !!(ae && /^(INPUT|SELECT|TEXTAREA)$/.test(ae.tagName) && ae.type !== "checkbox" && Date.now() - (S._typedAt || 0) < (ae.tagName === "SELECT" ? 20e3 : 8e3)); }   /* only hold the redraw while someone is actually typing or choosing */
+/* games ESPN doesn't carry (FA Trophy, non-league, Highland/Lowland, Welsh Cup ...) come from BBC Sport's scores list: one request covers every game that day */
+const BBC_URL = d => `https://web-cdn.api.bbci.co.uk/wc-poll-data/container/sport-data-scores-fixtures?selectedEndDate=${d}&selectedStartDate=${d}&todayDate=${d}&urn=urn%3Abbc%3Asportsdata%3Afootball&useSdApi=false`;
+function bbcStatus(e) {
+  const st = e.status || "", lab = (e.periodLabel || {}).value || (e.statusComment || {}).value || "";
+  if (st === "PreEvent") return { state: "pre", detail: "Scheduled", clock: "", period: 0, completed: false };
+  if (st === "MidEvent") { const mins = +(lab.match(/\d+/) || [0])[0]; return { state: "in", detail: lab || "Live", clock: lab, period: lab === "HT" || mins <= 45 ? 1 : mins <= 90 ? 2 : 3, completed: false }; }
+  if (st === "PostEvent") return { state: "post", detail: "FT", clock: "90'", period: 2, completed: true };
+  return { state: "post", detail: /postpon/i.test(st + lab) ? "Postponed" : lab || st || "Off", clock: "", period: 0, completed: false };
+}
+function bbcEvents(e) {
+  const out = [], mn = x => { const m = x.min.match(/(\d+)(?:'\+(\d+))?/); return m ? +m[1] * 100 + +(m[2] || 0) : 99900; };
+  for (const [side, k] of [["h", "home"], ["a", "away"]]) for (const p of (e[k] || {}).actions || []) for (const a of p.actions || []) { const t = a.type || "";
+    if (/goal|card/i.test(t)) out.push({ min: (a.timeLabel || {}).value || "", type: /own/i.test(t) ? "Own Goal" : /goal/i.test(t) ? "Goal" : /red/i.test(t) ? "Red Card" : "Yellow Card", side, who: p.playerName || "" }); }
+  return out.sort((a, b) => mn(a) - mn(b));
+}
+async function bbcTick(mine, now) {
+  const gs = extraGames().filter(g => g.src === "bbc" && mine.has("football:" + g.id) && (g.status.state === "in" || g._fin || (g.status.state === "pre" && +new Date(kick(g)) <= now + 60e3 && now - +new Date(kick(g)) < 4 * 3600e3)));
+  if (!gs.length || now - (S._bbcAt || 0) < 15e3) return false; S._bbcAt = now; let ch = false;
+  await Promise.all([...new Set(gs.map(g => g.bd || kick(g).slice(0, 10)))].map(async d => { try { const j = await getJ(BBC_URL(d)), by = new Map();
+    for (const G of j.eventGroups || []) for (const sg of G.secondaryGroups || []) for (const e of sg.events || []) by.set("bbc" + e.id, e);
+    for (const g of gs) { const e = by.get(g.id); if (!e) continue; const before = JSON.stringify([g.status, g.home.score, g.away.score, (g.events || []).length]);
+      g.status = bbcStatus(e); if (e.status !== "PreEvent") { g.home.score = String((e.home || {}).score ?? g.home.score ?? 0); g.away.score = String((e.away || {}).score ?? g.away.score ?? 0); }
+      g.events = bbcEvents(e); g._fin = false; if (g.status.state === "post") { g._postDetail = true; g._luDone = true; }
+      if (JSON.stringify([g.status, g.home.score, g.away.score, g.events.length]) !== before) ch = true; } } catch {} }));
+  return ch;
+}
 async function liveTick() {
   if (ticking && Date.now() - (S._tickAt || 0) > 20e3) ticking = false;   /* watchdog: a round that never finished doesn't block the next */
   if (ticking || !S.data || (document.visibilityState === "hidden" && !(alertsOn() && (liveBetCount() || followActive())))) return; ticking = true; S._tickAt = Date.now();
@@ -6031,7 +6060,8 @@ async function liveTick() {
     const mine = new Set([...(S.bets || []).filter(b => b.result === "open").flatMap(b => b.legs || []), ...(S.tracked || []).flatMap(t => t.legs || []), ...(S.slip || []), ...(((S.chalAll || {}).funded || {}).bets || []).filter(b => b.result === "open").flatMap(b => b.legs || [])].map(l => (l.sport || "") + ":" + l.gid));   /* funded bets live separately but still get quick updates */
     for (const f of gFollows ? gFollows() : []) mine.add(String(f)); if (S.drawer) mine.add(S.drawer);
     const want = (sp, g) => g._fin || mine.has(sp + ":" + g.id) && now - (g._sumAt || 0) > 8e3 || now - (g._sumAt || 0) > 60e3;
-    const live = [...S.data.football.filter(g => (isLive(g) || g._fin) && want("football", g)).map(g => ["football", g]), ...extraGames().filter(g => mine.has("football:" + g.id) && (isLive(g) || g._fin || due(g))).map(g => ["football", g]), ...S.data.nba.filter(g => (isLive(g) || g._fin) && want("nba", g)).map(g => ["nba", g])];
+    const live = [...S.data.football.filter(g => (isLive(g) || g._fin) && want("football", g)).map(g => ["football", g]), ...extraGames().filter(g => g.src !== "bbc" && mine.has("football:" + g.id) && (isLive(g) || g._fin || due(g))).map(g => ["football", g]), ...S.data.nba.filter(g => (isLive(g) || g._fin) && want("nba", g)).map(g => ["nba", g])];
+    if (await bbcTick(mine, now) && !typingNow()) render();
     for (const [, g] of live) g._sumAt = now;
     if (live.length && !(S._sumBusy && now - S._sumBusy < 20e3)) { S._sumBusy = now; Promise.all(live.map(async ([sp, g]) => { try { const s = await getJ(`${SB}/${sp === "nba" ? "basketball/nba" : "soccer/" + g.league}/summary?event=${g.id}`); const wasFin = g._fin; applyHeader(sp, g, s); sp === "nba" ? applyNba(g, s) : applyFb(g, s); if (wasFin || g.status.state !== "post") g._fin = false; S._sumCh = true; } catch {} })).finally(() => { S._sumBusy = 0; if (S._sumCh && !typingNow()) { S._sumCh = false; render(); } }); }
     if (ok || !tried) { S.liveAt = new Date().toISOString(); S.liveFail = 0; } else S.liveFail = (S.liveFail || 0) + 1;

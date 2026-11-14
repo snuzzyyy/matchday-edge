@@ -240,6 +240,56 @@ def football_extra(known):
     out.sort(key=lambda m: m["kickoff"])
     return out
 
+# ---------- games ESPN doesn't carry (FA Trophy, non-league, Highland/Lowland, Welsh Cup ...) from BBC Sport's scores feed ----------
+BBC = "https://web-cdn.api.bbci.co.uk/wc-poll-data/container/sport-data-scores-fixtures?selectedEndDate={d}&selectedStartDate={d}&todayDate={d}&urn=urn%3Abbc%3Asportsdata%3Afootball&useSdApi=false"
+def bbc_status(e):
+    st, lab = e.get("status", ""), ((e.get("periodLabel") or {}).get("value") or (e.get("statusComment") or {}).get("value") or "")
+    if st == "PreEvent": return {"state": "pre", "detail": "Scheduled", "clock": "", "period": 0, "completed": False}
+    if st == "MidEvent":
+        m = re.match(r"(\d+)", lab); mins = int(m.group(1)) if m else 0
+        per = 1 if lab == "HT" or mins <= 45 else 2 if mins <= 90 else 3
+        return {"state": "in", "detail": lab or "Live", "clock": lab, "period": per, "completed": False}
+    if st == "PostEvent": return {"state": "post", "detail": "FT", "clock": "90'", "period": 2, "completed": True}
+    return {"state": "post", "detail": "Postponed" if re.search(r"postpon", st + lab, re.I) else (lab or st or "Off"), "clock": "", "period": 0, "completed": False}
+def bbc_events(e):
+    out = []
+    for side, k in (("h", "home"), ("a", "away")):
+        for p in (e.get(k) or {}).get("actions") or []:
+            for a in p.get("actions") or []:
+                t = a.get("type", "")
+                if re.search(r"goal|card", t, re.I): out.append({"min": (a.get("timeLabel") or {}).get("value", ""), "type": "Own Goal" if re.search(r"own", t, re.I) else "Goal" if re.search(r"goal", t, re.I) else "Red Card" if re.search(r"red", t, re.I) else "Yellow Card", "side": side, "who": p.get("playerName", "")})
+    def mn(x): m = re.match(r"(\d+)(?:'\+(\d+))?", x["min"]); return (int(m.group(1)), int(m.group(2) or 0)) if m else (999, 0)
+    return sorted(out, key=mn)
+def team_key(n):
+    w = [x for x in nname(n).split() if x not in ("fc", "afc", "town", "city", "united", "utd", "the", "cf", "sc")]
+    return w[0] if w else nname(n)
+def bbc_extra(have):
+    """have: ESPN games already in the data. Adds the rest of BBC's list (3 days back to 2 ahead), ids start with "bbc"."""
+    seen = {(m["kickoff"][:10], team_key(m["home"].get("full") or m["home"]["name"]), team_key(m["away"].get("full") or m["away"]["name"])) for m in have}
+    out = []
+    for i in range(-3, 3):
+        d = (today + dt.timedelta(days=i)).isoformat()
+        j = get(BBC.format(d=d), f"bbc_{d}", 300 if i >= -1 else 6 * 3600) or {}
+        for g in j.get("eventGroups") or []:
+            for sg in g.get("secondaryGroups") or []:
+                for e in sg.get("events") or []:
+                    try:
+                        H, A = e["home"], e["away"]; ko = e.get("startDateTime") or (e.get("date") or {}).get("iso", "")
+                        if not ko or (ko[:10], team_key(H["fullName"]), team_key(A["fullName"])) in seen: continue
+                        seen.add((ko[:10], team_key(H["fullName"]), team_key(A["fullName"])))
+                        def T(t): n = t["fullName"]; return {"id": "bbc" + t["id"], "name": n, "full": n, "abbr": re.sub(r"[^A-Z]", "", n.upper())[:3], "color": "#334155", "alt": "#94a3b8", "logo": "", "score": t.get("score") if e.get("status") != "PreEvent" else None, "form": "", "record": "", "last5": []}
+                        lg = (e.get("tournament") or {}).get("name") or g.get("displayLabel") or "Football"; stg = (e.get("stage") or {}).get("name") or ""
+                        if stg and re.search(r"round|final|qualif|play-?off", stg, re.I): lg = f"{lg} · {stg}"
+                        m = {"id": "bbc" + e["id"], "src": "bbc", "bd": d, "league": "all", "lg": lg, "lite": True, "kickoff": ko.replace(":00Z", "Z"), "status": bbc_status(e),
+                             "home": T(H), "away": T(A), "venue": "", "events": bbc_events(e)}
+                        model(m, "all", {}, 1.35)
+                        m["model"]["markets"] = [x for x in m["model"]["markets"] if not x["k"].startswith(("C", "Y"))]
+                        out.append(m)
+                    except Exception as ex:
+                        print("bbc game failed", e.get("id"), ex, file=sys.stderr)
+    out.sort(key=lambda m: m["kickoff"])
+    return out
+
 # ---------- football player bets (props) ----------
 # who plays: confirmed line-up (about an hour before kick-off) or recent starts in each team's last 5 games (summaries already fetched);
 # how often: the player's season game log on ESPN (league games he appeared in); Premier League: Fantasy PL xG + injury news
@@ -729,6 +779,8 @@ if __name__ == "__main__":
             "football": fb, "nba": nb}
     try: data["extra"] = football_extra([m["id"] for m in fb])
     except Exception as ex: print("extra games failed", ex, file=sys.stderr); data["extra"] = []
+    try: data["extra"] += bbc_extra(fb + data["extra"])
+    except Exception as ex: print("bbc games failed", ex, file=sys.stderr)
     chal = os.path.join(ROOT, "challenge.json")
     data["challenge"] = json.load(open(chal)) if os.path.exists(chal) else None
     tmp = os.path.join(SITE, "data.json.tmp"); json.dump(data, open(tmp, "w"), separators=(",", ":")); os.replace(tmp, os.path.join(SITE, "data.json"))
