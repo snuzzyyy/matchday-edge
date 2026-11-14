@@ -3522,7 +3522,7 @@ async function readShot(file) {
   } catch (e) { S.impShotMsg = "Couldn't read that screenshot. Check your connection and try again, or type the bet below."; impRefresh(); }
 }
 /* a funded-account slip (Single / Basketball / … / Stake / Potential Returns) pasted into the normal import: send it to Funded instead */
-const looksFunded = t => /^\s*(single|double|treble|trixie|\d+\s*-?\s*folds?|acca\w*)\s*$/im.test(t) && /^\s*(potential returns|returns)\b/im.test(t) && /^\s*stake\b/im.test(t) && fundedParse(t).length > 0;
+const looksFunded = t => /^\s*(single|double|treble|trixie|\d+\s*-?\s*folds?|acca\w*)(?:\s+acca\w*)?\s*$/im.test(t) && /^\s*(potential returns|returns)\b/im.test(t) && /^\s*stake\b/im.test(t) && fundedParse(t).length > 0;
 function impParse() { if (looksFunded(S.importText || "")) return { loading: false, funded: true, r: { legs: [], missing: [], unread: [], dec: null } }; const txt = S.importText || "", { idx, loading } = playerIndexFor(txt); const r = txt.trim() ? parseBet(txt, idx) : { legs: [], missing: [], unread: [], dec: null };
   for (const l of r.legs) if (l.pid && l.sport === "football" && !l.group && (S.impSS || {})[ssKey(l)]) l.ss = !l.ss;   /* the Super Sub tick on each player flips it */
   return { loading, r }; }
@@ -4149,7 +4149,7 @@ function fundedParse(raw) {
     out.push({ text: `${sel}${market ? ` · ${market.replace(/\s*\(Ordinary Time\)/i, "")}` : ""} (${home} v ${away})`, legs, dec, stake, result: /won/i.test(st) ? "won" : /lost/i.test(st) ? "lost" : /void/i.test(st) ? "void" : "open", at: when ? new Date(when.replace(",", "")).toISOString() : new Date().toISOString(), src: "import" });
   });
   /* an accumulator (one stake for several selections): put them together as one bet */
-  if (out.length > 1 && /^\s*(accumulator|acca|double|treble|trixie|\d+\s*-?\s*folds?)\s*$/im.test(String(raw || ""))) {
+  if (out.length > 1 && /^\s*(accumulator|acca|double|treble|trixie|\d+\s*-?\s*folds?)(?:\s+acca\w*)?\s*$/im.test(String(raw || ""))) {
     const withStake = out.filter(b => b.stake), stake = withStake.length ? withStake[withStake.length - 1].stake : 0, ret = (String(raw).match(/(?:potential\s+)?returns?\s*:?\s*£?\s*([\d,]+(?:\.\d+)?)/i) || [])[1], tot = (String(raw).match(/1 bet\s*[×x]\s*£?[\d.]+\s*\n\s*(\d+(?:\.\d+)?)/i) || [])[1];
     const dec = stake && ret ? Math.round(+ret.replace(/,/g, "") / stake * 1000) / 1000 : tot ? +tot : out.reduce((a, b) => a * (b.legs.length ? b.legs[0].dec || 1 : 1), 1);
     const legs = out.some(b => b.legs.length) ? out.map(b => b.legs[0] || (t => ({ manual: true, sport: "football", label: (t[1] || b.text).replace(/,\s*Whole Match/i, ""), match: t[2] ? `${t[2]} v ${t[3]}` : "", dec: b.dec || 1, fst: b.result === "won" ? "hit" : b.result === "lost" ? "miss" : b.result === "void" ? "void" : undefined }))(String(b.text || "").match(/^(.+?)(?: \((.+?) v (.+)\))?$/) || [])) : [];   /* legs we can't follow (games outside our data) stay in the acca for you to tick off */
