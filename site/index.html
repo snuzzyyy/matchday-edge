@@ -3107,6 +3107,14 @@ function legInfo(l) {
   if (g) { r.html = r.html.replace(/^<div class="tl-leg([^"]*)"/, `<button type="button" class="tl-leg linkleg$1" data-open="${l.sport}:${l.gid}" aria-label="Open the game"`); const k = r.html.lastIndexOf("</div>"); r.html = r.html.slice(0, k) + "</button>" + r.html.slice(k + 6); }
   return r;
 }
+/* when a leg's game has finished, keep its result and the final score on the leg itself, so the bet still shows them after the game leaves the data */
+function snapLeg(l) {
+  if (!l || l.manual || !l.gid || (l.fst && l.fin)) return null; const g = findGame(l.sport, l.gid); if (!g || g.status.state !== "post") return null;
+  if (l.pid && !(l.sport === "nba" ? g._postDetail || g.box : g.lineups)) { loadDetail(l.sport + ":" + l.gid); return null; }
+  const st = legInfo0(l).st; if (!/^(hit|miss|void)$/.test(st)) return null;
+  const T = t => ({ id: t.id, name: t.name, abbr: t.abbr, score: t.score });
+  return { ...l, fst: l.fst || st, final: l.pid ? legValue(l).v : l.final ?? null, fin: { home: T(g.home), away: T(g.away), lg: g.league || "", at: kick(g) } };
+}
 function legInfo0(l) {   // -> { html, st: "pre" | "live" | "hit" | "miss" | "void" | "manual" }
   if (l.manual) { const hit = l.fst === "hit", miss = l.fst === "miss", vd = l.fst === "void";
     return { st: l.fst || "manual", html: `<div class="tl-leg ${hit ? "hit" : miss ? "miss" : vd ? "void" : ""}"><div class="tl-top"><b>${esc(l.label)}</b><span>${esc(l.match || "You mark this one")}</span></div><div class="tl-num"><span>${hit || miss || vd ? "" : l.match ? "You mark this one" : "We couldn't match it to a game"}</span><span>${hit ? "✓ Landed" : miss ? "✗ Lost" : vd ? "Void" : ""}</span></div></div>` }; }
@@ -3391,6 +3399,7 @@ document.addEventListener("click", e => { const t = e.target.closest && e.target
 function legGroups(legs, infos, ck) {
   const out = [], at = new Map();
   legs.forEach((l, k) => { const g = !l.manual && l.gid && findGame(l.sport, l.gid);
+    if (!g && l.fin) { const key = l.sport + l.gid; if (!at.has(key)) { at.set(key, out.length); out.push({ sp: l.sport, g: { id: l.gid, home: l.fin.home, away: l.fin.away, league: l.fin.lg, start: l.fin.at, status: { state: "post", detail: "FT" } }, lines: [], gone: true }); } out[at.get(key)].lines.push({ html: legLine(l, k, legs), st: infos[k].st }); return; }
     if (!g) { out.push({ raw: infos[k].html }); return; }
     const key = l.sport + g.id; if (!at.has(key)) { at.set(key, out.length); out.push({ sp: l.sport, g, lines: [] }); } out[at.get(key)].lines.push({ html: legLine(l, k, legs), st: infos[k].st }); });
   /* like Sky Bet: legs still to come first, landed ones drop to the bottom; games all done sink below the rest */
@@ -3401,7 +3410,7 @@ function legGroups(legs, infos, ck) {
     const head = isPre(g) ? `<span class="lgg-t"><b>${esc(vs(sp, g))}</b><small>${esc(whenLabel(kick(g)))}${sp === "football" ? " · " + esc(leagueName(g.league)) : ""}</small></span><span class="lgg-cd">${untilTxt(kick(g))}</span>`
       : `<span class="lgg-t"><b>${esc(Lt.name)} <span class="lgg-sc">${esc(Lt.score)}–${esc(Rt.score)}</span> ${esc(Rt.name)}</b><small>${sp === "football" ? esc(leagueName(g.league)) : "NBA"}</small></span><span class="lgg-clk ${live ? "live" : ""}">${live ? `<span class="dot red"></span>${esc(clockLabel(sp, g))}` : post ? "FT" : esc(g.status.detail || "")}</span>`;
     if (!isPre(g)) { const ls = +Lt.score || 0, rs = +Rt.score || 0, row = (T, sc, lead) => `<span class="lgg-row ${lead ? "lead" : ""}">${logo(sp, T)}<span class="lgg-nm">${esc(T.name)}</span><b class="lgg-num">${esc(T.score ?? "0")}</b></span>`;
-      return `<div class="lgg"><button type="button" class="lgg-hd lgg-sbh" data-open="${sp}:${g.id}" aria-label="Open ${esc(vs(sp, g))}"><span class="lgg-sb">${row(Lt, ls, ls > rs)}${row(Rt, rs, rs > ls)}</span><span class="lgg-side"><span class="lgg-clk ${live ? "live" : ""}">${live ? `<span class="dot red"></span>${esc(clockLabel(sp, g))}` : post ? "FT" : esc(g.status.detail || "")}</span><small>${sp === "football" ? esc(leagueName(g.league)) : "NBA"}</small></span></button><div class="lgg-legs">${G.lines.map(x => x.html).join("")}</div>${(() => { const id = `${ck || legSig(legs)}|${sp}:${g.id}`, open = (S.gStats || {})[id]; return `<button type="button" class="gst-tog" data-gstats="${id}" aria-expanded="${!!open}">📊 ${open ? "Hide stats ▴" : "Stats ▾"}</button>${open ? gameStatsHTML(sp, g) : ""}`; })()}</div>`; }
+      return `<div class="lgg"><button type="button" class="lgg-hd lgg-sbh" data-open="${sp}:${g.id}" aria-label="Open ${esc(vs(sp, g))}"><span class="lgg-sb">${row(Lt, ls, ls > rs)}${row(Rt, rs, rs > ls)}</span><span class="lgg-side"><span class="lgg-clk ${live ? "live" : ""}">${live ? `<span class="dot red"></span>${esc(clockLabel(sp, g))}` : post ? "FT" : esc(g.status.detail || "")}</span><small>${sp === "football" ? esc(leagueName(g.league)) : "NBA"}</small></span></button><div class="lgg-legs">${G.lines.map(x => x.html).join("")}</div>${G.gone ? "" : (() => { const id = `${ck || legSig(legs)}|${sp}:${g.id}`, open = (S.gStats || {})[id]; return `<button type="button" class="gst-tog" data-gstats="${id}" aria-expanded="${!!open}">📊 ${open ? "Hide stats ▴" : "Stats ▾"}</button>${open ? gameStatsHTML(sp, g) : ""}`; })()}</div>`; }
     return `<div class="lgg"><button type="button" class="lgg-hd" data-open="${sp}:${g.id}" aria-label="Open ${esc(vs(sp, g))}"><span class="lgg-logos">${logo(sp, Lt)}${logo(sp, Rt)}</span>${head}</button><div class="lgg-legs">${G.lines.map(x => x.html).join("")}</div></div>`; }).join("");
 }
 function betCard(t) {
@@ -4044,7 +4053,8 @@ function fundedStats(F) { const settled = F.bets.filter(b => b.result !== "open"
   const eq = F.start + pl, bal = eq - staked - wd, goal = F.start * (1 + F.target / 100), won = settled.filter(b => b.result === "won").length, dec = settled.filter(b => b.result !== "void").length;
   return { adj, wd, bal, eq, pl, goal, open, staked, avail: bal, won, dec, pct: pl / F.start * 100, bpct: (bal - F.start) / F.start * 100, done: (F.stage || 1) === 1 && bal >= goal - 1e-9,   /* the funder passes you on the balance, with open stakes already taken off */ s2: (F.stage || 1) === 2 }; }   /* bal = the account's cash: open stakes come off it, a win pays stake back plus profit */
 setInterval(() => { try { if (S.user && S.chalLoaded && ((S.chalAll || {}).funded || {}).bets && S.chalAll.funded.bets.some(b => b.result === "open")) { const F = fundedNow(); fundedAuto(F); } } catch (e) {} }, 30e3);   /* settle funded bets wherever you are in the app */
-function fundedAuto(F) {   /* settle tracked singles by themselves */
+function fundedAuto(F) {
+  { let ch = false; for (const b of F.bets) if (b.legs && b.legs.length) b.legs = b.legs.map(l => { const n = snapLeg(l); if (n) { ch = true; return n; } return l; }); if (ch && S.chalLoaded) fundedSave(F); }   /* settle tracked singles by themselves */
   let n = 0, rl = 0; for (const b of F.bets) if (b.result === "open" && !(b.legs || []).length && (b._rl || 0) < 2) {   /* bets added before we could track their market: try again from the saved text */
     const m = String(b.text || "").match(/^(.+?) · (.+) \((.+?) v (.+)\)$/); if (!m || !(S.data || {}).nba) continue; b._rl = 2;   /* bump this when the importer learns a new market, so older bets get another try */
     const P = fundedParse(`Single\nOpen\n${m[1]}\n${m[2]} · ${m[3]} vs ${m[4]}\n${b.dec}\nStake\n£${b.stake}\nPotential Returns\n£${(b.stake * b.dec).toFixed(2)}`);
@@ -5268,6 +5278,7 @@ function betOutcome(legs) {   // "won" / "lost" once it's certain, otherwise nul
   let all = true, lost = false;
   for (const l of legs) {
     if (l.manual) { if (l.fst === "miss") lost = true; else if (l.fst !== "hit") all = false; continue; }   /* a leg you mark yourself */
+    if (l.fst && !findGame(l.sport, l.gid)) { if (l.fst === "miss") lost = true; else if (l.fst !== "hit") all = false; continue; }   /* game gone from the data: use the result saved when it finished */
     const g = findGame(l.sport, l.gid); if (!g) { all = false; continue; }
     if (l.group) {
       const gs = l.group.map(m => findGame(l.sport, m.gid)); if (gs.some(x => !x)) { all = false; continue; }
@@ -5479,6 +5490,7 @@ function autoSettle() {
     S.chalAll = normChal(x.data ? x.data.data : null); for (const c of due) { const F = chalList().find(y => y.id === c.id), r = F && F.active && F.active.label === c.active.label && activeResult(F.active); if (r) chalSettle(r, F.active.label, F.active.match, F.active.dec, F.id); } render(); }); }
   pruneTracked();
   const skip = store.get("noAuto", []);
+  for (const b of S.bets || []) if (b.result === "open" && (b.legs || []).length && b.user_id === (S.user || {}).id) { let ch = false; const legs = b.legs.map(l => { const n = snapLeg(l); if (n) { ch = true; return n; } return l; }); if (ch) { b.legs = legs; sb.from("bets").update({ legs }).eq("id", b.id).eq("user_id", S.user.id); } }   /* keep finished legs' results on open accas */
   for (const b of S.bets || []) if (b.result === "open" && !skip.includes(b.id)) { const r = betOutcome(b.legs); if (r) settleBet(b, r, true); }
   // fill in final numbers for settled bets (from the box score fetched after full time), so the breakdown lasts
   for (const b of S.bets || []) if (b.result !== "open" && (b.legs || []).some(l => (l.pid || l.k) && !l.fst)) {

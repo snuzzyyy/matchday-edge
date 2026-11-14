@@ -22,7 +22,7 @@ LEAGUES = [
     # internationals: so national-team games show, get prices and track
     ("uefa.nations", "Nations League", "UNL"), ("fifa.friendly", "International friendly", "INTL"),
 ]
-DAYS_BACK, DAYS_FWD = 1, 5
+DAYS_BACK, DAYS_FWD = 3, 5   # 3 days back so legs of longer accas keep their finished games
 
 def get(url, cache_key=None, ttl=None):
     if cache_key:
