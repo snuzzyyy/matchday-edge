@@ -4127,7 +4127,13 @@ function fundedPicks() {
   return out;
 }
 /* BetPro-style bet list (pasted or read from a screenshot): "Single / Basketball / Open / Denver Nuggets (-4) / Home Draw Away with Handicap (4), 1st Half · Indiana Pacers vs Denver Nuggets / … / 10/11 / Stake £10.00 / Potential Returns £19.09 / 7 Nov 2026, 21:52" */
+/* several bets pasted at once (BetPro's My Bets): split at each bet's heading, so a double and the singles after it stay separate bets */
 function fundedParse(raw) {
+  const L = String(raw || "").split(/\r?\n/), H = /^\s*(single|double|treble|trixie|\d+\s*-?\s*folds?|accumulator|acca\w*)(?:\s+acca\w*)?\s*$/i, at = L.map((x, i) => H.test(x) ? i : -1).filter(i => i >= 0);
+  if (at.length < 2 || !at.some(i => !/^\s*single\s*$/i.test(L[i]))) return fundedParse1(raw);
+  return at.flatMap((i, n) => fundedParse1(L.slice(n ? i : 0, at[n + 1] ?? L.length).join("\n")));
+}
+function fundedParse1(raw) {
   /* each bet is found by its game line ("Team A vs Team B"): either "Market · A vs B" with the selection above it (My Bets),
      or a line of its own with the market above and the selection above that (bet slip) */
   const L = String(raw || "").split("\n").map(x => x.trim()).filter(Boolean), isGame = x => /\svs?\.?\s/i.test(x) && !/^(stake|returns?|potential)/i.test(x);
@@ -4151,7 +4157,7 @@ function fundedParse(raw) {
     /* only bets we can follow get a live leg: match winner, totals, full-game handicaps, player overs and unders */
     let q = null;
     if (!/half|quarter|1st|2nd|3rd|4th|first|period|exact|correct|margin|double double|triple double|overtime|\bodd\b|\beven\b/.test(mk) && !(/corners?|cards?|booking/.test(mk) && !/over|under|total/.test(mk))) {   /* corners and cards totals track; other corner/card markets don't */
-      const pp = market.match(/^(.+?)\s+((?:points|assists|rebounds|blocks|steals|threes|made threes|3-?pointers?)(?:(?:\s*,\s*|\s+(?:and|&|\+)\s+)(?:points|assists|rebounds))*)\s+over\s*[\/f]?\s*(?:under|funder|\/under)\s+([\d.]+)/i);
+      const pp = market.replace(/\s+to score\s+(?=over)/i, " Points ").replace(/\s+(?:three'?s|3-?point(?:er)?s|threes) made\s+(?=over)/i, " Threes ").match(/^(.+?)\s+((?:points|assists|rebounds|blocks|steals|threes|made threes|3-?pointers?)(?:(?:\s*,\s*|\s+(?:and|&|\+)\s+)(?:points|assists|rebounds))*)\s+over\s*[\/f]?\s*(?:under|funder|\/under)\s+([\d.]+)/i);   /* BetPro: "X To Score Over/Under 12.5" = points, "X Three's Made Over/Under 1.5" = threes */
       const fpp = !nbaG && market.match(/^(.+?)\s+(shots on target|shots|saves|tackles|fouls committed|fouls|times fouled|goals|assists)\s+over\s*[\/f]?\s*(?:under|funder|\/under)\s+([\d.]+)/i);   /* football player lines: "Isaac Price Shots On Target Over/Under 0.5" */
       if (fpp) { const line = +fpp[3], under = /under/i.test(sel.replace(/^.*?:/, "")), st = fpp[2].toLowerCase(); q = under ? `${fpp[1]} under ${line} ${st}` : `${fpp[1]} ${Math.floor(line) + 1}+ ${st}`; }
       else if (pp) { const sl = (sel.match(/(?:over|under)\s*\+?(\d+(?:\.\d)?)/i) || [])[1], line = !/\.5$/.test(pp[3]) && sl && /\.5$/.test(sl) ? +sl : +pp[3], under = /under/i.test(sel);   /* a screenshot can drop the ".5" from one copy of the number */ q = under ? `${pp[1]} under ${line} ${pp[2]}` : `${pp[1]} ${Math.floor(line) + 1}+ ${pp[2]}`; }

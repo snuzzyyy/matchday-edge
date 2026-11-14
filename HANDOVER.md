@@ -566,3 +566,4 @@ No server of our own. ESPN is free, has no key and is about 1–3 minutes behind
 - Unders are made on demand by `nbaUnders(g)` (k `P:pid:STAT:u20` = under 19.5, p = 1 - over) and found through `mkt()`; never added to `g.model.markets`, so tips/accas don't use them. `propLeg` carries `under/line/max`.
 - build.py props: 5 players a team (18+ min), stats PTS/REB/AST/3PM/PRA/PR/PA/RA/STL/BLK (PR/PA/RA stored as `combo:PTS,REB` etc.; STL/BLK/3PM priced Poisson), up to 4 lines each, `prop.avg`. ~4,500 props, ~1MB raw in data.json.
 - Fixes: `betOutcome` now handles player unders (lost once over, landed on the final box score); funded acca keys keep colons in market keys; acca titles use `legText`; settle.py sums `combo:` stats.
+- Funded import: several bets pasted at once are split at each heading (`fundedParse` → `fundedParse1` per bet), so a Double followed by Singles stays separate. BetPro "X To Score Over/Under" = points, "Three's Made" = threes.
