@@ -6113,6 +6113,17 @@ function applyNba(g, s) {
       ps.forEach(p => p.on = on.has(p.id));
     }
   }
+  /* ESPN's box score sometimes sticks at 0 for everyone while the play-by-play runs on: count the stats from the plays instead */
+  { const ps = Object.values(box).flatMap(t => t.players), boxPts = ps.reduce((a, p) => a + num(p.s.PTS || 0), 0), score = num(g.home.score) + num(g.away.score), plays = s.plays || [];
+    if (ps.length && plays.length > 10 && score >= 8 && boxPts < score * .6) {
+      const add = (id, k, v = 1) => { const P = ps.find(p => String(p.id) === String(id)); if (!P) return; if (k === "3PT") { const [m, t] = String(P.s["3PT"] || "0-0").split("-").map(num); P.s["3PT"] = `${m + v}-${t + v}`; } else P.s[k] = String(num(P.s[k] || 0) + v); };
+      for (const P of ps) for (const k of ["PTS", "REB", "AST", "STL", "BLK", "3PT"]) P.s[k] = k === "3PT" ? "0-0" : "0";
+      for (const pl of plays) { const who = (pl.participants || []).map(q => (q.athlete || {}).id), t = String(pl.text || ""), ty = String((pl.type || {}).text || "");
+        if (pl.scoringPlay && who[0]) { add(who[0], "PTS", +pl.scoreValue || 0); if (+pl.scoreValue === 3 && !/free throw/i.test(t)) add(who[0], "3PT"); if (who[1] && /assists?\)/i.test(t)) add(who[1], "AST"); }
+        else if (/rebound/i.test(ty) && who[0] && !/team/i.test(t)) add(who[0], "REB");
+        else if (/steals?\)/i.test(t) && who[1]) add(who[1], "STL");
+        else if (/blocks/i.test(t) && who[1]) add(who[1], "BLK"); }
+      g._fromPlays = true; } else g._fromPlays = false; }
   if (Object.keys(box).length) g.box = box;
   const lead = [];
   for (const t of s.leaders || []) for (const cat of (t.leaders || []).slice(0, 3)) if ((cat.leaders || [])[0]) { const L0 = cat.leaders[0]; lead.push({ side: (t.team || {}).id === g.home.id ? "h" : "a", cat: cat.displayName || cat.name, who: (L0.athlete || {}).displayName, val: L0.displayValue }); }

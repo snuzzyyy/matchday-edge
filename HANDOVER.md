@@ -567,3 +567,4 @@ No server of our own. ESPN is free, has no key and is about 1–3 minutes behind
 - build.py props: 5 players a team (18+ min), stats PTS/REB/AST/3PM/PRA/PR/PA/RA/STL/BLK (PR/PA/RA stored as `combo:PTS,REB` etc.; STL/BLK/3PM priced Poisson), up to 4 lines each, `prop.avg`. ~4,500 props, ~1MB raw in data.json.
 - Fixes: `betOutcome` now handles player unders (lost once over, landed on the final box score); funded acca keys keep colons in market keys; acca titles use `legText`; settle.py sums `combo:` stats.
 - Funded import: several bets pasted at once are split at each heading (`fundedParse` → `fundedParse1` per bet), so a Double followed by Singles stays separate. BetPro "X To Score Over/Under" = points, "Three's Made" = threes.
+- NBA: when ESPN's live box score sticks at 0 (box points < 60% of the score) `applyNba` counts PTS/REB/AST/3PT/STL/BLK from the play-by-play (`g._fromPlays`). Checked against a finished game: 0 differences out of 114 numbers.
