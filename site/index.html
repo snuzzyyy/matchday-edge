@@ -3406,7 +3406,8 @@ function legLine(l, k, legs) {
   const c = st === "hit" || st === "miss" || st === "void" ? null : legChance(l);
   const h = info.html, bar = (h.match(/<div class="tl-bar"><i style="width:([\d.]+)%/) || [])[1], num = h.match(/<div class="tl-num"><span>([\s\S]*?)<\/span><span>([\s\S]*?)<\/span><\/div>/);
   const txt = x => String(x || "").replace(/<[^>]+>/g, "").replace(/✓ Landed|✗ Lost|✗ Missed/g, "").trim();
-  const prog = live && num ? [txt(num[1]), txt(num[2])].filter(x => x && !/chance now|Waiting/.test(x)).join(" · ") : "";
+  const p3 = l.sport === "nba" && l.stat === "3PM" && g && !isPre(g) ? String(((((g.box || {})[l.side] || {}).players || []).find(p => String(p.id) === String(l.pid)) || { s: {} }).s["3PT"] || "") : "", [m3, a3] = p3.split("-");   /* threes bets: made of attempted */
+  const prog = [...(live && num ? [txt(num[1]), txt(num[2])].filter(x => x && !/chance now|Waiting/.test(x)) : []), ...(a3 != null && a3 !== "" ? [`${m3} of ${a3} attempt${+a3 === 1 ? "" : "s"}`] : [])].join(" · ");
   const xi = Math.min(...["<div class=\"tl-teams\">", "<div class=\"tl-pps\">", "<div class=\"hc-rows\">", "<div class=\"pr-rows\">", "<div class=\"tp-grid\""].map(t => h.indexOf(t)).filter(n => n >= 0)), extra = live && isFinite(xi) ? h.slice(xi, -6) : "";
   const oc = playerTag(l);
   const right = st === "hit" ? "✓" : st === "miss" ? "✗" : st === "void" ? "Void" : c != null ? `<span style="color:${tierColor(c)}">${pct(c)}</span>` : "";
@@ -6116,9 +6117,10 @@ function applyNba(g, s) {
   /* ESPN's box score sometimes sticks at 0 for everyone while the play-by-play runs on: count the stats from the plays instead */
   { const ps = Object.values(box).flatMap(t => t.players), boxPts = ps.reduce((a, p) => a + num(p.s.PTS || 0), 0), score = num(g.home.score) + num(g.away.score), plays = s.plays || [];
     if (ps.length && plays.length > 10 && score >= 8 && boxPts < score * .6) {
-      const add = (id, k, v = 1) => { const P = ps.find(p => String(p.id) === String(id)); if (!P) return; if (k === "3PT") { const [m, t] = String(P.s["3PT"] || "0-0").split("-").map(num); P.s["3PT"] = `${m + v}-${t + v}`; } else P.s[k] = String(num(P.s[k] || 0) + v); };
+      const add = (id, k, v = 1) => { const P = ps.find(p => String(p.id) === String(id)); if (!P) return; if (k === "3PT" || k === "3PA") { const [m, t] = String(P.s["3PT"] || "0-0").split("-").map(num); P.s["3PT"] = `${m + (k === "3PT" ? v : 0)}-${t + v}`; } else P.s[k] = String(num(P.s[k] || 0) + v); };   /* 3PA: a missed three (an attempt only) */
       for (const P of ps) for (const k of ["PTS", "REB", "AST", "STL", "BLK", "3PT"]) P.s[k] = k === "3PT" ? "0-0" : "0";
       for (const pl of plays) { const who = (pl.participants || []).map(q => (q.athlete || {}).id), t = String(pl.text || ""), ty = String((pl.type || {}).text || "");
+        if (!pl.scoringPlay && who[0] && /misses/i.test(t) && /three point/i.test(t)) add(who[0], "3PA");
         if (pl.scoringPlay && who[0]) { add(who[0], "PTS", +pl.scoreValue || 0); if (+pl.scoreValue === 3 && !/free throw/i.test(t)) add(who[0], "3PT"); if (who[1] && /assists?\)/i.test(t)) add(who[1], "AST"); }
         else if (/rebound/i.test(ty) && who[0] && !/team/i.test(t)) add(who[0], "REB");
         else if (/steals?\)/i.test(t) && who[1]) add(who[1], "STL");
