@@ -4171,6 +4171,8 @@ function fundedParse1(raw) {
     { const ts = !q && !nbaG && market.replace(/,\s*(ordinary time|whole match)/i, "").trim().match(/^(.+?)\s+to score$/i), yn = sel.replace(/^.*?:\s*/, "").trim();   /* "Italy To Score" Yes/No: a team scoring */
       if (ts && /^yes$/i.test(yn) && normT(`${home} ${away}`).includes(normT(ts[1]))) q = `${home} v ${away}: ${ts[1]} to score`; }   /* "No" isn't tracked yet: you mark it */
     let legs = []; if (q) { const r = parseBet(q, playerIndex(false).idx); if (r.legs.length === 1 && !r.missing.length) legs = r.legs; }
+    if (!legs.length && q) { const nm = q.match(/^([A-Z][\w'.-]+) ([A-Z][\w'.-]+) (?=under |\d+\+ )/);   /* BetPro sometimes puts the surname first ("Daniels Dyson" = Dyson Daniels) */
+      if (nm) { const r = parseBet(`${nm[2]} ${nm[1]} ${q.slice(nm[0].length)}`, playerIndex(false).idx); if (r.legs.length === 1 && !r.missing.length) legs = r.legs; } }
     if (legs.length && legs[0].pid && !/ v /.test(q) && !gamesInText(normT(`${home} v ${away}`)).some(f => String(f.g.id) === String(legs[0].gid))) legs = [];   /* a player read on his own: only if he's in this game */
     const qm = mk.match(/(1st|2nd|3rd|4th|first|second|third|fourth)\s+quarter|quarter\s*([1-4])|\bq([1-4])\b/), qn = qm ? (qm[2] || qm[3] ? +(qm[2] || qm[3]) : { "1st": 1, first: 1, "2nd": 2, second: 2, "3rd": 3, third: 3, "4th": 4, fourth: 4 }[qm[1]]) : 0;
     if (!legs.length && /both teams to score|btts/.test(mk) && /(1st|first|2nd|second) half/.test(mk) && !/^no$/i.test(sel.trim()) && !nbaG) {   /* BTTS in one half = each team scores in that half (tracked from the goal times) */
