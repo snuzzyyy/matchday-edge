@@ -4173,7 +4173,9 @@ function fundedParse1(raw) {
     let legs = []; if (q) { const r = parseBet(q, playerIndexFor(q).idx); if (r.legs.length === 1 && !r.missing.length) legs = r.legs; }
     if (!legs.length && q) { const nm = q.match(/^([A-Z][\w'.-]+) ([A-Z][\w'.-]+) (?=under |\d+\+ )/);   /* BetPro sometimes puts the surname first ("Daniels Dyson" = Dyson Daniels) */
       if (nm) { const r = parseBet(`${nm[2]} ${nm[1]} ${q.slice(nm[0].length)}`, playerIndexFor(`${nm[2]} ${nm[1]} ${q.slice(nm[0].length)}`).idx); if (r.legs.length === 1 && !r.missing.length) legs = r.legs; } }
-    if (legs.length && legs[0].pid && !/ v /.test(q) && !gamesInText(normT(`${home} v ${away}`)).some(f => String(f.g.id) === String(legs[0].gid))) legs = [];   /* a player read on his own: only if he's in this game */
+    const inGame = l => gamesInText(normT(`${home} v ${away}`)).some(f => String(f.g.id) === String(l.gid));
+    if (legs.length && legs[0].pid && !/ v /.test(q) && !inGame(legs[0])) { legs = [];   /* a player read on his own: only if he's in this game. Matched someone else with that surname ("Klay Thompson" → Amen Thompson)? look through the full rosters */
+      const r = parseBet(q, playerIndex(true).idx); if (r.legs.length === 1 && !r.missing.length && inGame(r.legs[0])) legs = r.legs; }
     const qm = mk.match(/(1st|2nd|3rd|4th|first|second|third|fourth)\s+quarter|quarter\s*([1-4])|\bq([1-4])\b/), qn = qm ? (qm[2] || qm[3] ? +(qm[2] || qm[3]) : { "1st": 1, first: 1, "2nd": 2, second: 2, "3rd": 3, third: 3, "4th": 4, fourth: 4 }[qm[1]]) : 0;
     if (!legs.length && /both teams to score|btts/.test(mk) && /(1st|first|2nd|second) half/.test(mk) && !/^no$/i.test(sel.trim()) && !nbaG) {   /* BTTS in one half = each team scores in that half (tracked from the goal times) */
       const r = parseBet(`${home} v ${away}: ${home} to win`, playerIndex(false).idx), w = r.legs.length === 1 && !r.missing.length ? r.legs[0] : null, h = /(1st|first) half/.test(mk) ? 1 : 2;

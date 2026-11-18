@@ -570,3 +570,4 @@ No server of our own. ESPN is free, has no key and is about 1–3 minutes behind
 - NBA: when ESPN's live box score sticks at 0 (box points < 60% of the score) `applyNba` counts PTS/REB/AST/3PT/STL/BLK from the play-by-play (`g._fromPlays`). Checked against a finished game: 0 differences out of 114 numbers.
 - Threes bets (NBA 3PM legs) show "X of Y attempts" from the box score `3PT` (made-attempted) in `legLine`; the play-by-play fallback counts missed threes as attempts.
 - Funded import uses `playerIndexFor(q)` (downloads full team rosters when a player is missing), so bench/role players outside the 5 priced per team (e.g. Zach Edey) still link. Tests: route ESPN with async execFile, or roster fetches time out (getJ 6s).
+- Funded import: a player read on his own who turns out to be in another game (surname match, "Klay Thompson" → Amen Thompson) is retried against the full rosters (`playerIndex(true)`).
