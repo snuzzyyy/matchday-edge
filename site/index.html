@@ -4102,6 +4102,12 @@ function fundedAuto(F) {
     const m = String(b.text || "").match(/^(.+?) · (.+) \((.+?) v (.+)\)$/); if (!m || !(S.data || {}).nba) continue; b._rl = 2;   /* bump this when the importer learns a new market, so older bets get another try */
     const P = fundedParse(`Single\nOpen\n${m[1]}\n${m[2]} · ${m[3]} vs ${m[4]}\n${b.dec}\nStake\n£${b.stake}\nPotential Returns\n£${(b.stake * b.dec).toFixed(2)}`);
     if (P.length === 1 && P[0].legs.length) { b.legs = P[0].legs; rl++; } }
+  /* legs saved as "you mark this one" (the importer couldn't match them then): try again now, e.g. once the full team rosters have loaded */
+  S._mlTry = S._mlTry || {};
+  for (const b of F.bets) if (b.result === "open") (b.legs || []).forEach((l, i) => { if (!l.manual || l.fst) return; const key = b.id + ":" + i; if ((S._mlTry[key] || 0) >= 30) return; S._mlTry[key] = (S._mlTry[key] || 0) + 1;
+    const m = String(l.label || "").match(/^(.+?) · (.+)$/), v = String(l.match || "").match(/^(.+?) v (.+)$/); if (!m || !v || !(S.data || {}).nba) return;
+    const P = fundedParse(`Single\nOpen\n${m[1]}\n${m[2]} · ${v[1]} vs ${v[2]}\n${l.dec || 2}\nStake\n£1\nPotential Returns\n£${l.dec || 2}`);
+    if (P.length === 1 && P[0].legs.length === 1 && !P[0].legs[0].manual) { b.legs = b.legs.map((x, k) => k === i ? { ...P[0].legs[0], dec: l.dec } : x); rl++; toast(`Now tracking ${legText(P[0].legs[0])} live`); } });
   if (rl && S.chalLoaded) fundedSave(F);
   /* a bet we settled as lost before the final stats came in: put it right once every leg shows it landed */
   for (const b of F.bets) { if (b.result !== "lost" || b.manualRes || !(b.legs || []).length) continue;
